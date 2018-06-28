@@ -1,0 +1,20 @@
+{
+  "name": "freedb-client",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "cryptico": "^1.0.2",
+    "jsencrypt": "^3.0.0-rc.1",
+    "yargs": "^11.0.0"
+  }
+}
