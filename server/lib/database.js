@@ -32,20 +32,29 @@ const SYSTEM_ACL = {
 };
 
 const CORE_TYPES = [{
-  namespace: 'core',
-  type: 'namespace',
+  id: 'namespace',
   schema: {
     type: 'object',
     properties: {
       id: {type: 'string'},
-      latestVersion: {type: 'string'},
-      versions: {type: 'array', items: {type: 'string'}},
+      versions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            version: {type: 'string'},
+            types: {
+              type: 'object',
+              additionalProperties: {$ref: '#/core/type/type'}
+            }
+          }
+        }
+      },
     },
     additionalProperties: false,
   }
 }, {
-  namespace: 'core',
-  type: 'user',
+  id: 'user',
   schema: {
     type: 'object',
     properties: {
@@ -57,17 +66,6 @@ const CORE_TYPES = [{
 
 const CORE_OBJECTS = [{
   namespace: 'core',
-  type: 'namespace',
-  document: {
-    id: 'core',
-    acl: SYSTEM_ACL,
-    data: {
-      id: 'core',
-      versions: [],
-    }
-  }
-}, {
-  namespace: 'core',
   type: 'user',
   document: {
     id: USER_KEYS.system,
@@ -78,37 +76,40 @@ const CORE_OBJECTS = [{
   }
 }, {
   namespace: 'core',
-  type: 'type',
+  type: 'namespace',
   document: {
-    id: 'core/type',
+    id: 'core',
     acl: SYSTEM_ACL,
     data: {
-      namespace: 'core',
-      type: 'type',
+      id: 'core',
       versions: [{
-        version: '0',
-        schema: {
-          type: 'object',
-          definitions: jsonSchemaDefinitions,
-          properties: {
-            namespace: {type: 'string'},
-            type: {type: 'string'},
-            versions: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  idField: {type: 'string', default: DEFAULT_ID_FIELD},
-                  version: {type: 'string'},
-                  schema: jsonSchemaSchema,
-                },
-                additionalProperties: false,
-              }
-            }
-          },
-          additionalProperties: false,
-        }
-      }]
+        verision: '0',
+        types: {
+          type: {$ref: '/core/type/type'},
+          namespace: {$ref: '/core/type/namespace'},
+          user: {$ref: '/core/type/user'},
+        },
+      }],
+    }
+  }
+}, {
+  namespace: 'core',
+  type: 'type',
+  document: {
+    id: 'type',
+    acl: SYSTEM_ACL,
+    data: {
+      id: 'type',
+      schema: {
+        type: 'object',
+        definitions: jsonSchemaDefinitions,
+        properties: {
+          id: {type: 'string'},
+          idField: {type: 'string', default: 'id'},
+          schema: jsonSchemaSchema,
+        },
+        additionalProperties: false,
+      }
     }
   }
 }]
@@ -131,12 +132,11 @@ class Database {
     }
     let db = await this.user(USER_KEYS.system);
     for (let type of CORE_TYPES) {
-      let existing = await db.get(type.namespace, 'type', type.type, SYSTEM_ACL);
+      let existing = await db.get('core', 'type', type.id, SYSTEM_ACL);
       if (!existing) {
-        await db.create(type.namespace, 'type', type, SYSTEM_ACL);
+        existing = await db.create('core', 'type', type, SYSTEM_ACL);
       }
     }
-    await db.publishNamespace('core');
   }
 
   async user(user) {
@@ -172,29 +172,11 @@ class DatabaseForUser {
     return this.client.db(DB_NAME).collection(collectionName);
   }
 
-  async validate(typeInfo, obj) {
-    let err = validate.validators.data(obj.data, typeInfo.schema);
+  async validate(schema, obj) {
+    let err = validate.validators.data(obj.data, schema);
     if (err) throw new Error(err);
     err = validate.validators.acl(obj.acl);
     if (err) throw new Error(err);
-  }
-
-  async publishNamespace(name) {
-    const namespace = await this.get('core', 'namespace', name);
-    if (namespace.acl.owner !== this.user.id) throw new Error(`User ${this.user.id} does not own namespace ${name}`);
-    namespace.data.versions = namespace.data.versions || [];
-    const newVersion = namespace.data.versions.length.toString();
-    namespace.data.versions.push(newVersion);
-    namespace.data.latestVersion = newVersion;
-    const types = await this.getAll('core', 'type', {'data.namespace': name});
-    for (let type of types) {
-      let stagingVersion = type.data.versions.shift();
-      if (stagingVersion.version !== 'staging') continue;
-      stagingVersion.version = newVersion;
-      type.data.versions.push(stagingVersion);
-      await this.update('core', 'type', type.id, type.data);
-    }
-    await this.update('core', 'namespace', name, namespace.data);
   }
 
   async getAll(namespace, type, query={}, access='read') {
@@ -208,6 +190,18 @@ class DatabaseForUser {
     return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
   }
 
+  async getType(namespace, type) {
+    const ns = await this.get('core', 'namespace', namespace);
+    if (!ns) throw new Error(`Namespace ${namespace} not found`);
+    const nsVersion = ns.data.versions[ns.data.versions.length - 1];
+    if (!nsVersion) throw new Error(`Namespace ${namespace}@${ns.data.versions.length - 1} not found`);
+    const typeRef = (nsVersion.types[type] || {$ref: ''}).$ref.split('/').pop();
+    if (!typeRef) throw new Error(`Type ${namespace}/${type} not found`);
+    const typeInfo = await this.get('core', 'type', typeRef);
+    if (!typeInfo) throw new Error(`Item core/type/${typeRef} not found`);
+    return typeInfo;
+  }
+
   async get(namespace, type, id, access='read') {
     const arr = await this.getAll(namespace, type, {id}, access);
     if (arr.length > 1) throw new Error(`Multiple items found for ${namespace}/${type}/${id}`);
@@ -217,43 +211,38 @@ class DatabaseForUser {
 
   async create(namespace, type, data, acl={}) {
     acl.owner = this.user.id;
-    const typeVersions = await this.get('core', 'type', namespace + '/' + type);
-    if (!typeVersions) throw new Error(`Type ${namespace}/${type} not found`);
-    const typeInfo = typeVersions.data.versions[typeVersions.data.versions.length - 1];
-    let id = data[typeInfo.idField || DEFAULT_ID_FIELD] || randomstring.generate(ID_LENGTH);
-    if (namespace === 'core' && type === 'type') {
-      const namespaceInfo = await this.get('core', 'namespace', data.namespace);
-      if (!namespaceInfo) throw new Error(`Namespace ${data.namespace} not found`);
-      if (namespaceInfo.acl.owner !== acl.owner) throw new Error(`User ${acl.owner} does not own namespace ${data.namespace}`);
-      id = data.namespace + '/' + data.type;
-      data = {
-        namespace: data.namespace,
-        type: data.type,
-        versions: [{version: STAGING_KEY, schema: data.schema, idField: data.idField || DEFAULT_ID_FIELD}],
-      }
-    } else if (namespace === 'core' && type === 'user') {
-      acl.owner = id;
+    const typeInfo = await this.getType(namespace, type);
+    let id = randomstring.generate(ID_LENGTH);
+    if (typeInfo.idField !== null) {
+      id = data[typeInfo.idField || DEFAULT_ID_FIELD] || id;
     }
+    let err = validate.validators.itemID(id);
+    if (err) throw new Error(err);
     if (namespace === 'core') {
       acl.read = [USER_KEYS.all];
+      if (type === 'type') {
+        acl.owner = USER_KEYS.system;
+        util.fixSchemaRefs(data.schema, id);
+      } else if (type === 'user') {
+        acl.owner = id;
+      }
     }
     const existing = await this.get(namespace, type, id);
     if (existing) throw new Error(`Item ${namespace}/${type}/${id} already exists`);
     const obj = {id, data, acl};
-    await this.validate(typeInfo, obj);
+    await this.validate(typeInfo.data.schema, obj);
     const col = this.getCollection(namespace, type);
     let result = await col.insert(util.encodeDocument([obj]));
     return obj;
   }
 
   async update(namespace, type, id, data) {
-    const existing = this.get(namespace, type, id, 'update');
+    const existing = await this.get(namespace, type, id, 'update');
     if (!existing) throw new Error(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`);
-    const typeVersions = await this.get('core', 'type', namespace + '/' + type);
-    if (!typeVersions) throw new Error(`Type ${namespace}/${type} not found`);
-    const typeInfo = typeVersions.data.versions[typeVersions.data.versions.length - 1];
-    await this.validate(typeInfo, {id, data, acl: {owner: 'dummy'}});
+    const typeInfo = await this.getType(namespace, type);
+    await this.validate(typeInfo.data.schema, {id, data, acl: {owner: 'dummy'}});
     const col = this.getCollection(namespace, type);
+    // TODO: make idField readOnly
     const result = await col.update({id}, {$set: {data: util.encodeDocument(data)}});
     return result;
   }

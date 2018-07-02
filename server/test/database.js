@@ -32,17 +32,17 @@ describe('Database', () => {
   });
 
   it('should have core types', async () => {
-    let user = await systemDB.get('core', 'type', 'core/type');
+    let user = await systemDB.get('core', 'type', 'type');
     expect(user.acl).to.deep.equal({owner: '_system', read: ['_all']});
-    expect(user.data.versions[0].schema.type).to.equal('object');
+    expect(user.data.schema.type).to.equal('object');
 
-    let type = await systemDB.get('core', 'type', 'core/user');
+    let type = await systemDB.get('core', 'type', 'user');
     expect(type.acl).to.deep.equal({owner: '_system', read: ['_all']});
-    expect(type.data.versions[0].schema.type).to.equal('object');
+    expect(type.data.schema.type).to.equal('object');
   });
 
   it('should not create item for missing namespace', () => {
-    return expectError(systemDB.create('foo', 'user', {str: 'baz'}), /Type foo\/user not found/);
+    return expectError(systemDB.create('foo', 'user', {str: 'baz'}), /Namespace foo not found/);
   });
 
   it('should not create item for missing type', () => {
@@ -65,37 +65,18 @@ describe('Database', () => {
     return expectError(database.createUser('pkey1'), /Public key already exists/)
   });
 
-  it('should not allow creating new core type', async () => {
-    const userDB = await database.user(USERS[0].id);
-    const type = {schema: {type: 'string'}, type: 'foo', namespace: 'core'};
-    return expectError(userDB.create('core', 'type', type), /User .* does not own namespace core/);
-  });
-
-  it('should not allow creating type for missing namespace', async () => {
-    const userDB = await database.user(USERS[0].id);
-    const type = {schema: {type: 'string'}, type: 'bar', namespace: 'foo'};
-    return expectError(userDB.create('core', 'type', type), /Namespace foo not found/);
-  });
-
   it('should allow creating new namespace', async () => {
     const userDB = await database.user(USERS[0].id);
     const ns = await userDB.create('core', 'namespace', {id: 'foo'});
     expect(ns.data.id).to.equal('foo');
   });
 
-  it('should allow adding type to namespace', async () => {
+  it('should allow creating type', async () => {
     const userDB = await database.user(USERS[0].id);
-    const type = {schema: {type: 'string'}, type: 'bar', namespace: 'foo'};
+    const type = {schema: {type: 'string'}, id: 'thing'};
     const created = await userDB.create('core', 'type', type);
-    expect(created.data.type).to.equal(type.type);
-    expect(created.data.namespace).to.equal(type.namespace);
-    expect(created.data.versions[0].schema).to.deep.equal(type.schema);
-  });
-
-  it('should not allow other user to add type to namespace', async () => {
-    const userDB = await database.user(USERS[1].id);
-    const type = {schema: {type: 'string'}, type: 'baz', namespace: 'foo'};
-    return expectError(userDB.create('core', 'type', type), /User .* does not own namespace foo/);
+    expect(created.data.id).to.equal(type.id);
+    expect(created.data.schema).to.deep.equal(type.schema);
   });
 
   it('should not allow other user to add duplicate namespace', async () => {
@@ -105,12 +86,35 @@ describe('Database', () => {
 
   it('should not allow other user to publish namespace', async () => {
     const userDB = await database.user(USERS[1].id);
-    return expectError(userDB.publishNamespace('foo'), /User .* does not own namespace foo/);
+    const ns = {
+      id: 'foo',
+      versions: [{
+        version: '0',
+        types: {
+          'thing': {$ref: '/core/type/thing'},
+        }
+      }]
+    }
+    return expectError(userDB.update('core', 'namespace', 'foo', ns), /User .* cannot update core\/namespace\/foo/)
   });
 
   it('should allow user to publish namespace', async () => {
     const userDB = await database.user(USERS[0].id);
-    await userDB.publishNamespace('foo');
-  })
+    const ns = {
+      id: 'foo',
+      versions: [{
+        version: '0',
+        types: {
+          'thing': {$ref: '/core/type/thing'},
+        }
+      }]
+    }
+  });
+
+  /** TODO:
+   *  Should not allow removing version from namespace
+   *  Should not allow changing type/namespace ID
+   *  Should validate against different versions
+   */
 });
 

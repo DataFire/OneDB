@@ -3,6 +3,7 @@ const WORDY_REGEX = /^[a-zA-Z0-9]\w{1,29}$/; // starts with a letter, 2-30 chara
 
 const REGEX = {
   typeID: WORDY_REGEX,
+  itemID: WORDY_REGEX,
   namespace: WORDY_REGEX,
 }
 
@@ -45,6 +46,10 @@ let validators = module.exports.validators = {
   typeID: type => {
     if (typeof type !== 'string')  return "You must specify a type ID";
     if (!REGEX.typeID.test(type))  return "Invalid type ID: " + type;
+  },
+  itemID: id => {
+    if (typeof id !== 'string') return "No ID specified";
+    if (!REGEX.itemID.test(id)) return "Invalid ID: " + id;
   },
   data: (data, schema) => {
     if (data === undefined)        return "No data specified";

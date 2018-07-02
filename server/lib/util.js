@@ -45,4 +45,24 @@ module.exports.decodeDocument = function(schema) {
   return obj;
 }
 
-
+module.exports.fixSchemaRefs = function(schema, rootID) {
+  if (typeof schema !== 'object' || schema === null) return;
+  if (Array.isArray(schema)) schema.forEach(sub => module.exports.fixSchemaRefs(sub, rootID));
+  if (schema.$ref) {
+    if (schema.$ref === '#') schema.$ref = '/core/type/' + rootID;
+    let [dummy, namespace, type] = schema.$ref.split('/');
+    let newSchema = {
+      type: 'object',
+      properties: {
+        $ref: {
+          type: 'string',
+          pattern: `.*/${namespace}/${type}/\\w+`,
+        },
+      },
+    }
+    for (let key in schema) delete schema[key];
+    Object.assign(schema, newSchema);
+  } else {
+    for (let key in schema) module.exports.fixSchemaRefs(schema[key], rootID);
+  }
+}
