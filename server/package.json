@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --exit"
   },
   "author": "",
   "license": "MIT",
@@ -12,10 +12,14 @@
     "ajv": "^6.5.1",
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
+    "mongodb": "^3.1.0",
+    "randomstring": "^1.1.5",
     "yargs": "^11.0.0"
   },
   "devDependencies": {
     "chai": "^4.1.2",
-    "mocha": "^5.2.0"
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^5.2.0",
+    "mongodb-memory-server": "^1.8.0"
   }
 }

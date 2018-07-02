@@ -54,7 +54,7 @@ let validators = module.exports.validators = {
     try {
       validate = ajv.compile(schema);
     } catch (e) {
-      return "Error compiling JSON schema";
+      return "Error compiling JSON schema: " + e.message;
     }
     let isValid = validate(data);
     if (!isValid) return "Data does not match schema. " + ajv.errorsText(validate.errors);
