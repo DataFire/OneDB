@@ -1,5 +1,5 @@
 const Ajv = require('ajv');
-const WORDY_REGEX = /^[a-zA-Z]\w{1,29}$/; // starts with a letter, 2-30 characters
+const WORDY_REGEX = /^[a-zA-Z0-9]\w{1,29}$/; // starts with a letter, 2-30 characters
 
 const REGEX = {
   typeID: WORDY_REGEX,

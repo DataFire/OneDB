@@ -1,13 +1,9 @@
 const expect = require('chai').expect;
 const validate = require('../lib/validate');
 
-validate.sendError = function(res, message, details, statusCode) {
-  return {message, details, statusCode};
-}
-
 describe('Validation', () => {
   it('should allow valid namespaces', () => {
-    let namespaces = ['abc', 'ABC', 'a12', 'a_b_c', 'a2b3', 'abcdefghijklmnopqrstuvwxyz'];
+    let namespaces = ['abc', 'ABC', 'a12', 'a_b_c', 'a2b3', '123', 'abcdefghijklmnopqrstuvwxyz'];
     let errors = namespaces.map(validate.validators.namespace);
     errors.forEach((err, idx) => {
       expect(err).to.equal(undefined, namespaces[idx]);
@@ -15,7 +11,7 @@ describe('Validation', () => {
   });
 
   it('should not allow invalid namespaces', () => {
-    let namespaces = [undefined, null, '', 'a', '123', 'ab&', 'abΩ', 'aaaaabbbbbcccccdddddeeeeefffffg', {}, [], 123];
+    let namespaces = [undefined, null, '', 'a', '_ab', 'ab&', 'abΩ', 'aaaaabbbbbcccccdddddeeeeefffffg', {}, [], 123];
     let errors = namespaces.map(validate.validators.namespace);
     errors.forEach((err, idx) => {
       expect(err).to.be.a('string');
@@ -24,7 +20,7 @@ describe('Validation', () => {
   });
 
   it('should allow valid type IDs', () => {
-    let types = ['abc', 'ABC', 'a12', 'a_b_c', 'a2b3', 'abcdefghijklmnopqrstuvwxyz'];
+    let types = ['abc', 'ABC', 'a12', 'a_b_c', 'a2b3', '123', 'abcdefghijklmnopqrstuvwxyz'];
     let errors = types.map(validate.validators.typeID);
     errors.forEach((err, idx) => {
       expect(err).to.equal(undefined, types[idx]);
@@ -32,7 +28,7 @@ describe('Validation', () => {
   });
 
   it('should not allow invalid type IDs', () => {
-    let types = [undefined, null, '', 'a', '123', 'ab&', 'abΩ', 'aaaaabbbbbcccccdddddeeeeefffffg', {}, [], 123];
+    let types = [undefined, null, '', 'a', '_ab', 'ab&', 'abΩ', 'aaaaabbbbbcccccdddddeeeeefffffg', {}, [], 123];
     let errors = types.map(validate.validators.typeID);
     errors.forEach((err, idx) => {
       expect(err).to.be.a('string');
