@@ -8,9 +8,9 @@ module.exports = {
         type: 'object',
         properties: {
           version: {type: 'string'},
-          types: {
+          schemas: {
             type: 'object',
-            additionalProperties: {$ref: '#/core/type/type'}
+            additionalProperties: {$ref: '#/core/schema/schema'}
           }
         }
       }

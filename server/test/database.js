@@ -31,22 +31,22 @@ describe('Database', () => {
     systemDB = await database.user('_system');
   });
 
-  it('should have core types', async () => {
-    let user = await systemDB.get('core', 'type', 'type');
+  it('should have core schemas', async () => {
+    let user = await systemDB.get('core', 'schema', 'schema');
     expect(user.acl).to.deep.equal({owner: '_system', read: ['_all']});
-    expect(user.data.schema.type).to.equal('object');
+    expect(user.data.type).to.deep.equal(['object', 'boolean']);
 
-    let type = await systemDB.get('core', 'type', 'user');
-    expect(type.acl).to.deep.equal({owner: '_system', read: ['_all']});
-    expect(type.data.schema.type).to.equal('object');
+    let schema = await systemDB.get('core', 'schema', 'user');
+    expect(schema.acl).to.deep.equal({owner: '_system', read: ['_all']});
+    expect(schema.data.type).to.equal('object');
   });
 
   it('should not create item for missing namespace', () => {
     return expectError(systemDB.create('foo', 'user', {str: 'baz'}), /Namespace foo not found/);
   });
 
-  it('should not create item for missing type', () => {
-    return expectError(systemDB.create('core', 'foo', {name: 'alice'}), /Type core\/foo not found/);
+  it('should not create item for missing schema', () => {
+    return expectError(systemDB.create('core', 'foo', {name: 'alice'}), /Schema core\/foo not found/);
   });
 
   it('should not allow initalizing for missing user', () => {
@@ -67,21 +67,21 @@ describe('Database', () => {
 
   it('should allow creating new namespace', async () => {
     const userDB = await database.user(USERS[0].id);
-    const ns = await userDB.create('core', 'namespace', {id: 'foo'});
-    expect(ns.data.id).to.equal('foo');
+    const ns = await userDB.create('core', 'namespace', {}, {}, 'foo');
+    expect(ns.data).to.deep.equal({});
   });
 
-  it('should allow creating type', async () => {
+  it('should allow creating schema', async () => {
     const userDB = await database.user(USERS[0].id);
-    const type = {schema: {type: 'string'}, id: 'thing'};
-    const created = await userDB.create('core', 'type', type);
-    expect(created.data.id).to.equal(type.id);
-    expect(created.data.schema).to.deep.equal(type.schema);
+    const schema = {type: 'string'};
+    const created = await userDB.create('core', 'schema', schema);
+    expect(created.data.id).to.equal(schema.id);
+    expect(created.data.schema).to.deep.equal(schema.schema);
   });
 
   it('should not allow other user to add duplicate namespace', async () => {
     const userDB = await database.user(USERS[1].id);
-    return expectError(userDB.create('core', 'namespace', {id: 'foo'}), /Item core\/namespace\/foo already exists/);
+    return expectError(userDB.create('core', 'namespace', {}, {}, 'foo'), /Item core\/namespace\/foo already exists/);
   });
 
   it('should not allow other user to publish namespace', async () => {
@@ -90,8 +90,8 @@ describe('Database', () => {
       id: 'foo',
       versions: [{
         version: '0',
-        types: {
-          'thing': {$ref: '/core/type/thing'},
+        schemas: {
+          'thing': {$ref: '/core/schema/thing'},
         }
       }]
     }
@@ -104,8 +104,8 @@ describe('Database', () => {
       id: 'foo',
       versions: [{
         version: '0',
-        types: {
-          'thing': {$ref: '/core/type/thing'},
+        schemas: {
+          'thing': {$ref: '/core/schema/thing'},
         }
       }]
     }
@@ -113,7 +113,7 @@ describe('Database', () => {
 
   /** TODO:
    *  Should not allow removing version from namespace
-   *  Should not allow changing type/namespace ID
+   *  Should not allow changing schema/namespace ID
    *  Should validate against different versions
    */
 });
