@@ -67,21 +67,21 @@ describe('Database', () => {
 
   it('should allow creating new namespace', async () => {
     const userDB = await database.user(USERS[0].id);
-    const ns = await userDB.create('core', 'namespace', {}, {}, 'foo');
+    const ns = await userDB.create('core', 'namespace', {}, 'foo');
     expect(ns.data).to.deep.equal({});
   });
 
   it('should allow creating schema', async () => {
     const userDB = await database.user(USERS[0].id);
     const schema = {type: 'string'};
-    const created = await userDB.create('core', 'schema', schema, {}, 'thing');
+    const created = await userDB.create('core', 'schema', schema, 'thing');
     expect(created.data.id).to.equal(schema.id);
     expect(created.data.schema).to.deep.equal(schema.schema);
   });
 
   it('should not allow other user to add duplicate namespace', async () => {
     const userDB = await database.user(USERS[1].id);
-    return expectError(userDB.create('core', 'namespace', {}, {}, 'foo'), /Item core\/namespace\/foo already exists/);
+    return expectError(userDB.create('core', 'namespace', {}, 'foo'), /Item core\/namespace\/foo already exists/);
   });
 
   it('should not allow other user to publish namespace', async () => {
@@ -114,7 +114,7 @@ describe('Database', () => {
 
   it('should allow user to create thing', async () => {
     const userDB = await database.user(USERS[0].id);
-    let item = await userDB.create('foo', 'thing', "Hello world!", {}, 'thing1');
+    let item = await userDB.create('foo', 'thing', "Hello world!", 'thing1');
     expect(item.data).to.equal("Hello world!");
     item = await userDB.get('foo', 'thing', item.id);
     expect(item.data).to.equal("Hello world!");
@@ -122,7 +122,7 @@ describe('Database', () => {
 
   it('should allow other user to create thing', async () => {
     const userDB = await database.user(USERS[1].id);
-    let item = await userDB.create('foo', 'thing', "Goodbye world!", {}, 'thing2');
+    let item = await userDB.create('foo', 'thing', "Goodbye world!", 'thing2');
     expect(item.data).to.equal("Goodbye world!");
     item = await userDB.get('foo', 'thing', item.id);
     expect(item.data).to.equal("Goodbye world!");

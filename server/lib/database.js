@@ -83,7 +83,7 @@ class Database {
     for (let type of CORE_TYPES) {
       let existing = await db.get('core', 'schema', type.id, SYSTEM_ACL);
       if (!existing) {
-        existing = await db.create('core', 'schema', type.schema, SYSTEM_ACL, type.id);
+        existing = await db.create('core', 'schema', type.schema, type.id, SYSTEM_ACL);
       }
     }
   }
@@ -158,7 +158,7 @@ class DatabaseForUser {
     return arr[0];
   }
 
-  async create(namespace, schema, data, acl={}, id='') {
+  async create(namespace, schema, data, id='', acl={}) {
     acl.owner = this.user.id;
     const schemaInfo = await this.getSchema(namespace, schema);
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
