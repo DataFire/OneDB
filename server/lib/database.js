@@ -192,6 +192,16 @@ class DatabaseForUser {
     return result;
   }
 
+  async setACL(namespace, schema, id, acl) {
+    const existing = await this.get(namespace, schema, id, 'acl');
+    if (!existing) throw new Error(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    const schemaInfo = await this.getSchema(namespace, schema);
+    existing.acl = acl;
+    await this.validate(schemaInfo.data, existing);
+    const col = this.getCollection(namespace, schema);
+    const result = await col.update({id}, {$set :{acl}});
+  }
+
   async destroy(namespace, schema, id) {
     const existing = await this.get(namespace, schema, id, 'destroy');
     if (!existing) throw new Error(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
