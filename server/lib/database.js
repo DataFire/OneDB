@@ -191,6 +191,13 @@ class DatabaseForUser {
     const result = await col.update({id}, {$set: {data: util.encodeDocument(data)}});
     return result;
   }
+
+  async destroy(namespace, schema, id) {
+    const existing = await this.get(namespace, schema, id, 'destroy');
+    if (!existing) throw new Error(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    const col = this.getCollection(namespace, schema);
+    const result = await col.remove({id}, {justOne: true});
+  }
 }
 
 module.exports = Database;
