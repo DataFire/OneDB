@@ -26,8 +26,9 @@ const ACL_SCHEMA = {
     owner: IDENTITY_SCHEMA,
     read:  ACL_LIST_SCHEMA,
     write: ACL_LIST_SCHEMA,
-    destroy: ACL_LIST_SCHEMA,
     append: ACL_LIST_SCHEMA,
+    destroy: ACL_LIST_SCHEMA,
+    acl: ACL_LIST_SCHEMA,
   },
 }
 
