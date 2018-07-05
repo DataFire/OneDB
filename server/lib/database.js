@@ -7,6 +7,8 @@ const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
 const STAGING_KEY = 'staging';
 
+const START_TIME = (new Date()).toISOString();
+
 const USER_KEYS = {
   all: '_all',
   system: '_system',
@@ -17,12 +19,19 @@ const SYSTEM_ACL = {
   read: [USER_KEYS.all],
 };
 
+const SYSTEM_INFO = {
+  created: START_TIME,
+  updated: START_TIME,
+  created_by: USER_KEYS.system,
+}
+
 const CORE_OBJECTS = [{
   namespace: 'core',
   schema: 'user',
   document: {
     id: USER_KEYS.system,
     acl: SYSTEM_ACL,
+    info: SYSTEM_INFO,
     data: {
       publicKey: '',
     }
@@ -33,6 +42,7 @@ const CORE_OBJECTS = [{
   document: {
     id: 'core',
     acl: SYSTEM_ACL,
+    info: SYSTEM_INFO,
     data: {
       id: 'core',
       versions: [{
@@ -51,6 +61,7 @@ const CORE_OBJECTS = [{
   document: {
     id: 'schema',
     acl: SYSTEM_ACL,
+    info: SYSTEM_INFO,
     data: require('./schemas/schema'),
   }
 }]
@@ -126,6 +137,8 @@ class DatabaseForUser {
     if (err) throw new Error(err);
     err = validate.validators.acl(obj.acl);
     if (err) throw new Error(err);
+    err = validate.validators.info(obj.info);
+    if (err) throw new Error(err);
   }
 
   async getAll(namespace, schema, query={}, access='read') {
@@ -175,7 +188,13 @@ class DatabaseForUser {
     }
     const existing = await this.get(namespace, schema, id);
     if (existing) throw new Error(`Item ${namespace}/${schema}/${id} already exists`);
-    const obj = {id, data, acl};
+    const time = (new Date()).toISOString();
+    const info = {
+      created: time,
+      updated: time,
+      created_by: this.user.id,
+    }
+    const obj = {id, data, info, acl};
     await this.validate(schemaInfo.data, obj);
     const col = this.getCollection(namespace, schema);
     let result = await col.insert(util.encodeDocument([obj]));
@@ -186,9 +205,11 @@ class DatabaseForUser {
     const existing = await this.get(namespace, schema, id, 'update');
     if (!existing) throw new Error(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
     const schemaInfo = await this.getSchema(namespace, schema);
-    await this.validate(schemaInfo.data, {id, data, acl: {owner: 'dummy'}});
+    existing.data = data;
+    existing.info.updated = (new Date()).toISOString();
+    await this.validate(schemaInfo.data, existing);
     const col = this.getCollection(namespace, schema);
-    const result = await col.update({id}, {$set: {data: util.encodeDocument(data)}});
+    const result = await col.update({id}, {$set: {data: util.encodeDocument(existing.data), info: existing.info}});
     return result;
   }
 

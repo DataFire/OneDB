@@ -7,33 +7,9 @@ const REGEX = {
   namespace: WORDY_REGEX,
 }
 
-const IDENTITY_SCHEMA = {
-  type: 'string',
-  minLength: 2,
-  maxLength: 100,
-}
-
-const ACL_LIST_SCHEMA = {
-  type: 'array',
-  items: IDENTITY_SCHEMA,
-}
-
-const ACL_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['owner'],
-  properties: {
-    owner: IDENTITY_SCHEMA,
-    read:  ACL_LIST_SCHEMA,
-    write: ACL_LIST_SCHEMA,
-    append: ACL_LIST_SCHEMA,
-    destroy: ACL_LIST_SCHEMA,
-    acl: ACL_LIST_SCHEMA,
-  },
-}
-
-let ajvForACL = new Ajv();
-let validateACL = ajvForACL.compile(ACL_SCHEMA);
+let ajvCore = new Ajv();
+let validateACL = ajvCore.compile(require('./schemas/acl'));
+let validateInfo = ajvCore.compile(require('./schemas/info'));
 
 let sendError = module.exports.sendError = (res, message="Unknown error", details=undefined, statusCode=400) => {
   res.status(statusCode).json({error: message, details});
@@ -67,7 +43,11 @@ let validators = module.exports.validators = {
   },
   acl: acl => {
     let isValid = validateACL(acl);
-    if (!isValid) return "ACL is invalid. " + ajvForACL.errorsText(validateACL.errors);
+    if (!isValid) return "ACL is invalid. " + ajvCore.errorsText(validateACL.errors);
+  },
+  info: info => {
+    let isValid = validateInfo(info);
+    if (!isValid) return "Info is invalid. " + ajvCore.errorsText(validateInfo.errors);
   }
 }
 
