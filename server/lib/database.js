@@ -1,20 +1,7 @@
 const mongodb = require('mongodb');
-const jsonSchemaSchema = JSON.parse(JSON.stringify(require('ajv/lib/refs/json-schema-draft-07.json')));
 const randomstring = require("randomstring");
 const validate = require('./validate');
 const util = require('./util');
-
-function fixCoreSchema(schema) {
-  if (typeof schema !== 'object') return;
-  if (Array.isArray(schema)) return schema.forEach(fixCoreSchema);
-  if (schema.$ref === '#') schema.$ref = '#/definitions/jsonSchema';
-  for (let key in schema) fixCoreSchema(schema[key]);
-}
-fixCoreSchema(jsonSchemaSchema);
-const jsonSchemaDefinitions = JSON.parse(JSON.stringify(jsonSchemaSchema.definitions));
-jsonSchemaDefinitions.jsonSchema = jsonSchemaSchema;
-delete jsonSchemaSchema.$id;
-delete jsonSchemaSchema.definitions;
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
@@ -30,39 +17,6 @@ const SYSTEM_ACL = {
   owner: USER_KEYS.system,
   read: [USER_KEYS.all],
 };
-
-const CORE_TYPES = [{
-  id: 'namespace',
-  schema: {
-    type: 'object',
-    properties: {
-      id: {type: 'string'},
-      versions: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            version: {type: 'string'},
-            types: {
-              type: 'object',
-              additionalProperties: {$ref: '#/core/type/type'}
-            }
-          }
-        }
-      },
-    },
-    additionalProperties: false,
-  }
-}, {
-  id: 'user',
-  schema: {
-    type: 'object',
-    properties: {
-      publicKey: {type: 'string'},
-    },
-    additionalProperties: false,
-  },
-}];
 
 const CORE_OBJECTS = [{
   namespace: 'core',
@@ -100,19 +54,20 @@ const CORE_OBJECTS = [{
     acl: SYSTEM_ACL,
     data: {
       id: 'type',
-      schema: {
-        type: 'object',
-        definitions: jsonSchemaDefinitions,
-        properties: {
-          id: {type: 'string'},
-          idField: {type: 'string', default: 'id'},
-          schema: jsonSchemaSchema,
-        },
-        additionalProperties: false,
-      }
+      schema: require('./schemas/type'),
     }
   }
 }]
+
+
+
+const CORE_TYPES = [{
+  id: 'namespace',
+  schema: require('./schemas/namespace'),
+}, {
+  id: 'user',
+  schema: require('./schemas/user'),
+}];
 
 class Database {
   constructor(url) {
