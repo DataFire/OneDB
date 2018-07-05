@@ -189,6 +189,27 @@ describe('Database', () => {
     await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
+  it('should allow transfer of ownership', async () => {
+    const userDB = await database.user(USERS[1].id);
+    await userDB.setACL('foo', 'thing', 'thing2', {owner: USERS[0].id, read: ['_all']});
+    const item = await userDB.get('foo', 'thing', 'thing2');
+    expect(item.acl.owner).to.equal(USERS[0].id);
+  });
+
+  it('should not allow second user to alter thing2 after owner transfer', async () => {
+    const userDB = await database.user(USERS[1].id);
+    await expectError(userDB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {read: ['_all']}), /User .* cannot update ACL for foo\/thing\/thing2/);
+    await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
+  });
+
+  it('should allow first user to alter thing2 after owner transfer', async () => {
+    const userDB = await database.user(USERS[0].id);
+    await userDB.update('foo', 'thing', 'thing2', "This is a new string");
+    const item = await userDB.get('foo', 'thing', 'thing2');
+    expect(item.data).to.equal("This is a new string");
+  })
+
   /** TODO:
    *  Should not allow removing version from namespace
    *  Should not allow changing schema/namespace ID
