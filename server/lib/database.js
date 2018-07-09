@@ -12,11 +12,30 @@ const START_TIME = (new Date()).toISOString();
 const USER_KEYS = {
   all: '_all',
   system: '_system',
+  owner: '_owner',
+}
+
+const DEFAULT_ACL = {
+  read: [USER_KEYS.owner],
+  write: [USER_KEYS.owner],
+  append: [USER_KEYS.owner],
+  destroy: [USER_KEYS.owner],
+  modify_read: [USER_KEYS.owner],
+  modify_write: [USER_KEYS.owner],
+  modify_append: [USER_KEYS.owner],
+  modify_destroy: [USER_KEYS.owner],
 }
 
 const SYSTEM_ACL = {
   owner: USER_KEYS.system,
   read: [USER_KEYS.all],
+  write: [USER_KEYS.system],
+  append: [USER_KEYS.system],
+  destroy: [USER_KEYS.system],
+  modify_read: [USER_KEYS.system],
+  modify_write: [USER_KEYS.system],
+  modify_append: [USER_KEYS.system],
+  modify_destroy: [USER_KEYS.system],
 };
 
 const SYSTEM_INFO = {
@@ -30,8 +49,8 @@ const CORE_OBJECTS = [{
   schema: 'user',
   document: {
     id: USER_KEYS.system,
-    acl: SYSTEM_ACL,
     info: SYSTEM_INFO,
+    acl: SYSTEM_ACL,
     data: {
       publicKey: '',
     }
@@ -41,16 +60,33 @@ const CORE_OBJECTS = [{
   schema: 'namespace',
   document: {
     id: 'core',
-    acl: SYSTEM_ACL,
     info: SYSTEM_INFO,
+    acl: SYSTEM_ACL,
     data: {
       id: 'core',
       versions: [{
         verision: '0',
-        schemas: {
-          schema: {$ref: '/core/schema/schema'},
-          namespace: {$ref: '/core/schema/namespace'},
-          user: {$ref: '/core/schema/user'},
+        types: {
+          user: {
+            schema: {$ref: '/data/core/schema/user'},
+            initial_acl: {
+              read: [USER_KEYS.all],
+              write: [USER_KEYS.owner],
+            }
+          },
+          schema: {
+            schema: {$ref: '/data/core/schema/schema'},
+            initial_acl: {
+              read: [USER_KEYS.all],
+            }
+          },
+          namespace: {
+            schema: {$ref: '/data/core/schema/namespace'},
+            initial_acl: {
+              read: [USER_KEYS.all],
+              write: [USER_KEYS.owner],  // TODO: change this to append
+            }
+          },
         },
       }],
     }
@@ -60,8 +96,8 @@ const CORE_OBJECTS = [{
   schema: 'schema',
   document: {
     id: 'schema',
-    acl: SYSTEM_ACL,
     info: SYSTEM_INFO,
+    acl: SYSTEM_ACL,
     data: require('./schemas/schema'),
   }
 }]
@@ -92,9 +128,9 @@ class Database {
     }
     let db = await this.user(USER_KEYS.system);
     for (let type of CORE_TYPES) {
-      let existing = await db.get('core', 'schema', type.id, SYSTEM_ACL);
+      let existing = await db.get('core', 'schema', type.id);
       if (!existing) {
-        existing = await db.create('core', 'schema', type.schema, type.id, SYSTEM_ACL);
+        existing = await db.create('core', 'schema', type.schema, type.id);
       }
     }
   }
@@ -141,27 +177,30 @@ class DatabaseForUser {
     if (err) throw new Error(err);
   }
 
-  async getAll(namespace, schema, query={}, access='read') {
-    const col = this.getCollection(namespace, schema);
-    query.$or = [{
-      'acl.owner': this.user.id,
-    }, {}]
-    query.$or[1]['acl.' + access] = {$in: [this.user.id, USER_KEYS.all]};
-    let arr = await col.find(query).toArray();
-    let decoded = util.decodeDocument(arr);
-    return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
-  }
-
   async getSchema(namespace, schema) {
-    const ns = await this.get('core', 'namespace', namespace);
-    if (!ns) throw new Error(`Namespace ${namespace} not found`);
-    const nsVersion = ns.data.versions[ns.data.versions.length - 1];
-    if (!nsVersion) throw new Error(`Namespace ${namespace}@${ns.data.versions.length - 1} not found`);
-    const schemaRef = (nsVersion.schemas[schema] || {$ref: ''}).$ref.split('/').pop();
+    const namespaceInfo = await this.get('core', 'namespace', namespace);
+    if (!namespaceInfo) throw new Error(`Namespace ${namespace} not found`);
+    const nsVersion = namespaceInfo.data.versions[namespaceInfo.data.versions.length - 1];
+    if (!nsVersion) throw new Error(`Namespace ${namespace}@${namespaceInfo.data.versions.length - 1} not found`);
+    const schemaRef = (nsVersion.types[schema] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
     if (!schemaRef) throw new Error(`Schema ${namespace}/${schema} not found`);
     const schemaInfo = await this.get('core', 'schema', schemaRef);
     if (!schemaInfo) throw new Error(`Item core/schema/${schemaRef} not found`);
-    return schemaInfo;
+    return {schemaInfo, namespaceInfo: nsVersion};
+  }
+
+  async getAll(namespace, schema, query={}, access='read') {
+    const col = this.getCollection(namespace, schema);
+    if (access !== 'force') {
+      const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}]};
+      ownerQuery.$and[1]['acl.' + access] = {$in: [USER_KEYS.owner]};
+      const accessQuery = {};
+      accessQuery['acl.' + access] = {$in: [this.user.id, USER_KEYS.all]};
+      query.$or = [ownerQuery, accessQuery];
+    }
+    let arr = await col.find(query).toArray();
+    let decoded = util.decodeDocument(arr);
+    return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
   }
 
   async get(namespace, schema, id, access='read') {
@@ -171,29 +210,30 @@ class DatabaseForUser {
     return arr[0];
   }
 
-  async create(namespace, schema, data, id='', acl={}) {
-    acl.owner = this.user.id;
-    const schemaInfo = await this.getSchema(namespace, schema);
+  async create(namespace, schema, data, id='') {
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
     let err = validate.validators.itemID(id);
     if (err) throw new Error(err);
+    const existing = await this.get(namespace, schema, id);
+    if (existing) throw new Error(`Item ${namespace}/${schema}/${id} already exists`);
+    let acl = JSON.parse(JSON.stringify(Object.assign({}, DEFAULT_ACL, namespaceInfo.types[schema].initial_acl)));
+    acl.owner = this.user.id;
     if (namespace === 'core') {
-      acl.read = [USER_KEYS.all];
       if (schema === 'schema') {
-        acl.owner = USER_KEYS.system;
         util.fixSchemaRefs(data, id);
       } else if (schema === 'user') {
         acl.owner = id;
       }
     }
-    const existing = await this.get(namespace, schema, id);
-    if (existing) throw new Error(`Item ${namespace}/${schema}/${id} already exists`);
+
     const time = (new Date()).toISOString();
     const info = {
       created: time,
       updated: time,
       created_by: this.user.id,
     }
+
     const obj = {id, data, info, acl};
     await this.validate(schemaInfo.data, obj);
     const col = this.getCollection(namespace, schema);
@@ -202,9 +242,9 @@ class DatabaseForUser {
   }
 
   async update(namespace, schema, id, data) {
-    const existing = await this.get(namespace, schema, id, 'update');
+    const existing = await this.get(namespace, schema, id, 'write');
     if (!existing) throw new Error(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
-    const schemaInfo = await this.getSchema(namespace, schema);
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
     existing.data = data;
     existing.info.updated = (new Date()).toISOString();
     await this.validate(schemaInfo.data, existing);
@@ -214,13 +254,26 @@ class DatabaseForUser {
   }
 
   async setACL(namespace, schema, id, acl) {
-    const existing = await this.get(namespace, schema, id, 'acl');
+    const existing = await this.get(namespace, schema, id, 'force');
     if (!existing) throw new Error(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
-    const schemaInfo = await this.getSchema(namespace, schema);
-    existing.acl = acl;
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
+    const isCurrentOwner = existing.acl.owner === this.user.id;
+    for (let key in acl) {
+      if (key === 'owner') {
+        if (!isCurrentOwner) throw new Error(`User ${this.user.id} cannot change owner for ${namespace}/${schema}/${id}`);
+      } else {
+        let aclKey = key.startsWith('modify_') ? key : 'modify_' + key;
+        let list = existing.acl[aclKey] || [];
+        let isAllowed = (list.indexOf(USER_KEYS.owner) !== -1 && isCurrentOwner)
+              || list.indexOf(this.user.id) !== -1
+              || list.indexOf(USER_KEYS.all) !== -1
+        if (!isAllowed) throw new Error(`User ${this.user.id} is not allowed to modify acl.${key} for ${namespace}/${schema}/${id}`);
+      }
+      existing.acl[key] = acl[key];
+    }
     await this.validate(schemaInfo.data, existing);
     const col = this.getCollection(namespace, schema);
-    const result = await col.update({id}, {$set :{acl}});
+    const result = await col.update({id}, {$set :{acl: existing.acl}});
   }
 
   async destroy(namespace, schema, id) {

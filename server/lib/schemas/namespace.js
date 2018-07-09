@@ -1,16 +1,24 @@
 module.exports = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    id: {type: 'string'},
     versions: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
           version: {type: 'string'},
-          schemas: {
+          types: {
             type: 'object',
-            additionalProperties: {$ref: '#/core/schema/schema'}
+            additionalProperties: {
+              type: 'object',
+              required: ['schema'],
+              additionalProperties: false,
+              properties: {
+                schema: {$ref: '/data/core/schema/schema'},
+                initial_acl: {$ref: '/data/core/schema/acl'},
+              }
+            }
           }
         }
       }

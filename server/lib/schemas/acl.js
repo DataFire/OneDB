@@ -19,7 +19,10 @@ const ACL_SCHEMA = module.exports = {
     write: ACL_LIST_SCHEMA,
     append: ACL_LIST_SCHEMA,
     destroy: ACL_LIST_SCHEMA,
-    acl: ACL_LIST_SCHEMA,
+    modify_read: ACL_LIST_SCHEMA,
+    modify_write: ACL_LIST_SCHEMA,
+    modify_append: ACL_LIST_SCHEMA,
+    modify_destroy: ACL_LIST_SCHEMA,
   },
 }
 
