@@ -130,13 +130,19 @@ const CORE_TYPES = [{
   schema: require('./schemas/user_private'),
 }];
 
+const fail = function(message, statusCode) {
+  let err = new Error(message);
+  if (statusCode) err.statusCode = statusCode;
+  return Promise.reject(err);
+}
+
 class Database {
   constructor(url) {
     this.url = url;
   }
 
   async initialize() {
-    if (this.client) throw new Error("Database already initialized");
+    if (this.client) return fail("Database already initialized");
     this.client = await mongodb.MongoClient.connect(this.url, {useNewUrlParser: true});
     let coreObjects = JSON.parse(JSON.stringify(CORE_OBJECTS));
     for (let obj of coreObjects) {
@@ -158,28 +164,28 @@ class Database {
   }
 
   async user(user) {
-    if (!this.client) throw new Error("Database not initialized");
+    if (!this.client) return fail("Database not initialized");
     const db = new DatabaseForUser({client: this.client, user});
     await db.initialize();
     return db;
   }
 
   async signIn(email, password) {
-    if (!this.client) throw new Error("Database not initialized");
+    if (!this.client) return fail("Database not initialized");
     const db = await this.user(USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
-    if (!existing.length) throw new Error(`User ${email} not found`);
+    if (!existing.length) return fail(`User ${email} not found`);
     const user = existing[0].data;
     const isValid = await util.checkPassword(password, user.hash, user.salt);
-    if (!isValid) throw new Error(`Invalid password for ${email}`);
+    if (!isValid) return fail(`Invalid password for ${email}`);
     return user;
   }
 
   async createUser(email, password) {
-    if (!this.client) throw new Error("Database not initialized");
+    if (!this.client) return fail("Database not initialized");
     const db = await this.user(USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
-    if (existing.length) throw new Error("A user with that email address already exists");
+    if (existing.length) return fail("A user with that email address already exists");
     const user = await db.create('core', 'user', {publicKey: ''});
     const creds = await util.computeCredentials(password);
     creds.email = email;
@@ -197,8 +203,8 @@ class DatabaseForUser {
 
   async initialize() {
     let users = await this.getCollection('core', 'user').find({id: this.userID}).toArray();
-    if (!users || !users[0]) throw new Error(`User ${this.userID} not found`);
-    if (users.length > 1) throw new Error("Multiple users found for ID " + this.userID);
+    if (!users || !users[0]) return fail(`User ${this.userID} not found`);
+    if (users.length > 1) return fail("Multiple users found for ID " + this.userID);
     this.user = users[0];
   }
 
@@ -210,27 +216,27 @@ class DatabaseForUser {
   async validate(obj, schema=null) {
     if (schema) {
       let err = validate.validators.data(obj.data, schema);
-      if (err) throw new Error(err);
+      if (err) return fail(err);
     }
     if (obj.acl) {
       let err = validate.validators.acl(obj.acl);
-      if (err) throw new Error(err);
+      if (err) return fail(err);
     }
     if (obj.info) {
       let err = validate.validators.info(obj.info);
-      if (err) throw new Error(err);
+      if (err) return fail(err);
     }
   }
 
   async getSchema(namespace, schema) {
     const namespaceInfo = await this.get('core', 'namespace', namespace);
-    if (!namespaceInfo) throw new Error(`Namespace ${namespace} not found`);
+    if (!namespaceInfo) return fail(`Namespace ${namespace} not found`);
     const nsVersion = namespaceInfo.data.versions[namespaceInfo.data.versions.length - 1];
-    if (!nsVersion) throw new Error(`Namespace ${namespace}@${namespaceInfo.data.versions.length - 1} not found`);
+    if (!nsVersion) return fail(`Namespace ${namespace}@${namespaceInfo.data.versions.length - 1} not found`);
     const schemaRef = (nsVersion.types[schema] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
-    if (!schemaRef) throw new Error(`Schema ${namespace}/${schema} not found`);
+    if (!schemaRef) return fail(`Schema ${namespace}/${schema} not found`);
     const schemaInfo = await this.get('core', 'schema', schemaRef);
-    if (!schemaInfo) throw new Error(`Item core/schema/${schemaRef} not found`);
+    if (!schemaInfo) return fail(`Item core/schema/${schemaRef} not found`);
     return {schemaInfo, namespaceInfo: nsVersion};
   }
 
@@ -259,7 +265,7 @@ class DatabaseForUser {
 
   async get(namespace, schema, id, access='read') {
     const arr = await this.getAll(namespace, schema, {id}, access);
-    if (arr.length > 1) throw new Error(`Multiple items found for ${namespace}/${schema}/${id}`);
+    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
     if (!arr.length) return;
     return arr[0];
   }
@@ -268,9 +274,9 @@ class DatabaseForUser {
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
     let err = validate.validators.itemID(id);
-    if (err) throw new Error(err);
+    if (err) return fail(err);
     const existing = await this.get(namespace, schema, id);
-    if (existing) throw new Error(`Item ${namespace}/${schema}/${id} already exists`);
+    if (existing) return fail(`Item ${namespace}/${schema}/${id} already exists`);
     let acl = JSON.parse(JSON.stringify(Object.assign({}, DEFAULT_ACL, namespaceInfo.types[schema].initial_acl)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
@@ -306,8 +312,8 @@ class DatabaseForUser {
         'info.updated': (new Date()).toISOString(),
       },
     });
-    if (result.result.nModified === 0) throw new Error(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
-    if (result.result.nModified > 1) throw new Error(`Multiple items found for ${namespace}/${schema}/${id}`);
+    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
   }
 
   async setACL(namespace, schema, id, acl) {
@@ -329,8 +335,8 @@ class DatabaseForUser {
     query = this.buildQuery(query, necessaryPermissions);
     const col = this.getCollection(namespace, schema);
     const result = await col.update(query, update);
-    if (result.result.nModified === 0) throw new Error(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
-    if (result.result.nModified > 1) throw new Error(`Multiple items found for ${namespace}/${schema}/${id}`);
+    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
   }
 
   async destroy(namespace, schema, id) {
@@ -338,7 +344,7 @@ class DatabaseForUser {
     query = this.buildQuery(query, 'destroy');
     const col = this.getCollection(namespace, schema);
     const result = await col.remove(query, {justOne: true});
-    if (result.result.n === 0) throw new Error(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
   }
 }
 

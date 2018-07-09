@@ -21,6 +21,17 @@ const requireLogin = function(req, res, next) {
   res.status(401).json({message: "You need to log in to do that"});
 }
 
+const errorGuard = function(fn) {
+  return async function(req, res, next) {
+    try {
+      await fn(req, res, next);
+    } catch (err) {
+      res.status(err.statusCode || 500);
+      res.json({message: err.message || "Unknown error"});
+    }
+  }
+}
+
 module.exports = function(database) {
   const router = module.exports = new express.Router();
   router.use(bodyParser.json(config.maxDataSize));
@@ -39,14 +50,14 @@ module.exports = function(database) {
   /**
    *  Retrieve prep
    */
-  router.get([ITEM_PATH, ACL_PATH, INFO_PATH], async (req, res, next) => {
+  router.get([ITEM_PATH, ACL_PATH, INFO_PATH], errorGuard(async (req, res, next) => {
     req.item = await req.db.get(req.params.namespace, req.params.typeID, req.params.itemID);
     if (!req.item) {
       res.status(404).json({message: `Item ${req.params.namespace}/${req.params.typeID}/${req.params.itemID} not found`});
     } else {
       next();
     }
-  });
+  }));
 
   /**
    * Retrieve Data
@@ -72,53 +83,46 @@ module.exports = function(database) {
   /**
    *  List
    */
-  router.get(TYPE_PATH, async (req, res) => {
+  router.get(TYPE_PATH, errorGuard(async (req, res) => {
     // TODO: validate search params
     let items = req.db.getAll(req.params.namespace, req.params.typeID, req.query);
     items = items.map(i => i.data);
     res.json(items);
-  });
+  }));
 
-  router.use(requireLogin);
+  router.use(errorGuard(requireLogin));
 
   /**
    *  Create
    */
-  router.post([TYPE_PATH, ITEM_PATH], async (req, res) => {
+  router.post([TYPE_PATH, ITEM_PATH], errorGuard(async (req, res) => {
     await req.db.create(req.params.namespace, req.params.typeID, req.body, req.params.itemID);
     res.json("Success");
-  });
+  }));
 
   /**
    * Update
    */
-  router.put(ITEM_PATH, async (req, res) => {
+  router.put(ITEM_PATH, errorGuard(async (req, res) => {
     await req.db.update(req.params.namespace, req.params.typeID, req.params.itemID, req.body)
     res.json("Success");
-  });
+  }));
 
   /**
    * Update ACL
    */
-  router.put(ACL_PATH, async (req, res) => {
+  router.put(ACL_PATH, errorGuard(async (req, res) => {
     await req.db.setACL(req.params.namespace, req.params.typeID, req.params.itemID, req.body);
     res.json("Success");
-  });
+  }));
 
   /**
    * Destroy
    */
-  router.delete(ITEM_PATH, async (req, res) => {
+  router.delete(ITEM_PATH, errorGuard(async (req, res) => {
     await req.db.destroy(req.params.namespace, req.params.typeID, req.params.itemID);
     res.json("Succes");
-  });
-
-  router.use((err, req, res, next) => {
-    if (err.statusCode) res.status(err.statusCode);
-    else res.status(500);
-    console.log(err);
-    res.json({message: err.message || "Unknown error"});
-  });
+  }));
 
   return router;
 }
