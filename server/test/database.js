@@ -27,7 +27,6 @@ describe('Database', () => {
     const uri = await mongod.getConnectionString();
     database = new Database(uri);
     await database.initialize();
-    console.log('initialized');
     systemDB = await database.user('_system');
   });
 
