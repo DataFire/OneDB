@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 const DOLLAR = "\uFF04";
 const DOT = "\uFF0E";
 const KEY_REPLACEMENTS = {
@@ -65,4 +67,39 @@ module.exports.fixSchemaRefs = function(schema, rootID) {
   } else {
     for (let key in schema) module.exports.fixSchemaRefs(schema[key], rootID);
   }
+}
+
+const SALT_LENGTH = 32;
+const VERIFICATION_ID_LENGTH = 16;
+const ITERATIONS = 25000;
+const KEY_LENGTH = 512;
+const DIGEST_ALGO = 'sha256'
+
+module.exports.computeCredentials = (password) => {
+  return new Promise((resolve, reject) => {
+    let result = {};
+    crypto.randomBytes(SALT_LENGTH, (err, buf) => {
+      if (err) return reject(err);
+      result.salt = buf.toString('hex');
+      crypto.randomBytes(VERIFICATION_ID_LENGTH, (err, buf) => {
+        if (err) return reject(err);
+        result.verificationID = buf.toString('hex');
+        crypto.pbkdf2(password, result.salt, ITERATIONS, KEY_LENGTH, DIGEST_ALGO, (err, hashRaw) => {
+          if (err) return reject(err);
+          result.hash = new Buffer(hashRaw, 'binary').toString('hex');
+          resolve(result);
+        });
+      });
+    });
+  });
+}
+
+module.exports.checkPassword = (password, hash, salt) => {
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2(password, salt, ITERATIONS, KEY_LENGTH, DIGEST_ALGO, (err, hashRaw) => {
+      if (err) return reject(err);
+      let compHash = new Buffer(hashRaw, 'binary').toString('hex');
+      resolve(compHash === hash);
+    })
+  });
 }

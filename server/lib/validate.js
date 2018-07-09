@@ -64,6 +64,7 @@ let middleware = module.exports.middleware = (loc, name) => {
 
 module.exports.namespace = middleware('params', 'namespace');
 module.exports.typeID = middleware('params', 'typeID');
+module.exports.itemID = middleware('params', 'itemID');
 
 module.exports.type = (req, res, next) => {
   if (!req.body) return sendError(res, "You must include a body in your request");

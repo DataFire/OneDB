@@ -38,6 +38,8 @@ const SYSTEM_ACL = {
   modify_destroy: [USER_KEYS.system],
 };
 
+const PRIVATE_ACL = Object.assign({}, SYSTEM_ACL, {read: [USER_KEYS.system]});
+
 const SYSTEM_INFO = {
   created: START_TIME,
   updated: START_TIME,
@@ -49,6 +51,17 @@ const CORE_OBJECTS = [{
   schema: 'user',
   document: {
     id: USER_KEYS.system,
+    info: SYSTEM_INFO,
+    acl: SYSTEM_ACL,
+    data: {
+      publicKey: '',
+    }
+  }
+}, {
+  namespace: 'core',
+  schema: 'user',
+  document: {
+    id: USER_KEYS.all,
     info: SYSTEM_INFO,
     acl: SYSTEM_ACL,
     data: {
@@ -87,6 +100,10 @@ const CORE_OBJECTS = [{
               write: [USER_KEYS.owner],  // TODO: change this to append
             }
           },
+          user_private: {
+            schema: {$ref: '/data/core/schema/user_private'},
+            initial_acl: PRIVATE_ACL,
+          }
         },
       }],
     }
@@ -108,6 +125,9 @@ const CORE_TYPES = [{
 }, {
   id: 'user',
   schema: require('./schemas/user'),
+}, {
+  id: 'user_private',
+  schema: require('./schemas/user_private'),
 }];
 
 class Database {
@@ -118,7 +138,8 @@ class Database {
   async initialize() {
     if (this.client) throw new Error("Database already initialized");
     this.client = await mongodb.MongoClient.connect(this.url, {useNewUrlParser: true});
-    for (let obj of CORE_OBJECTS) {
+    let coreObjects = JSON.parse(JSON.stringify(CORE_OBJECTS));
+    for (let obj of coreObjects) {
       let coll = this.client.db(DB_NAME).collection(obj.namespace + '-' + obj.schema);
       let existing = await coll.find({id: obj.document.id}).toArray();
       if (!existing[0]) {
@@ -127,7 +148,8 @@ class Database {
       }
     }
     let db = await this.user(USER_KEYS.system);
-    for (let type of CORE_TYPES) {
+    let coreTypes = JSON.parse(JSON.stringify(CORE_TYPES));
+    for (let type of coreTypes) {
       let existing = await db.get('core', 'schema', type.id);
       if (!existing) {
         existing = await db.create('core', 'schema', type.schema, type.id);
@@ -136,16 +158,33 @@ class Database {
   }
 
   async user(user) {
-    let db = new DatabaseForUser({client: this.client, user});
+    if (!this.client) throw new Error("Database not initialized");
+    const db = new DatabaseForUser({client: this.client, user});
     await db.initialize();
     return db;
   }
 
-  async createUser(publicKey) {
-    let db = await this.user(USER_KEYS.system);
-    let existing = await db.getCollection('core', 'user').find({'data.publicKey': publicKey}).toArray();
-    if (existing.length) throw new Error("Public key already exists");
-    let user = await db.create('core', 'user', {publicKey});
+  async signIn(email, password) {
+    if (!this.client) throw new Error("Database not initialized");
+    const db = await this.user(USER_KEYS.system);
+    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
+    if (!existing.length) throw new Error(`User ${email} not found`);
+    const user = existing[0].data;
+    const isValid = await util.checkPassword(password, user.hash, user.salt);
+    if (!isValid) throw new Error(`Invalid password for ${email}`);
+    return user;
+  }
+
+  async createUser(email, password) {
+    if (!this.client) throw new Error("Database not initialized");
+    const db = await this.user(USER_KEYS.system);
+    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
+    if (existing.length) throw new Error("A user with that email address already exists");
+    const user = await db.create('core', 'user', {publicKey: ''});
+    const creds = await util.computeCredentials(password);
+    creds.email = email;
+    creds.id = user.id;
+    const userPrivate = await db.create('core', 'user_private', creds);
     return user;
   }
 }
