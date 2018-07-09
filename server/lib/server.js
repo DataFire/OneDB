@@ -1,37 +1,49 @@
 const express = require('express');
 const RateLimit = require('express-rate-limit');
-const args = require('yargs').argv;
-const packageInfo = require('./package.json');
+const packageInfo = require('../package.json');
 const crud = require('./crud');
-const config = require('./config');
+const defaultConfig = require('./config');
 
-const app = express();
+class Server {
+  constructor(config={}) {
+    config = Object.assign({}, defaultConfig, config);
+    config.rateLimit = Object.assign({}, defaultConfig.rateLimit, config.rateLimit);
 
-app.enable('trust proxy');
+    this.app = express();
 
-app.use(new RateLimit(config.rateLimit.all));
+    this.app.enable('trust proxy');
+    this.app.use(new RateLimit(config.rateLimit.all));
 
-app.get('/ping', (req, res) => {
-  res.json('pong');
-});
+    this.app.get('/ping', (req, res) => {
+      res.json('pong');
+    });
 
-app.get('/info', (req, res) => {
-  res.json({version: packageInfo.version});
-});
+    this.app.get('/info', (req, res) => {
+      res.json({version: packageInfo.version});
+    });
 
-let getRateLimit = new RateLimit(config.rateLimit.getData);
-let mutateRateLimit = new RateLimit(config.rateLimit.mutateData);
-app.use((req, res, next) => {
-  if (req.method === 'GET') {
-    getRateLimit(req, res, next);
-  } else {
-    mutateRateLimit(req, res, next);
+    let getRateLimit = new RateLimit(config.rateLimit.getData);
+    let mutateRateLimit = new RateLimit(config.rateLimit.mutateData);
+    this.app.use((req, res, next) => {
+      if (req.method === 'GET') {
+        getRateLimit(req, res, next);
+      } else {
+        mutateRateLimit(req, res, next);
+      }
+    })
+
+    this.app.use('/data', crud);
   }
-})
 
-app.use('/data', crud);
+  async listen(port) {
+    return new Promise((resolve, reject) => {
+      this.server = this.app.listen(port, resolve);
+    });
+  }
 
-args.port = args.port || 3000;
-app.listen(args.port, () => {
-  console.log("FreeDB listening on port " + args.port);
-});
+  close() {
+    this.server.close();
+  }
+}
+
+module.exports = Server;

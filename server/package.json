@@ -12,11 +12,12 @@
     "ajv": "^6.5.1",
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
+    "express-rate-limit": "^2.11.0",
     "mongodb": "^3.1.0",
-    "randomstring": "^1.1.5",
-    "yargs": "^11.0.0"
+    "randomstring": "^1.1.5"
   },
   "devDependencies": {
+    "axios": "^0.18.0",
     "chai": "^4.1.2",
     "chai-as-promised": "^7.1.1",
     "mocha": "^5.2.0",

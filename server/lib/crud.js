@@ -1,10 +1,11 @@
 const express = require('express');
-const router = module.exports = new express.Router();
+const bodyParser = require('body-parser');
 const validate = require('./validate');
 const config = require('./config');
 const Database = require('./database');
-const validate = require('./validate');
+
 const database = new Database(config.mongodb);
+const router = module.exports = new express.Router();
 
 router.use(bodyParser.json(config.maxDataSize));
 
