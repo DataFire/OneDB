@@ -4,7 +4,7 @@ The goal of the alpha release is a simple proof of concept. It leaves out many f
 * Access control
 * OAuth 2.0 support
 * Data migration
-* FreeDB desktop
+* FreeDB Desktop
 * Namespace versioning
 
 ## Security
@@ -17,17 +17,12 @@ The goal of the alpha release is a simple proof of concept. It leaves out many f
 * Add additional schema validation:
   * Keys must be alphanumeric
   * $refs are converted into IDs
-  * Illegal keys: `id`, `owner`, `created`, `updated`
 
 ## Data CRUD
-* Read/write operations can only be performed by owner
-* All operations signed by user
-* Reject operations with a timestamp off by more than X seconds
 * create
   * JSON schema validation
   * limits on size and number of docs
   * set `id`, `owner`, `created` fields
-    * `id` field should be deterministic (2-way?) hash of owner + timestamp
     * 8 alnum characters ~= 200 trillion possibilities
     * reject duplicate IDs
 * retrieve
