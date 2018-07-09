@@ -168,13 +168,19 @@ class DatabaseForUser {
     return this.client.db(DB_NAME).collection(collectionName);
   }
 
-  async validate(schema, obj) {
-    let err = validate.validators.data(obj.data, schema);
-    if (err) throw new Error(err);
-    err = validate.validators.acl(obj.acl);
-    if (err) throw new Error(err);
-    err = validate.validators.info(obj.info);
-    if (err) throw new Error(err);
+  async validate(obj, schema=null) {
+    if (schema) {
+      let err = validate.validators.data(obj.data, schema);
+      if (err) throw new Error(err);
+    }
+    if (obj.acl) {
+      let err = validate.validators.acl(obj.acl);
+      if (err) throw new Error(err);
+    }
+    if (obj.info) {
+      let err = validate.validators.info(obj.info);
+      if (err) throw new Error(err);
+    }
   }
 
   async getSchema(namespace, schema) {
@@ -189,15 +195,24 @@ class DatabaseForUser {
     return {schemaInfo, namespaceInfo: nsVersion};
   }
 
+  buildQuery(query={}, accesses='read') {
+    if (accesses !== 'force') {
+      query.$and = query.$and || [];
+      if (typeof accesses === 'string') accesses = [accesses];
+      accesses.forEach(access => {
+        const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}]};
+        ownerQuery.$and[1]['acl.' + access] = {$in: [USER_KEYS.owner]};
+        const accessQuery = {};
+        accessQuery['acl.' + access] = {$in: [this.user.id, USER_KEYS.all]};
+        query.$and.push({$or: [ownerQuery, accessQuery]});
+      });
+    }
+    return query;
+  }
+
   async getAll(namespace, schema, query={}, access='read') {
     const col = this.getCollection(namespace, schema);
-    if (access !== 'force') {
-      const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}]};
-      ownerQuery.$and[1]['acl.' + access] = {$in: [USER_KEYS.owner]};
-      const accessQuery = {};
-      accessQuery['acl.' + access] = {$in: [this.user.id, USER_KEYS.all]};
-      query.$or = [ownerQuery, accessQuery];
-    }
+    query = this.buildQuery(query, access);
     let arr = await col.find(query).toArray();
     let decoded = util.decodeDocument(arr);
     return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
@@ -235,52 +250,56 @@ class DatabaseForUser {
     }
 
     const obj = {id, data, info, acl};
-    await this.validate(schemaInfo.data, obj);
+    await this.validate(obj, schemaInfo.data);
     const col = this.getCollection(namespace, schema);
     let result = await col.insert(util.encodeDocument([obj]));
     return obj;
   }
 
   async update(namespace, schema, id, data) {
-    const existing = await this.get(namespace, schema, id, 'write');
-    if (!existing) throw new Error(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    const query = this.buildQuery({id}, 'write');
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
-    existing.data = data;
-    existing.info.updated = (new Date()).toISOString();
-    await this.validate(schemaInfo.data, existing);
+    await this.validate({data}, schemaInfo.data);
     const col = this.getCollection(namespace, schema);
-    const result = await col.update({id}, {$set: {data: util.encodeDocument(existing.data), info: existing.info}});
-    return result;
+    const result = await col.update(query, {
+      $set: {
+        data: util.encodeDocument(data),
+        'info.updated': (new Date()).toISOString(),
+      },
+    });
+    if (result.result.nModified === 0) throw new Error(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.nModified > 1) throw new Error(`Multiple items found for ${namespace}/${schema}/${id}`);
   }
 
   async setACL(namespace, schema, id, acl) {
-    const existing = await this.get(namespace, schema, id, 'force');
-    if (!existing) throw new Error(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    await this.validate({acl: Object.assign({owner: 'dummy'}, acl)});
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
-    const isCurrentOwner = existing.acl.owner === this.user.id;
+    const necessaryPermissions = [];
+    let query = {$and: [{id}]};
+    const update = {$set: {}};
     for (let key in acl) {
       if (key === 'owner') {
-        if (!isCurrentOwner) throw new Error(`User ${this.user.id} cannot change owner for ${namespace}/${schema}/${id}`);
+        query.$and.push({'acl.owner': this.user.id});
+        update.$set['acl.owner'] = acl.owner;
       } else {
         let aclKey = key.startsWith('modify_') ? key : 'modify_' + key;
-        let list = existing.acl[aclKey] || [];
-        let isAllowed = (list.indexOf(USER_KEYS.owner) !== -1 && isCurrentOwner)
-              || list.indexOf(this.user.id) !== -1
-              || list.indexOf(USER_KEYS.all) !== -1
-        if (!isAllowed) throw new Error(`User ${this.user.id} is not allowed to modify acl.${key} for ${namespace}/${schema}/${id}`);
+        necessaryPermissions.push(aclKey);
+        update.$set['acl.' + key] = acl[key];
       }
-      existing.acl[key] = acl[key];
     }
-    await this.validate(schemaInfo.data, existing);
+    query = this.buildQuery(query, necessaryPermissions);
     const col = this.getCollection(namespace, schema);
-    const result = await col.update({id}, {$set :{acl: existing.acl}});
+    const result = await col.update(query, update);
+    if (result.result.nModified === 0) throw new Error(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.nModified > 1) throw new Error(`Multiple items found for ${namespace}/${schema}/${id}`);
   }
 
   async destroy(namespace, schema, id) {
-    const existing = await this.get(namespace, schema, id, 'destroy');
-    if (!existing) throw new Error(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    let query = {id};
+    query = this.buildQuery(query, 'destroy');
     const col = this.getCollection(namespace, schema);
-    const result = await col.remove({id}, {justOne: true});
+    const result = await col.remove(query, {justOne: true});
+    if (result.result.n === 0) throw new Error(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
   }
 }
 

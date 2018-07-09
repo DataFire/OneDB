@@ -141,7 +141,7 @@ describe('Database', () => {
     let thing = await userDB.get('foo', 'thing', 'thing2');
     expect(thing).to.equal(undefined);
     await expectError(userDB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {read: ['_all']}), /User .* is not allowed to modify acl.read for foo\/thing\/thing2/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {read: ['_all']}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
@@ -150,7 +150,7 @@ describe('Database', () => {
     let thing = await userDB.get('foo', 'thing', 'thing1');
     expect(thing).to.equal(undefined);
     await expectError(userDB.update('foo', 'thing', 'thing1', "This is a new string"), /User .* cannot update foo\/thing\/thing1/);
-    await expectError(userDB.setACL('foo', 'thing', 'thing1', {read: ['_all']}), /User .* is not allowed to modify acl.read for foo\/thing\/thing1/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing1', {read: ['_all']}), /User .* cannot update ACL for foo\/thing\/thing1/);
     await expectError(userDB.destroy('foo', 'thing', 'thing1'), /User .* cannot destroy foo\/thing\/thing1/);
   });
 
@@ -193,7 +193,7 @@ describe('Database', () => {
   it('should not allow first user to alter thing2 after updated ACL', async () => {
     const userDB = await database.user(USERS[0].id);
     await expectError(userDB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {read: ['_all']}), /User .* is not allowed to modify acl.read for foo\/thing\/thing2/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {read: ['_all']}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
@@ -207,7 +207,7 @@ describe('Database', () => {
   it('should not allow second user to alter thing2 after owner transfer', async () => {
     const userDB = await database.user(USERS[1].id);
     await expectError(userDB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {read: ['_all']}), /User .* is not allowed to modify acl.read for foo\/thing\/thing2/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {read: ['_all']}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
