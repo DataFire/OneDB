@@ -37,7 +37,17 @@ describe('Database', () => {
     expect(user.data.type).to.deep.equal(['object', 'boolean']);
 
     let schema = await systemDB.get('core', 'schema', 'user');
-    expect(schema.acl.owner).to.equal('_system');
+    expect(schema.acl).to.deep.equal({
+      owner: '_system',
+      read: ['_all'],
+      write: [],
+      append: [],
+      destroy: [],
+      modify_read: [],
+      modify_write: [],
+      modify_append: [],
+      modify_destroy: [],
+    });
     expect(schema.acl.read).to.deep.equal(['_all']);
     expect(schema.data.type).to.equal('object');
   });
@@ -86,6 +96,16 @@ describe('Database', () => {
     const created = await userDB.create('core', 'schema', schema, 'thing');
     expect(created.data.id).to.equal(schema.id);
     expect(created.data.schema).to.deep.equal(schema.schema);
+  });
+
+  it('should not allow destroying schema', async () => {
+    const userDB = await database.user(USERS[0].id);
+    return expectError(userDB.destroy('core', 'schema', 'thing'), /User .* cannot destroy core\/schema\/thing/)
+  });
+
+  it('should not allow destroying namespace', async () => {
+    const userDB = await database.user(USERS[0].id);
+    return expectError(userDB.destroy('core', 'namespace', 'foo'), /User .* cannot destroy core\/namespace\/foo/)
   });
 
   it('should not allow other user to add duplicate namespace', async () => {
@@ -246,7 +266,7 @@ describe('Database', () => {
       modify_append: ['_owner'],
       modify_destroy: [],
     })
-  })
+  });
 
   /** TODO:
    *  Should not allow removing version from namespace

@@ -91,6 +91,13 @@ const CORE_OBJECTS = [{
             schema: {$ref: '/data/core/schema/schema'},
             initial_acl: {
               read: [USER_KEYS.all],
+              write: [],
+              append: [],
+              destroy: [],
+              modify_read: [],
+              modify_write: [],
+              modify_append: [],
+              modify_destroy: [],
             }
           },
           namespace: {
@@ -98,6 +105,12 @@ const CORE_OBJECTS = [{
             initial_acl: {
               read: [USER_KEYS.all],
               write: [USER_KEYS.owner],  // TODO: change this to append
+              append: [],
+              destroy: [],
+              modify_read: [],
+              modify_write: [],
+              modify_append: [],
+              modify_destroy: [],
             }
           },
           user_private: {
@@ -277,7 +290,7 @@ class DatabaseForUser {
     if (err) return fail(err);
     const existing = await this.get(namespace, schema, id);
     if (existing) return fail(`Item ${namespace}/${schema}/${id} already exists`);
-    let acl = JSON.parse(JSON.stringify(Object.assign({}, DEFAULT_ACL, namespaceInfo.types[schema].initial_acl)));
+    let acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (schema === 'schema') {

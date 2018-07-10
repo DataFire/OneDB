@@ -7,6 +7,7 @@ const IDENTITY_SCHEMA = {
 const ACL_LIST_SCHEMA = {
   type: 'array',
   items: IDENTITY_SCHEMA,
+  default: ['_owner'],
 }
 
 const ACL_SCHEMA = module.exports = {

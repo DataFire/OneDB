@@ -7,7 +7,7 @@ const REGEX = {
   namespace: WORDY_REGEX,
 }
 
-let ajvCore = new Ajv();
+let ajvCore = new Ajv({useDefaults: true});
 let validateACL = ajvCore.compile(require('./schemas/acl'));
 let validateInfo = ajvCore.compile(require('./schemas/info'));
 
@@ -31,7 +31,7 @@ let validators = module.exports.validators = {
   data: (data, schema) => {
     if (data === undefined)        return "No data specified";
     if (!schema)                   return "No JSON schema specified";
-    let ajv = new Ajv() // TODO: a single ajv instance will cache schemas, but the cache could grow unbounded...
+    let ajv = new Ajv({useDefaults: true}) // TODO: a single ajv instance will cache schemas, but the cache could grow unbounded...
     let validate = null;
     try {
       validate = ajv.compile(schema);
