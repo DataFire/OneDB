@@ -325,7 +325,7 @@ class DatabaseForUser {
         'info.updated': (new Date()).toISOString(),
       },
     });
-    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
     if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
   }
 
@@ -348,7 +348,7 @@ class DatabaseForUser {
     query = this.buildQuery(query, necessaryPermissions);
     const col = this.getCollection(namespace, schema);
     const result = await col.update(query, update);
-    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
     if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
   }
 
@@ -357,7 +357,7 @@ class DatabaseForUser {
     query = this.buildQuery(query, 'destroy');
     const col = this.getCollection(namespace, schema);
     const result = await col.remove(query, {justOne: true});
-    if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`);
+    if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
   }
 }
 

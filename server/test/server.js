@@ -94,5 +94,23 @@ describe("Server", () => {
 
     resp = await axios.get(HOST + '/data/core/schema/foo');
     expect(resp.data).to.deep.equal(data);
+    resp = await axios.get(HOST + '/data/core/schema/foo/acl');
+    expect(resp.data).to.deep.equal({
+      owner: USER_1.id,
+      read: ['_all'],
+      write: [],
+      append: [],
+      destroy: [],
+      modify_read: [],
+      modify_write: [],
+      modify_append: [],
+      modify_destroy: [],
+    });
+  });
+
+  it('should not allow DELETE of schema', async () => {
+    let resp = await axios.delete(HOST + '/data/core/schema/foo', {auth: USER_1, validateStatus: () => true});
+    expect(resp.status).to.equal(401);
+    expect(resp.data).to.deep.equal({message: `User ${USER_1.id} cannot destroy core/schema/foo, or core/schema/foo does not exist`});
   });
 });
