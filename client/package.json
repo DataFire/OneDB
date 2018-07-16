@@ -4,14 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --exit"
+    "test": "mocha --exit",
+    "build": "webpack -p"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.1",
     "chai": "^4.1.2",
     "mocha": "^5.2.0",
-    "mongodb-memory-server": "^1.9.0"
+    "mongodb-memory-server": "^1.9.0",
+    "webpack": "^3.5.5"
   },
   "dependencies": {
     "ajv": "^6.5.2",
