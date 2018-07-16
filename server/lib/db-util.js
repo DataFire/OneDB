@@ -81,7 +81,6 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
     info: SYSTEM_INFO,
     acl: SYSTEM_ACL,
     data: {
-      id: 'core',
       versions: [{
         verision: '0',
         types: {
