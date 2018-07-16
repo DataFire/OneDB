@@ -39,8 +39,8 @@ describe('Validation', () => {
   it('should allow valid ACL', () => {
     let acls = [
       {owner: 'me'},
-      {owner: 'me', read: ['you']},
-      {owner: 'me', read: [], write: [], destroy: [], append: []},
+      {owner: 'me', allowed: {read: ['you']}},
+      {owner: 'me', modify: {read: [], write: [], destroy: [], append: []}},
     ];
     let errors = acls.map(validate.validators.acl);
     errors.forEach((err, idx) => {

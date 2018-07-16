@@ -15,29 +15,38 @@ const SYSTEM_INFO = {
 }
 
 const DEFAULT_ACL = module.exports.DEFAULT_ACL = {
-  read: [USER_KEYS.owner],
-  write: [USER_KEYS.owner],
-  append: [USER_KEYS.owner],
-  destroy: [USER_KEYS.owner],
-  modify_read: [USER_KEYS.owner],
-  modify_write: [USER_KEYS.owner],
-  modify_append: [USER_KEYS.owner],
-  modify_destroy: [USER_KEYS.owner],
+  allowed: {
+    read: [USER_KEYS.owner],
+    write: [USER_KEYS.owner],
+    append: [USER_KEYS.owner],
+    destroy: [USER_KEYS.owner],
+  },
+  modify: {
+    read: [USER_KEYS.owner],
+    write: [USER_KEYS.owner],
+    append: [USER_KEYS.owner],
+    destroy: [USER_KEYS.owner],
+  }
 }
 
 const SYSTEM_ACL = module.exports.SYSTEM_ACL = {
   owner: USER_KEYS.system,
-  read: [USER_KEYS.all],
-  write: [USER_KEYS.system],
-  append: [USER_KEYS.system],
-  destroy: [USER_KEYS.system],
-  modify_read: [USER_KEYS.system],
-  modify_write: [USER_KEYS.system],
-  modify_append: [USER_KEYS.system],
-  modify_destroy: [USER_KEYS.system],
+  allowed: {
+    read: [USER_KEYS.all],
+    write: [USER_KEYS.system],
+    append: [USER_KEYS.system],
+    destroy: [USER_KEYS.system],
+  },
+  modify: {
+    read: [USER_KEYS.system],
+    write: [USER_KEYS.system],
+    append: [USER_KEYS.system],
+    destroy: [USER_KEYS.system],
+  }
 };
 
-const PRIVATE_ACL = module.exports.PRIVATE_ACL = Object.assign({}, SYSTEM_ACL, {read: [USER_KEYS.system]});
+const PRIVATE_ACL = module.exports.PRIVATE_ACL = JSON.parse(JSON.stringify(SYSTEM_ACL));
+PRIVATE_ACL.allowed.read = [USER_KEYS.system];
 
 const CORE_TYPES = module.exports.CORE_TYPES = [{
   id: 'namespace',
@@ -87,34 +96,44 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
           user: {
             schema: {$ref: '/data/core/schema/user'},
             initial_acl: {
-              read: [USER_KEYS.all],
-              write: [USER_KEYS.owner],
+              allowed: {
+                read: [USER_KEYS.all],
+                write: [USER_KEYS.owner],
+              }
             }
           },
           schema: {
             schema: {$ref: '/data/core/schema/schema'},
             initial_acl: {
-              read: [USER_KEYS.all],
-              write: [],
-              append: [],
-              destroy: [],
-              modify_read: [],
-              modify_write: [],
-              modify_append: [],
-              modify_destroy: [],
+              allowed: {
+                read: [USER_KEYS.all],
+                write: [],
+                append: [],
+                destroy: [],
+              },
+              modify: {
+                read: [],
+                write: [],
+                append: [],
+                destroy: [],
+              }
             }
           },
           namespace: {
             schema: {$ref: '/data/core/schema/namespace'},
             initial_acl: {
-              read: [USER_KEYS.all],
-              write: [],
-              append: [USER_KEYS.owner],
-              destroy: [],
-              modify_read: [],
-              modify_write: [],
-              modify_append: [],
-              modify_destroy: [],
+              allowed: {
+                read: [USER_KEYS.all],
+                write: [],
+                append: [USER_KEYS.owner],
+                destroy: [],
+              },
+              modify: {
+                read: [],
+                write: [],
+                append: [],
+                destroy: [],
+              }
             }
           },
           user_private: {

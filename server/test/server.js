@@ -91,21 +91,25 @@ describe("Server", () => {
   it('should allow POST with auth', async () => {
     const data = {type: 'string'};
     let resp = await axios.post(HOST + '/data/core/schema/foo', data, {auth: USER_1, validateStatus: () => true});
-    expect(resp.data).to.equal("Success");
+    expect(resp.data).to.equal('foo');
 
     resp = await axios.get(HOST + '/data/core/schema/foo');
     expect(resp.data).to.deep.equal(data);
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
       owner: USER_1.id,
-      read: ['_all'],
-      write: [],
-      append: [],
-      destroy: [],
-      modify_read: [],
-      modify_write: [],
-      modify_append: [],
-      modify_destroy: [],
+      allowed: {
+        read: ['_all'],
+        write: [],
+        append: [],
+        destroy: [],
+      },
+      modify: {
+        read: [],
+        write: [],
+        append: [],
+        destroy: [],
+      }
     });
   });
 

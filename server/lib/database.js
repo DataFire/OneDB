@@ -122,18 +122,21 @@ class DatabaseForUser {
     return {schemaInfo, namespaceInfo: nsVersion};
   }
 
-  buildQuery(query={}, accesses='read') {
-    if (accesses !== 'force') {
-      query.$and = query.$and || [];
-      if (typeof accesses === 'string') accesses = [accesses];
-      accesses.forEach(access => {
-        const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}]};
-        ownerQuery.$and[1]['acl.' + access] = {$in: [dbUtil.USER_KEYS.owner]};
-        const accessQuery = {};
-        accessQuery['acl.' + access] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
-        query.$and.push({$or: [ownerQuery, accessQuery]});
-      });
-    }
+  buildQuery(query={}, accesses='read', modifyACL=false) {
+    let accessType = modifyACL ? 'modify' : 'allowed';
+    query.$and = query.$and || [];
+    if (typeof accesses === 'string') accesses = [accesses];
+    accesses.forEach(access => {
+      let allowKey = ['acl', accessType, access].join('.');
+      let disallowKey = ['acl', 'disallowed', access].join('.');
+      const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
+      ownerQuery.$and[1][allowKey] = {$in: [dbUtil.USER_KEYS.owner]};
+      ownerQuery.$and[2][disallowKey] = {$nin: [dbUtil.USER_KEYS.owner]};
+      const accessQuery = {$and: [{}, {}]};
+      accessQuery.$and[0][allowKey] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
+      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
+      query.$and.push({$or: [ownerQuery, accessQuery]});
+    });
     return query;
   }
 
@@ -209,12 +212,13 @@ class DatabaseForUser {
         query.$and.push({'acl.owner': this.user.id});
         update.$set['acl.owner'] = acl.owner;
       } else {
-        let aclKey = key.startsWith('modify_') ? key : 'modify_' + key;
-        necessaryPermissions.push(aclKey);
-        update.$set['acl.' + key] = acl[key];
+        for (let permission in acl[key]) {
+          necessaryPermissions.push(permission);
+          update.$set['acl.' + key + '.' + permission] = acl[key][permission];
+        }
       }
     }
-    query = this.buildQuery(query, necessaryPermissions);
+    query = this.buildQuery(query, necessaryPermissions, true);
     const col = this.getCollection(namespace, schema);
     const result = await col.update(query, update);
     if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
