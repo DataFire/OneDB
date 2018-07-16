@@ -2,6 +2,7 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
 
 module.exports = {
   maxDataSize: '1000kb',
+  host: 'http://localhost:3000',
   rateLimit: {
     all: {
       windowMs: FIFTEEN_MIN,

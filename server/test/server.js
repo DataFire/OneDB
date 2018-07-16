@@ -16,6 +16,7 @@ const USER_1 = {
 describe("Server", () => {
   before(async () => {
     const server = new Server({
+      host: HOST,
       mongodb: await mongod.getConnectionString(),
       rateLimit: {
         all: {
@@ -113,4 +114,10 @@ describe("Server", () => {
     expect(resp.status).to.equal(401);
     expect(resp.data).to.deep.equal({message: `User ${USER_1.id} cannot destroy core/schema/foo, or core/schema/foo does not exist`});
   });
+
+  it('should have $refs set with host', async () => {
+    let resp = await axios.get(HOST + '/data/core/namespace/core');
+    let version = resp.data.versions[0];
+    expect(version.types.user.schema.$ref).to.equal('http://localhost:3333/data/core/schema/user');
+  })
 });

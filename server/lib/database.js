@@ -2,146 +2,11 @@ const mongodb = require('mongodb');
 const randomstring = require("randomstring");
 const validate = require('./validate');
 const util = require('./util');
+const dbUtil = require('./db-util');
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
 const STAGING_KEY = 'staging';
-
-const START_TIME = (new Date()).toISOString();
-
-const USER_KEYS = {
-  all: '_all',
-  system: '_system',
-  owner: '_owner',
-}
-
-const DEFAULT_ACL = {
-  read: [USER_KEYS.owner],
-  write: [USER_KEYS.owner],
-  append: [USER_KEYS.owner],
-  destroy: [USER_KEYS.owner],
-  modify_read: [USER_KEYS.owner],
-  modify_write: [USER_KEYS.owner],
-  modify_append: [USER_KEYS.owner],
-  modify_destroy: [USER_KEYS.owner],
-}
-
-const SYSTEM_ACL = {
-  owner: USER_KEYS.system,
-  read: [USER_KEYS.all],
-  write: [USER_KEYS.system],
-  append: [USER_KEYS.system],
-  destroy: [USER_KEYS.system],
-  modify_read: [USER_KEYS.system],
-  modify_write: [USER_KEYS.system],
-  modify_append: [USER_KEYS.system],
-  modify_destroy: [USER_KEYS.system],
-};
-
-const PRIVATE_ACL = Object.assign({}, SYSTEM_ACL, {read: [USER_KEYS.system]});
-
-const SYSTEM_INFO = {
-  created: START_TIME,
-  updated: START_TIME,
-  created_by: USER_KEYS.system,
-}
-
-const CORE_OBJECTS = [{
-  namespace: 'core',
-  schema: 'user',
-  document: {
-    id: USER_KEYS.system,
-    info: SYSTEM_INFO,
-    acl: SYSTEM_ACL,
-    data: {
-      publicKey: '',
-    }
-  }
-}, {
-  namespace: 'core',
-  schema: 'user',
-  document: {
-    id: USER_KEYS.all,
-    info: SYSTEM_INFO,
-    acl: SYSTEM_ACL,
-    data: {
-      publicKey: '',
-    }
-  }
-}, {
-  namespace: 'core',
-  schema: 'namespace',
-  document: {
-    id: 'core',
-    info: SYSTEM_INFO,
-    acl: SYSTEM_ACL,
-    data: {
-      id: 'core',
-      versions: [{
-        verision: '0',
-        types: {
-          user: {
-            schema: {$ref: '/data/core/schema/user'},
-            initial_acl: {
-              read: [USER_KEYS.all],
-              write: [USER_KEYS.owner],
-            }
-          },
-          schema: {
-            schema: {$ref: '/data/core/schema/schema'},
-            initial_acl: {
-              read: [USER_KEYS.all],
-              write: [],
-              append: [],
-              destroy: [],
-              modify_read: [],
-              modify_write: [],
-              modify_append: [],
-              modify_destroy: [],
-            }
-          },
-          namespace: {
-            schema: {$ref: '/data/core/schema/namespace'},
-            initial_acl: {
-              read: [USER_KEYS.all],
-              write: [USER_KEYS.owner],  // TODO: change this to append
-              append: [],
-              destroy: [],
-              modify_read: [],
-              modify_write: [],
-              modify_append: [],
-              modify_destroy: [],
-            }
-          },
-          user_private: {
-            schema: {$ref: '/data/core/schema/user_private'},
-            initial_acl: PRIVATE_ACL,
-          }
-        },
-      }],
-    }
-  }
-}, {
-  namespace: 'core',
-  schema: 'schema',
-  document: {
-    id: 'schema',
-    info: SYSTEM_INFO,
-    acl: SYSTEM_ACL,
-    data: require('./schemas/schema'),
-  }
-}]
-
-const CORE_TYPES = [{
-  id: 'namespace',
-  schema: require('./schemas/namespace'),
-}, {
-  id: 'user',
-  schema: require('./schemas/user'),
-}, {
-  id: 'user_private',
-  schema: require('./schemas/user_private'),
-}];
 
 const fail = function(message, statusCode) {
   let err = new Error(message);
@@ -150,14 +15,18 @@ const fail = function(message, statusCode) {
 }
 
 class Database {
-  constructor(url) {
-    this.url = url;
+  constructor(opts={}) {
+    if (typeof opts == 'string') {
+      opts = {mongodb: opts};
+    }
+    this.options = opts;
   }
 
   async initialize() {
     if (this.client) return fail("Database already initialized");
-    this.client = await mongodb.MongoClient.connect(this.url, {useNewUrlParser: true});
-    let coreObjects = JSON.parse(JSON.stringify(CORE_OBJECTS));
+    if (this.options.host) dbUtil.setRefHost(this.options.host);
+    this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
+    let coreObjects = JSON.parse(JSON.stringify(dbUtil.CORE_OBJECTS));
     for (let obj of coreObjects) {
       let coll = this.client.db(DB_NAME).collection(obj.namespace + '-' + obj.schema);
       let existing = await coll.find({id: obj.document.id}).toArray();
@@ -166,8 +35,8 @@ class Database {
         await coll.insert(encoded);
       }
     }
-    let db = await this.user(USER_KEYS.system);
-    let coreTypes = JSON.parse(JSON.stringify(CORE_TYPES));
+    let db = await this.user(dbUtil.USER_KEYS.system);
+    let coreTypes = JSON.parse(JSON.stringify(dbUtil.CORE_TYPES));
     for (let type of coreTypes) {
       let existing = await db.get('core', 'schema', type.id);
       if (!existing) {
@@ -185,7 +54,7 @@ class Database {
 
   async signIn(email, password) {
     if (!this.client) return fail("Database not initialized");
-    const db = await this.user(USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (!existing.length) return fail(`User ${email} not found`);
     const user = existing[0].data;
@@ -196,7 +65,7 @@ class Database {
 
   async createUser(email, password) {
     if (!this.client) return fail("Database not initialized");
-    const db = await this.user(USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
     const user = await db.create('core', 'user', {publicKey: ''});
@@ -259,9 +128,9 @@ class DatabaseForUser {
       if (typeof accesses === 'string') accesses = [accesses];
       accesses.forEach(access => {
         const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}]};
-        ownerQuery.$and[1]['acl.' + access] = {$in: [USER_KEYS.owner]};
+        ownerQuery.$and[1]['acl.' + access] = {$in: [dbUtil.USER_KEYS.owner]};
         const accessQuery = {};
-        accessQuery['acl.' + access] = {$in: [this.user.id, USER_KEYS.all]};
+        accessQuery['acl.' + access] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
         query.$and.push({$or: [ownerQuery, accessQuery]});
       });
     }
@@ -290,7 +159,7 @@ class DatabaseForUser {
     if (err) return fail(err);
     const existing = await this.get(namespace, schema, id);
     if (existing) return fail(`Item ${namespace}/${schema}/${id} already exists`);
-    let acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || DEFAULT_ACL)));
+    let acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || dbUtil.DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (schema === 'schema') {

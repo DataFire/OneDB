@@ -7,14 +7,20 @@ const register = require('./register');
 const defaultConfig = require('./config');
 const Database = require('./database');
 
+const DEFAULT_PORT = 3000;
+
 class Server {
   constructor(config={}) {
     this.config = Object.assign({}, defaultConfig, config);
     this.config.rateLimit = Object.assign({}, defaultConfig.rateLimit, this.config.rateLimit);
+    if (!this.config.mongodb) throw new Error("No MongoDB host specified");
   }
 
-  async listen(port) {
-    const database = new Database(this.config.mongodb);
+  async listen(port=DEFAULT_PORT) {
+    const database = new Database({
+      mongodb: this.config.mongodb,
+      host: this.config.host,
+    });
     await database.initialize();
     this.app = express();
     this.app.enable('trust proxy');
