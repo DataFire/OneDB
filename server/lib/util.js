@@ -51,7 +51,7 @@ module.exports.fixSchemaRefs = function(schema, rootID) {
   if (typeof schema !== 'object' || schema === null) return;
   if (Array.isArray(schema)) schema.forEach(sub => module.exports.fixSchemaRefs(sub, rootID));
   if (schema.$ref) {
-    if (schema.$ref === '#') schema.$ref = '/core/type/' + rootID;
+    if (schema.$ref === '#') schema.$ref = '/data/core/schema/' + rootID;
     let [dummy, namespace, type] = schema.$ref.split('/');
     let newSchema = {
       type: 'object',
