@@ -96,8 +96,8 @@ module.exports = function(database) {
    *  Create
    */
   router.post([TYPE_PATH, ITEM_PATH], errorGuard(async (req, res) => {
-    await req.db.create(req.params.namespace, req.params.typeID, req.body, req.params.itemID);
-    res.json("Success");
+    let item = await req.db.create(req.params.namespace, req.params.typeID, req.body, req.params.itemID);
+    res.json(item.id);
   }));
 
   /**
