@@ -86,8 +86,15 @@ describe('Database', () => {
 
   it('should allow creating new namespace', async () => {
     const userDB = await database.user(USERS[0].id);
-    const ns = await userDB.create('core', 'namespace', {}, 'foo');
-    expect(ns.data).to.deep.equal({});
+    const ns = {
+      versions: [{
+        version: '0',
+        types: {
+          'thing': {schema: {$ref: '/data/core/schema/thing'}},
+        }
+      }]
+    }
+    await userDB.create('core', 'namespace', ns, 'foo');
   });
 
   it('should allow creating schema', async () => {
@@ -126,17 +133,17 @@ describe('Database', () => {
     return expectError(userDB.update('core', 'namespace', 'foo', ns), /User .* cannot update core\/namespace\/foo/)
   });
 
-  it('should allow user to publish namespace', async () => {
+  it('should allow owner to alter namespace', async () => {
     const userDB = await database.user(USERS[0].id);
     const ns = {
       versions: [{
         version: '0',
         types: {
-          'thing': {schema: {$ref: '/data/core/schema/thing'}},
+          'thing': {schema: {$ref: '/data/core/schema/thing'}, initial_acl: {destroy: []}},
         }
       }]
     }
-    return userDB.update('core', 'namespace', 'foo', ns);
+    return expectError(userDB.update('core', 'namespace', 'foo', ns), /User .* cannot update core\/namespace\/foo/);
   });
 
   it('should allow user to create thing', async () => {

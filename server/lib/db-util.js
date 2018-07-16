@@ -108,8 +108,8 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
             schema: {$ref: '/data/core/schema/namespace'},
             initial_acl: {
               read: [USER_KEYS.all],
-              write: [USER_KEYS.owner],  // TODO: change this to append
-              append: [],
+              write: [],
+              append: [USER_KEYS.owner],
               destroy: [],
               modify_read: [],
               modify_write: [],
