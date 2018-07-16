@@ -34,7 +34,7 @@ const errorGuard = function(fn) {
 
 module.exports = function(database) {
   const router = module.exports = new express.Router();
-  router.use(bodyParser.json(config.maxDataSize));
+  router.use(bodyParser.json({strict: false, limit: config.maxDataSize}));
 
   router.use(TYPE_PATH, validate.namespace, validate.typeID);
   router.use(ITEM_PATH, validate.itemID);
