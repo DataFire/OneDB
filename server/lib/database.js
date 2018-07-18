@@ -26,9 +26,10 @@ class Database {
     if (this.client) return fail("Database already initialized");
     if (this.options.host) dbUtil.setRefHost(this.options.host);
     this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
+    this.db = this.client.db(DB_NAME);
     let coreObjects = JSON.parse(JSON.stringify(dbUtil.CORE_OBJECTS));
     for (let obj of coreObjects) {
-      let coll = this.client.db(DB_NAME).collection(obj.namespace + '-' + obj.schema);
+      let coll = this.db.collection(obj.namespace + '-' + obj.schema);
       let existing = await coll.find({id: obj.document.id}).toArray();
       if (!existing[0]) {
         let encoded = util.encodeDocument(obj.document);
@@ -46,14 +47,14 @@ class Database {
   }
 
   async user(user) {
-    if (!this.client) return fail("Database not initialized");
-    const db = new DatabaseForUser({client: this.client, user});
+    if (!this.db) return fail("Database not initialized");
+    const db = new DatabaseForUser({db: this.db, user});
     await db.initialize();
     return db;
   }
 
   async signIn(email, password) {
-    if (!this.client) return fail("Database not initialized");
+    if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
@@ -66,7 +67,7 @@ class Database {
   }
 
   async createUser(email, password) {
-    if (!this.client) return fail("Database not initialized");
+    if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
@@ -83,7 +84,7 @@ class Database {
 
 class DatabaseForUser {
   constructor(opts) {
-    this.client = opts.client;
+    this.db = opts.db;
     this.userID = opts.user;
   }
 
@@ -96,7 +97,7 @@ class DatabaseForUser {
 
   getCollection(namespace, schema) {
     const collectionName = namespace + '-' + schema;
-    return this.client.db(DB_NAME).collection(collectionName);
+    return this.db.collection(collectionName);
   }
 
   async validate(obj, schema=null) {
