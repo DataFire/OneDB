@@ -200,6 +200,35 @@ describe('Database', () => {
     expect(item).to.equal(undefined);
   });
 
+  it('should allow append', async () => {
+    const userDB = await database.user(USERS[0].id);
+    await userDB.create('core', 'schema', {
+      type: 'object',
+      properties: {
+        things: {type: 'array', items: {type: 'string'}},
+      },
+    }, 'list');
+    await userDB.create('core', 'namespace', {
+      versions: [{
+        version: '0',
+        types: {
+          list: {
+            schema: {$ref: '/data/core/schema/list'},
+          }
+        },
+      }]
+    }, 'list')
+    await userDB.create('list', 'list', {things: ['foo']}, 'mylist');
+    let item = await userDB.get('list', 'list', 'mylist');
+    expect(item.data.things).to.deep.equal(['foo']);
+    await expectError(userDB.append('list', 'list', 'mylist', {things: [3]}), /should be string/);
+    await expectError(userDB.append('list', 'list', 'mylist', {widgets: ['bar']}), /Schema not found for key widgets/);
+    await userDB.append('list', 'list', 'mylist', {things: ['bar']});
+    item = await userDB.get('list', 'list', 'mylist');
+    expect(item.data.things).to.deep.equal(['foo', 'bar']);
+  })
+
+
   it('should not allow invalid ACL', async () => {
     const userDB = await database.user(USERS[1].id);
     return expectError(userDB.setACL('foo', 'thing', 'thing2', {allowed: {read: {}}}), /ACL is invalid. data.allowed.read should be array/);
