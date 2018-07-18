@@ -125,7 +125,8 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
               allowed: {
                 read: [USER_KEYS.all],
                 write: [],
-                append: [USER_KEYS.owner],
+                //append: [USER_KEYS.owner],  TODO: enable append for versioning
+                append: [],
                 destroy: [],
               },
               modify: {

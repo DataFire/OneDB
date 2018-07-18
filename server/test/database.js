@@ -330,11 +330,5 @@ describe('Database', () => {
       },
     })
   });
-
-  /** TODO:
-   *  Should not allow removing version from namespace
-   *  Should not allow changing schema/namespace ID
-   *  Should validate against different versions
-   */
 });
 
