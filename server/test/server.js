@@ -10,7 +10,7 @@ const HOST = 'http://localhost:' + PORT;
 
 const USER_1 = {
   username: 'me@example.com',
-  password: 'secret',
+  password: 'thisisasecret',
 }
 
 describe("Server", () => {

@@ -1,4 +1,7 @@
 const Ajv = require('ajv');
+const validator = require('validator');
+
+const MIN_PASSWORD_LENGTH = 8;
 const WORDY_REGEX = /^[a-zA-Z0-9]\w{1,29}$/; // starts with a letter, 2-30 characters
 
 const REGEX = {
@@ -48,6 +51,22 @@ let validators = module.exports.validators = {
   info: info => {
     let isValid = validateInfo(info);
     if (!isValid) return "Info is invalid. " + ajvCore.errorsText(validateInfo.errors);
+  },
+  url: url => {
+    const opts = {require_protocol: true, protocols: ['http', 'https']};
+    if (!validator.isURL(url, opts)) {
+      return `${url} is not a valid URL`;
+    }
+  },
+  email: email => {
+    if (!validator.isEmail(email)) {
+      return `${email} is not a valid email address`;
+    }
+  },
+  password: password => {
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+    }
   }
 }
 

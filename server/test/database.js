@@ -69,15 +69,15 @@ describe('Database', () => {
   });
 
   it('should allow creating users', async () => {
-    let user = await database.createUser('user1', 'pkey1');
+    let user = await database.createUser('user1@example.com', 'abcdabcd');
     expect(user.data).to.deep.equal({publicKey: ''});
     USERS.push(user);
-    USERS.push(await database.createUser('user2', 'pkey2'));
-    USERS.push(await database.createUser('user3', 'pkey3'));
+    USERS.push(await database.createUser('user2@example.com', 'abcdefgh'));
+    USERS.push(await database.createUser('user3@example.com', 'abcdefgh'));
   });
 
   it('should not allow duplicate email', async () => {
-    await expectError(database.createUser('user1', 'pkey4'), /A user with that email address already exists/)
+    await expectError(database.createUser('user1@example.com', 'afsdjklsf'), /A user with that email address already exists/)
   });
 
   it('should not allow updating or destroying core type', async () => {

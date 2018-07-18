@@ -54,9 +54,11 @@ class Database {
 
   async signIn(email, password) {
     if (!this.client) return fail("Database not initialized");
+    let err = validate.validators.email(email) || validate.validators.password(password);
+    if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
-    if (!existing.length) return fail(`User ${email} not found`);
+    if (!existing.length) return fail(`User ${email} not found`, 401);
     const user = existing[0].data;
     const isValid = await util.checkPassword(password, user.hash, user.salt);
     if (!isValid) return fail(`Invalid password for ${email}`);
@@ -65,6 +67,8 @@ class Database {
 
   async createUser(email, password) {
     if (!this.client) return fail("Database not initialized");
+    let err = validate.validators.email(email) || validate.validators.password(password);
+    if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
