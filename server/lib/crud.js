@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const validate = require('./validate');
 const config = require('./config');
 const errorGuard = require('./error-guard');
+const fail = require('./fail');
 
 const NAMESPACE_PATH = '/:namespace';
 const TYPE_PATH = NAMESPACE_PATH + '/:typeID';
@@ -17,10 +18,10 @@ const RESTRICTED_PATHS = [
   '/core/user_private',
 ];
 
-const requireLogin = function(req, res, next) {
+const requireLogin = errorGuard(async function(req, res, next) {
   if (req.user) return next();
-  res.status(401).json({message: "You need to log in to do that"});
-}
+  else return fail("You need to log in to do that", 401);
+});
 
 module.exports = function(database) {
   const router = module.exports = new express.Router();
@@ -29,13 +30,13 @@ module.exports = function(database) {
   router.use(TYPE_PATH, validate.namespace, validate.typeID);
   router.use(ITEM_PATH, validate.itemID);
 
-  router.use(RESTRICTED_PATHS, (req, res) => {
-    res.status(401).send("This operation is restricted");
-  });
-  router.use(GET_ONLY_PATHS, (req, res, next) => {
+  router.use(RESTRICTED_PATHS, errorGuard((req, res) => {
+    fail("That operation is restricted", 401);
+  }));
+  router.use(GET_ONLY_PATHS, errorGuard((req, res, next) => {
     if (req.method === 'GET') return next();
-    res.status(401).send("This operation is restricted");
-  })
+    fail("That operation is restricted", 401);
+  }));
 
   /**
    *  Retrieve prep
@@ -80,7 +81,7 @@ module.exports = function(database) {
     res.json(items);
   }));
 
-  router.use(errorGuard(requireLogin));
+  router.use(requireLogin);
 
   /**
    *  Create

@@ -88,6 +88,15 @@ describe("Server", () => {
     USER_1.id = resp.data;
   });
 
+  it('should not allow directly adding user', async () => {
+    let resp = await axios.post(HOST + '/data/core/user', {}, {auth: USER_1, validateStatus: () => true});
+    expect(resp.status).to.equal(401);
+    expect(resp.data.message).to.equal('That operation is restricted');
+    resp = await axios.post(HOST + '/data/core/user_private', {}, {auth: USER_1, validateStatus: () => true});
+    expect(resp.status).to.equal(401);
+    expect(resp.data.message).to.equal('That operation is restricted');
+  })
+
   it('should allow POST with auth', async () => {
     const data = {type: 'string'};
     let resp = await axios.post(HOST + '/data/core/schema/foo', data, {auth: USER_1, validateStatus: () => true});
