@@ -1,3 +1,5 @@
+const fs = require('fs');
+const OVERRIDE_FILE = __dirname + '/../../server-config.json';
 const FIFTEEN_MIN = 15 * 60 * 1000;
 
 module.exports = {
@@ -27,4 +29,9 @@ module.exports = {
       delayAfter: 100,
     },
   }
+}
+
+if (fs.existsSync(OVERRIDE_FILE)) {
+  let overrides = require(OVERRIDE_FILE);
+  Object.assign(module.exports, overrides);
 }
