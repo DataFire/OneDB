@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const validate = require('./validate');
 const config = require('./config');
+const errorGuard = require('./error-guard');
 
 const NAMESPACE_PATH = '/:namespace';
 const TYPE_PATH = NAMESPACE_PATH + '/:typeID';
@@ -19,17 +20,6 @@ const RESTRICTED_PATHS = [
 const requireLogin = function(req, res, next) {
   if (req.user) return next();
   res.status(401).json({message: "You need to log in to do that"});
-}
-
-const errorGuard = function(fn) {
-  return async function(req, res, next) {
-    try {
-      await fn(req, res, next);
-    } catch (err) {
-      res.status(err.statusCode || 500);
-      res.json({message: err.message || "Unknown error"});
-    }
-  }
 }
 
 module.exports = function(database) {

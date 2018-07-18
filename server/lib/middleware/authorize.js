@@ -7,8 +7,7 @@ module.exports = function(database) {
   return async (req, res, next) => {
     let auth = req.get('authorization');
     if (!auth) {
-      req.db = await database.user('_all');
-      return next();
+      return fail("No authorization header", 401)
     }
     let parts = auth.split(' ');
     if (parts[0] === 'Basic') {
@@ -17,18 +16,11 @@ module.exports = function(database) {
       email = creds[0];
       password = creds[1];
       req.user = await database.signIn(email, password);
-      req.db = await database.user(req.user.id);
-      next();
-    } else if (parts[0] === 'Bearer') {
-      let token = parts[1];
-      try {
-        jwt.verify(token, config.jwtSecret);
-      } catch (e) {
-        return fail("Invalid Bearer token", 401);
-      }
-      req.user = await database.signInWithToken(token);
-      req.db = await database.user(req.user.id);
-      next();
+      let data = {email};
+      let opts = {expiresIn: '1d'};
+      let token = jwt.sign(data, config.jwtSecret, opts);
+      await database.addToken(email, token);
+      res.json(token);
     } else {
       return fail("Invalid authorization header", 401);
     }

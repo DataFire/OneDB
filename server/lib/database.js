@@ -3,16 +3,11 @@ const randomstring = require("randomstring");
 const validate = require('./validate');
 const util = require('./util');
 const dbUtil = require('./db-util');
+const fail = require('./fail');
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
 const STAGING_KEY = 'staging';
-
-const fail = function(message, statusCode) {
-  let err = new Error(message);
-  if (statusCode) err.statusCode = statusCode;
-  return Promise.reject(err);
-}
 
 class Database {
   constructor(opts={}) {
@@ -53,19 +48,6 @@ class Database {
     return db;
   }
 
-  async signIn(email, password) {
-    if (!this.db) return fail("Database not initialized");
-    let err = validate.validators.email(email) || validate.validators.password(password);
-    if (err) return fail(err, 400);
-    const db = await this.user(dbUtil.USER_KEYS.system);
-    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
-    if (!existing.length) return fail(`User ${email} not found`, 401);
-    const user = existing[0].data;
-    const isValid = await util.checkPassword(password, user.hash, user.salt);
-    if (!isValid) return fail(`Invalid password for ${email}`);
-    return user;
-  }
-
   async createUser(email, password) {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
@@ -79,6 +61,38 @@ class Database {
     creds.id = user.id;
     const userPrivate = await db.create('core', 'user_private', creds);
     return user;
+  }
+
+  async addToken(email, token) {
+    // TODO: remove old tokens
+    if (!this.db) return fail("Database not initialized");
+    let err = validate.validators.email(email);
+    if (err) return fail(err, 400);
+    const db = await this.user(dbUtil.USER_KEYS.system);
+    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
+    if (existing.length !== 1) return fail(`User ${email} not found`, 401);
+    await db.append('core', 'user_private', existing[0].id, {tokens: [token]});
+  }
+
+  async signIn(email, password) {
+    if (!this.db) return fail("Database not initialized");
+    let err = validate.validators.email(email) || validate.validators.password(password);
+    if (err) return fail(err, 400);
+    const db = await this.user(dbUtil.USER_KEYS.system);
+    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
+    if (!existing.length) return fail(`User ${email} not found`, 401);
+    const user = existing[0].data;
+    const isValid = await util.checkPassword(password, user.hash, user.salt);
+    if (!isValid) return fail(`Invalid password for ${email}`);
+    return user;
+  }
+
+  async signInWithToken(token) {
+    const db = await this.user(dbUtil.USER_KEYS.system);
+    const col = db.getCollection('core', 'user_private');
+    const user = await col.find({'data.tokens': {$in: [token]}}).toArray();
+    if (user.length !== 1) return fail(`The provided token is invalid`);
+    return user[0].data;
   }
 }
 

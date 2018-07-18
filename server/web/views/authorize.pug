@@ -1,0 +1,106 @@
+doctype html
+html
+  head
+    link(rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css")
+    style.
+      h1,h2 {
+        margin-top: 100px;
+      }
+      .dummy-form-group {
+        height: 86px;
+      }
+    script(
+      src="https://code.jquery.com/jquery-3.3.1.min.js"
+      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+      crossorigin="anonymous")
+    script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js")
+    script.
+      function showError(msg) {
+        alert(msg);
+      }
+
+      function sendRequest(url, email, pass, callback) {
+        $.ajax({
+          type: 'POST',
+          url: url,
+          headers: {
+            Authorization: "Basic " + btoa(email + ':' + pass),
+          },
+          success: callback,
+          error: function(req, textStatus, error) {
+            var message = textStatus;
+            try {
+              message = JSON.parse(req.responseText).message || message;
+            } catch (e) {}
+            showError(message);
+          },
+        });
+        return false;
+      }
+
+      function authorize(email, pass) {
+        if (!email) {
+          email = $('#SignIn input[name="email"]').val();
+          pass = $('#SignIn input[name="password"]').val();
+        }
+        sendRequest('/authorize', email, pass, function(data) {
+          alert(data);
+        });
+        return false;
+      }
+
+      function signUpAndAuthorize() {
+        var email = $('#SignUp input[name="email"]').val();
+        var pass = $('#SignUp input[name="password"]').val();
+        var confirmPass = $('#SignUp input[name="confirmPassword"]').val();
+        if (pass !== confirmPass) {
+          showError("Passwords don't match");
+        } else {
+          sendRequest('/register', email, pass, function(data) {
+            alert(data);
+            sendRequest('/authorize', email, pass, function(data) {
+              alert(data);
+            })
+          });
+        }
+        return false;
+      }
+  body
+    mixin user-form(signUp=false)
+      form(onsubmit= signUp ? 'return signUpAndAuthorize()' : 'return authorize()')
+        .form-group
+          label Email Address
+          input.form-control(type="text" name="email")
+        .form-group
+          label Password
+          input.form-control(type="password" name="password")
+        if signUp
+          .form-group
+            label Confirm Password
+            input.form-control(type="password" name="confirmPassword")
+        else
+          .dummy-form-group
+        .form-group
+          button.btn.btn-success(type="submit") Authorize #{query.originNoProtocol}
+    .container
+      h1 Lucky you!
+      p.
+        #{query.originNoProtocol} uses FreeDB, which means you will always own your data.
+        You can come back here anytime to add, modify, and delete data from #{query.originNoProtocol}.
+      p
+        a(href="FreeDB" target="_blank") Learn more
+        span  about how FreeDB gives usesrs more control over their data.
+      h2 #{query.originNoProtocol} would like to access, modify, and create FreeDB data on #{config.hostWithoutProtocol}
+      .row
+        .col
+          .card#SignIn
+            .card-body
+              h3 Sign in
+              p Sign into your existing FreeDB account on #{config.hostWithoutProtocol}
+              +user-form()
+        .col
+          .card#SignUp
+            .card-body
+              h3 Sign up
+              p Don't have an account? Sign up for free!
+              +user-form(true)

@@ -7,5 +7,6 @@ module.exports = {
     hash: {type: 'string'},
     salt: {type: 'string'},
     verificationID: {type: 'string'},
+    tokens: {type: 'array', items: {type:'string'}},
   }
 }

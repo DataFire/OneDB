@@ -21,7 +21,7 @@ describe("Server", () => {
       rateLimit: {
         all: {
           windowMs: 2000,
-          max: 10,
+          max: 100,
           delayMs: 0,
         }
       }
@@ -43,7 +43,7 @@ describe("Server", () => {
 
   it('should be rate limited', async function() {
     this.timeout(3000);
-    const numRequests = 11;
+    const numRequests = 101;
     let response = null;
     for (let i = 0; i < numRequests; ++i) {
       response = await axios.get(HOST + '/ping', {validateStatus: () => true});
@@ -123,5 +123,13 @@ describe("Server", () => {
     let resp = await axios.get(HOST + '/data/core/namespace/core');
     let version = resp.data.versions[0];
     expect(version.types.user.schema.$ref).to.equal('http://localhost:3333/data/core/schema/user');
-  })
+  });
+
+  it('should allow authorization', async () => {
+    let resp = await axios.post(HOST + '/authorize', {}, {auth: USER_1, validateStatus: () => true});
+    expect(resp.data).to.be.a('string');
+    let data = {type: 'string'};
+    resp = await axios.post(HOST + '/data/core/schema/bar', data, {headers: {Authorization: 'Bearer ' + resp.data}});
+    expect(resp.data).to.be.a('string');
+  });
 });
