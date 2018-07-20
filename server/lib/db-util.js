@@ -4,7 +4,6 @@ const crypto = require('crypto');
 const validate = require('./validate');
 
 const DOLLAR = "\uFF04";
-const DOT = "\uFF0E";
 const KEY_REPLACEMENTS = {
   dollar: {
     encode: /\$/g,
@@ -12,13 +11,9 @@ const KEY_REPLACEMENTS = {
     encoded: DOLLAR,
     decoded: '$',
   },
-  dot: {
-    encode: /\./g,
-    decode: new RegExp(DOT, 'g'),
-    encoded: DOT,
-    decoded: '.',
-  }
 }
+
+const KEY_REGEX = /^(\$ref|\$id|\$comment|\$schema|\w+)$/;
 
 const START_TIME = (new Date()).toISOString();
 
@@ -189,6 +184,7 @@ module.exports.encodeDocument = function(schema) {
   if (Array.isArray(schema)) return schema.map(module.exports.encodeDocument);
   let obj = {};
   for (let key in schema) {
+    if (!KEY_REGEX.test(key)) throw new Error(`Object key ${key} is invalid`);
     let newKey = key;
     for (let replaceKey in KEY_REPLACEMENTS) {
       let replacement = KEY_REPLACEMENTS[replaceKey];

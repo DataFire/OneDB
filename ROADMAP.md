@@ -27,7 +27,6 @@ The goal of the alpha release is a simple proof of concept. It leaves out many f
 ## TODO
 * email verification
 * password reset
-* enforce alphanumeric keys
 * `list` query params
   * sort
   * created_since

@@ -386,6 +386,34 @@ describe('Database', () => {
     };
     const item = await userDB.create('foo', 'thing', data);
     expect(item.data).to.deep.equal(data);
+  });
+
+  it('should not allow keys with special characters', async() => {
+    const userDB = await database.user(USERS[0].id);
+
+    let schema = {
+      type: 'object',
+      properties: {
+        'foo.bar': {type: 'string'},
+      }
+    }
+    await expectError(userDB.create('core', 'schema', schema), /Object key foo.bar is invalid/);
+
+    schema = {
+      type: 'object',
+      properties: {
+        'abc-d': {type: 'string'},
+      }
+    }
+    await expectError(userDB.create('core', 'schema', schema), /Object key abc-d is invalid/);
+
+    schema = {
+      type: 'object',
+      properties: {
+        '$foo': {type: 'string'},
+      }
+    }
+    await expectError(userDB.create('core', 'schema', schema), /Object key \$foo is invalid/);
   })
 });
 

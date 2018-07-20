@@ -6,9 +6,8 @@ describe('Util', () => {
     const schema = {
       foo: 'bar',
       $ref: 'abc',
-      'foo.bar': 'baz',
       nested: {
-        'a.b': 'qux',
+        $ref: 'qux',
       },
       array: [{
         $ref: 'def',
@@ -18,9 +17,8 @@ describe('Util', () => {
     expect(encoded).to.deep.equal({
       foo: 'bar',
       '\uFF04ref': 'abc',
-      'foo\uFF0Ebar': 'baz',
       nested: {
-        'a\uFF0Eb': 'qux',
+        '\uFF04ref': 'qux',
       },
       array: [{
         '\uFF04ref': 'def',
