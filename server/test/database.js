@@ -330,5 +330,28 @@ describe('Database', () => {
       },
     })
   });
+
+  it('should track namespaces and number of documents per user', async () => {
+    const userDB = await database.user(USERS[2].id);
+    let thing1 = await userDB.create('foo', 'thing', "test");
+    let user = await userDB.get('core', 'user', USERS[2].id);
+    expect(user.data.documents).to.equal(1);
+    expect(user.data.namespaces).to.deep.equal(['foo']);
+
+    let thing2 = await userDB.create('foo', 'thing', "test");
+    user = await userDB.get('core', 'user', USERS[2].id);
+    expect(user.data.documents).to.equal(2);
+    expect(user.data.namespaces).to.deep.equal(['foo']);
+
+    await userDB.create('core', 'schema', {type: 'string'});
+    user = await userDB.get('core', 'user', USERS[2].id);
+    expect(user.data.documents).to.equal(3);
+    expect(user.data.namespaces).to.deep.equal(['foo', 'core']);
+
+    await userDB.destroy('foo', 'thing', thing2.id)
+    user = await userDB.get('core', 'user', USERS[2].id);
+    expect(user.data.documents).to.equal(2);
+    expect(user.data.namespaces).to.deep.equal(['foo', 'core']);
+  })
 });
 

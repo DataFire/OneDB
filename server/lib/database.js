@@ -181,7 +181,7 @@ class DatabaseForUser {
     if (err) return fail(err);
     const existing = await this.get(namespace, schema, id);
     if (existing) return fail(`Item ${namespace}/${schema}/${id} already exists`);
-    let acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || dbUtil.DEFAULT_ACL)));
+    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || dbUtil.DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (schema === 'schema') {
@@ -201,7 +201,15 @@ class DatabaseForUser {
     const obj = {id, data, info, acl};
     await this.validate(obj, schemaInfo.data);
     const col = this.getCollection(namespace, schema);
-    let result = await col.insert(util.encodeDocument([obj]));
+    const result = await col.insert(util.encodeDocument([obj]));
+
+    const userUpdate = {
+      $inc: {'data.documents': 1},
+      $addToSet: {'data.namespaces': namespace},
+    }
+    const userCol = this.getCollection('core', 'user');
+    await userCol.update({id: this.user.id}, userUpdate);
+
     return obj;
   }
 
@@ -266,6 +274,11 @@ class DatabaseForUser {
     const col = this.getCollection(namespace, schema);
     const result = await col.remove(query, {justOne: true});
     if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
+    const userUpdate = {
+      $inc: {'data.documents': -1}
+    };
+    const userCol = this.getCollection('core', 'user');
+    await userCol.update({id: this.user.id}, userUpdate);
   }
 }
 
