@@ -1,12 +1,14 @@
 const MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
 const expect = require('chai').expect;
 const axios = require('axios');
+const config = require('../lib/config');
 const Server = require('../lib/server');
 
 const mongod = new MongoMemoryServer();
 
 const PORT = 3333;
 const HOST = 'http://localhost:' + PORT;
+const MAX_BYTES = 10000;
 
 const USER_1 = {
   username: 'me@example.com',
@@ -14,7 +16,10 @@ const USER_1 = {
 }
 
 describe("Server", () => {
+  let oldMaxBytes = config.maxBytesPerItem;
+
   before(async () => {
+    config.maxBytesPerItem = MAX_BYTES;
     const server = new Server({
       host: HOST,
       mongodb: await mongod.getConnectionString(),
@@ -28,6 +33,10 @@ describe("Server", () => {
     });
     return server.listen(PORT);
   });
+
+  after(() => {
+    config.maxBytesPerItem = oldMaxBytes;
+  })
 
   it('should respond with info', async () => {
     let response = await axios.get(HOST + '/info');
@@ -95,7 +104,7 @@ describe("Server", () => {
     resp = await axios.post(HOST + '/data/core/user_private', {}, {auth: USER_1, validateStatus: () => true});
     expect(resp.status).to.equal(401);
     expect(resp.data.message).to.equal('That operation is restricted');
-  })
+  });
 
   it('should allow POST with auth', async () => {
     const data = {type: 'string'};
@@ -120,6 +129,18 @@ describe("Server", () => {
         destroy: [],
       }
     });
+    const ns = {
+      versions: [{
+        version: '0',
+        types: {
+          foo: {
+            schema: {$ref: '/data/core/schema/foo'},
+          }
+        }
+      }]
+    }
+    resp = await axios.post(HOST + '/data/core/namespace/foo', ns, {auth: USER_1});
+    expect(resp.status).to.equal(200);
   });
 
   it('should not allow DELETE of schema', async () => {
@@ -141,4 +162,13 @@ describe("Server", () => {
     resp = await axios.post(HOST + '/data/core/schema/bar', data, {headers: {Authorization: 'Bearer ' + resp.data}});
     expect(resp.data).to.be.a('string');
   });
+
+  it('should respect max bytes per item', async () => {
+    let data = '';
+    for (let i = 0; i < MAX_BYTES; ++i) data += 'z';
+    const headers = {'Content-Type': 'application/json'};
+    const resp = await axios.post(HOST + '/data/foo/foo', JSON.stringify(data), {headers, auth: USER_1, validateStatus: () => true});
+    expect(resp.status).to.equal(413);
+    expect(resp.data.message).to.equal('request entity too large');
+  })
 });

@@ -4,7 +4,6 @@ const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 const config = require('../lib/config');
-config.maxItemsPerUser = 10;
 const Database = require('../lib/database');
 
 const mongod = new MongoMemoryServer();
@@ -357,11 +356,27 @@ describe('Database', () => {
   });
 
   it('should hit a limit for number of items per user', async () => {
+    const oldMaxItems = config.maxItemsPerUser;
+    config.maxItemsPerUser = 10;
     const userDB = await database.user(USERS[2].id);
     for (let i = 0; i < config.maxItemsPerUser - 2; ++i) {
       await userDB.create('foo', 'thing', 'foobar');
     }
     await expectError(userDB.create('foo', 'thing', 'foobar'), /You have hit your maximum of 10 items. Please destroy something to create a new one/);
+    config.maxItemsPerUser = oldMaxItems;
   });
+
+  it('should respect the maximum number of bytes per item in append', async function() {
+    this.timeout(10000);
+    const oldMaxBytes = config.maxBytesPerItem;
+    config.maxBytesPerItem = 1000;
+    const userDB = await database.user(USERS[0].id);
+    const list = await userDB.create('list', 'list', {things: []});
+    for (let i = 0; i < (config.maxBytesPerItem / 4) - 2; ++i) {
+      await userDB.append('list', 'list', list.id, {things: ['a']});
+    }
+    await expectError(userDB.append('list', 'list', list.id, {things: ['a']}), /would exceed the maximum of 1000 bytes/);
+    config.maxBytesPerItem = oldMaxBytes;
+  })
 });
 

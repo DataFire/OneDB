@@ -239,18 +239,31 @@ class DatabaseForUser {
 
   async append(namespace, schema, id, data) {
     const query = this.buildQuery({id}, 'append');
+    const col = this.getCollection(namespace, schema);
+    const existing = (await col.find({id}).toArray())[0];
+    if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
     const doc = {$push: {}}
     for (let key in data) {
       let schema = schemaInfo.data.properties && schemaInfo.data.properties[key];
       if (!schema) return fail(`Schema not found for key ${key}`, 400);
       await this.validate({data: data[key]}, schemaInfo.data.properties[key]);
+      existing[key] = (existing[key] || []).concat(data[key]);
       doc.$push['data.' + key] = {$each: data[key]};
     }
-    const col = this.getCollection(namespace, schema);
+
+    const newDoc = JSON.stringify(existing.data);
+    if (newDoc.length > config.maxBytesPerItem) {
+      return fail(`Item ${namespace}/${schema}/${id} would exceed the maximum of ${config.maxBytesPerItem} bytes`);
+    }
+
     const result = await col.update(query, doc);
-    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
-    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
+    if (result.result.nModified === 0) {
+      return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
+    }
+    if (result.result.nModified > 1) {
+      return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
+    }
   }
 
   async setACL(namespace, schema, id, acl) {

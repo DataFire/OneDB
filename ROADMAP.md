@@ -27,9 +27,8 @@ The goal of the alpha release is a simple proof of concept. It leaves out many f
 ## TODO
 * email verification
 * password reset
-* data $refs
+* allow $refs to data in other databases
 * enforce alphanumeric keys
-* per-user data limits
 * `list` query params
   * sort
   * created_since
