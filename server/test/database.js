@@ -3,6 +3,8 @@ const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
+const config = require('../lib/config');
+config.maxItemsPerUser = 10;
 const Database = require('../lib/database');
 
 const mongod = new MongoMemoryServer();
@@ -331,27 +333,35 @@ describe('Database', () => {
     })
   });
 
-  it('should track namespaces and number of documents per user', async () => {
+  it('should track namespaces and number of items per user', async () => {
     const userDB = await database.user(USERS[2].id);
     let thing1 = await userDB.create('foo', 'thing', "test");
     let user = await userDB.get('core', 'user', USERS[2].id);
-    expect(user.data.documents).to.equal(1);
+    expect(user.data.items).to.equal(1);
     expect(user.data.namespaces).to.deep.equal(['foo']);
 
     let thing2 = await userDB.create('foo', 'thing', "test");
     user = await userDB.get('core', 'user', USERS[2].id);
-    expect(user.data.documents).to.equal(2);
+    expect(user.data.items).to.equal(2);
     expect(user.data.namespaces).to.deep.equal(['foo']);
 
     await userDB.create('core', 'schema', {type: 'string'});
     user = await userDB.get('core', 'user', USERS[2].id);
-    expect(user.data.documents).to.equal(3);
+    expect(user.data.items).to.equal(3);
     expect(user.data.namespaces).to.deep.equal(['foo', 'core']);
 
     await userDB.destroy('foo', 'thing', thing2.id)
     user = await userDB.get('core', 'user', USERS[2].id);
-    expect(user.data.documents).to.equal(2);
+    expect(user.data.items).to.equal(2);
     expect(user.data.namespaces).to.deep.equal(['foo', 'core']);
-  })
+  });
+
+  it('should hit a limit for number of items per user', async () => {
+    const userDB = await database.user(USERS[2].id);
+    for (let i = 0; i < config.maxItemsPerUser - 2; ++i) {
+      await userDB.create('foo', 'thing', 'foobar');
+    }
+    await expectError(userDB.create('foo', 'thing', 'foobar'), /You have hit your maximum of 10 items. Please destroy something to create a new one/);
+  });
 });
 

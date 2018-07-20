@@ -4,6 +4,7 @@ const validate = require('./validate');
 const util = require('./util');
 const dbUtil = require('./db-util');
 const fail = require('./fail');
+const config = require('./config');
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
@@ -103,6 +104,10 @@ class DatabaseForUser {
   }
 
   async initialize() {
+    await this.refreshUser();
+  }
+
+  async refreshUser() {
     let users = await this.getCollection('core', 'user').find({id: this.userID}).toArray();
     if (!users || !users[0]) return fail(`User ${this.userID} not found`);
     if (users.length > 1) return fail("Multiple users found for ID " + this.userID);
@@ -175,6 +180,9 @@ class DatabaseForUser {
   }
 
   async create(namespace, schema, data, id='') {
+    if (this.user.data.items >= config.maxItemsPerUser) {
+      return fail(`You have hit your maximum of ${config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
+    }
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
     let err = validate.validators.itemID(id);
@@ -204,11 +212,12 @@ class DatabaseForUser {
     const result = await col.insert(util.encodeDocument([obj]));
 
     const userUpdate = {
-      $inc: {'data.documents': 1},
+      $inc: {'data.items': 1},
       $addToSet: {'data.namespaces': namespace},
     }
     const userCol = this.getCollection('core', 'user');
     await userCol.update({id: this.user.id}, userUpdate);
+    await this.refreshUser();
 
     return obj;
   }
@@ -275,10 +284,11 @@ class DatabaseForUser {
     const result = await col.remove(query, {justOne: true});
     if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
     const userUpdate = {
-      $inc: {'data.documents': -1}
+      $inc: {'data.items': -1}
     };
     const userCol = this.getCollection('core', 'user');
     await userCol.update({id: this.user.id}, userUpdate);
+    await this.refreshUser();
   }
 }
 
