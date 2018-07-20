@@ -113,8 +113,8 @@ class DatabaseForUser {
     this.user = users[0];
   }
 
-  getCollection(namespace, schema) {
-    const collectionName = namespace + '-' + schema;
+  getCollection(namespace, type) {
+    const collectionName = namespace + '-' + type;
     return this.db.collection(collectionName);
   }
 
@@ -137,13 +137,13 @@ class DatabaseForUser {
     }
   }
 
-  async getSchema(namespace, schema) {
+  async getSchema(namespace, type) {
     const namespaceInfo = await this.get('core', 'namespace', namespace);
     if (!namespaceInfo) return fail(`Namespace ${namespace} not found`);
     const nsVersion = namespaceInfo.data.versions[namespaceInfo.data.versions.length - 1];
     if (!nsVersion) return fail(`Namespace ${namespace}@${namespaceInfo.data.versions.length - 1} not found`);
-    const schemaRef = (nsVersion.types[schema] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
-    if (!schemaRef) return fail(`Schema ${namespace}/${schema} not found`);
+    const schemaRef = (nsVersion.types[type] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
+    if (!schemaRef) return fail(`Schema ${namespace}/${type} not found`);
     const schemaInfo = await this.get('core', 'schema', schemaRef);
     if (!schemaInfo) return fail(`Item core/schema/${schemaRef} not found`);
     return {schemaInfo, namespaceInfo: nsVersion};
@@ -167,37 +167,37 @@ class DatabaseForUser {
     return query;
   }
 
-  async getAll(namespace, schema, query={}, access='read') {
-    const col = this.getCollection(namespace, schema);
+  async getAll(namespace, type, query={}, access='read') {
+    const col = this.getCollection(namespace, type);
     query = this.buildQuery(query, access);
     let arr = await col.find(query).toArray();
     let decoded = util.decodeDocument(arr);
     return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
   }
 
-  async get(namespace, schema, id, access='read') {
-    const arr = await this.getAll(namespace, schema, {id}, access);
-    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
+  async get(namespace, type, id, access='read') {
+    const arr = await this.getAll(namespace, type, {id}, access);
+    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     if (!arr.length) return;
     return arr[0];
   }
 
-  async create(namespace, schema, data, id='') {
+  async create(namespace, type, data, id='') {
     if (this.user.data.items >= config.maxItemsPerUser) {
       return fail(`You have hit your maximum of ${config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
     }
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
     let err = validate.validators.itemID(id);
     if (err) return fail(err);
-    const existing = await this.get(namespace, schema, id);
-    if (existing) return fail(`Item ${namespace}/${schema}/${id} already exists`);
-    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || util.DEFAULT_ACL)));
+    const existing = await this.get(namespace, type, id);
+    if (existing) return fail(`Item ${namespace}/${type}/${id} already exists`);
+    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
-      if (schema === 'schema') {
+      if (type === 'schema') {
         util.fixSchemaRefs(data, id);
-      } else if (schema === 'user') {
+      } else if (type === 'user') {
         acl.owner = id;
       }
     }
@@ -210,8 +210,8 @@ class DatabaseForUser {
     }
 
     const obj = {id, data, info, acl};
-    await this.validate(obj, schemaInfo.data, namespace, schema);
-    const col = this.getCollection(namespace, schema);
+    await this.validate(obj, schemaInfo.data, namespace, type);
+    const col = this.getCollection(namespace, type);
     const result = await col.insert(util.encodeDocument([obj]));
 
     const userUpdate = {
@@ -225,53 +225,53 @@ class DatabaseForUser {
     return obj;
   }
 
-  async update(namespace, schema, id, data) {
+  async update(namespace, type, id, data) {
     const query = this.buildQuery({id}, 'write');
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
-    await this.validate({data}, schemaInfo.data, namespace, schema);
-    const col = this.getCollection(namespace, schema);
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    await this.validate({data}, schemaInfo.data, namespace, type);
+    const col = this.getCollection(namespace, type);
     const result = await col.update(query, {
       $set: {
         data: util.encodeDocument(data),
         'info.updated': (new Date()).toISOString(),
       },
     });
-    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
-    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
+    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
+    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
   }
 
-  async append(namespace, schema, id, data) {
+  async append(namespace, type, id, data) {
     const query = this.buildQuery({id}, 'append');
-    const col = this.getCollection(namespace, schema);
+    const col = this.getCollection(namespace, type);
     const existing = (await col.find({id}).toArray())[0];
-    if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
+    if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     const doc = {$push: {}}
     for (let key in data) {
       let schema = schemaInfo.data.properties && schemaInfo.data.properties[key];
       if (!schema) return fail(`Schema not found for key ${key}`, 400);
-      await this.validate({data: data[key]}, schemaInfo.data.properties[key], namespace, schema);
+      await this.validate({data: data[key]}, schemaInfo.data.properties[key], namespace, type);
       existing[key] = (existing[key] || []).concat(data[key]);
       doc.$push['data.' + key] = {$each: data[key]};
     }
 
     const newDoc = JSON.stringify(existing.data);
     if (newDoc.length > config.maxBytesPerItem) {
-      return fail(`Item ${namespace}/${schema}/${id} would exceed the maximum of ${config.maxBytesPerItem} bytes`);
+      return fail(`Item ${namespace}/${type}/${id} would exceed the maximum of ${config.maxBytesPerItem} bytes`);
     }
 
     const result = await col.update(query, doc);
     if (result.result.nModified === 0) {
-      return fail(`User ${this.userID} cannot update ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
+      return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     }
     if (result.result.nModified > 1) {
-      return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
+      return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     }
   }
 
-  async setACL(namespace, schema, id, acl) {
+  async setACL(namespace, type, id, acl) {
     await this.validate({acl: Object.assign({owner: 'dummy'}, acl)});
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     const necessaryPermissions = [];
     let query = {$and: [{id}]};
     const update = {$set: {}};
@@ -287,18 +287,18 @@ class DatabaseForUser {
       }
     }
     query = this.buildQuery(query, necessaryPermissions, true);
-    const col = this.getCollection(namespace, schema);
+    const col = this.getCollection(namespace, type);
     const result = await col.update(query, update);
-    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
-    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${schema}/${id}`);
+    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
+    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
   }
 
-  async destroy(namespace, schema, id) {
+  async destroy(namespace, type, id) {
     let query = {id};
     query = this.buildQuery(query, 'destroy');
-    const col = this.getCollection(namespace, schema);
+    const col = this.getCollection(namespace, type);
     const result = await col.remove(query, {justOne: true});
-    if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${schema}/${id}, or ${namespace}/${schema}/${id} does not exist`, 401);
+    if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     const userUpdate = {
       $inc: {'data.items': -1}
     };
