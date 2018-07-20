@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const util = require('../util');
 const config = require('../config');
 const fail = require('../fail');
 

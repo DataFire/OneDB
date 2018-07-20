@@ -1,5 +1,5 @@
 const expect = require('chai').expect;
-const util = require('../lib/util');
+const util = require('../lib/db-util');
 
 describe('Util', () => {
   it('should encode document', () => {

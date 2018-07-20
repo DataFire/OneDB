@@ -1,8 +1,7 @@
 const mongodb = require('mongodb');
 const randomstring = require("randomstring");
 const validate = require('./validate');
-const util = require('./util');
-const dbUtil = require('./db-util');
+const util = require('./db-util');
 const fail = require('./fail');
 const config = require('./config');
 
@@ -20,10 +19,10 @@ class Database {
 
   async initialize() {
     if (this.client) return fail("Database already initialized");
-    if (this.options.host) dbUtil.setRefHost(this.options.host);
+    if (this.options.host) util.setRefHost(this.options.host);
     this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
-    let coreObjects = JSON.parse(JSON.stringify(dbUtil.CORE_OBJECTS));
+    let coreObjects = JSON.parse(JSON.stringify(util.CORE_OBJECTS));
     for (let obj of coreObjects) {
       let coll = this.db.collection(obj.namespace + '-' + obj.schema);
       let existing = await coll.find({id: obj.document.id}).toArray();
@@ -32,8 +31,8 @@ class Database {
         await coll.insert(encoded);
       }
     }
-    let db = await this.user(dbUtil.USER_KEYS.system);
-    let coreTypes = JSON.parse(JSON.stringify(dbUtil.CORE_TYPES));
+    let db = await this.user(util.USER_KEYS.system);
+    let coreTypes = JSON.parse(JSON.stringify(util.CORE_TYPES));
     for (let type of coreTypes) {
       let existing = await db.get('core', 'schema', type.id);
       if (!existing) {
@@ -53,7 +52,7 @@ class Database {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
-    const db = await this.user(dbUtil.USER_KEYS.system);
+    const db = await this.user(util.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
     const user = await db.create('core', 'user', {publicKey: ''});
@@ -69,7 +68,7 @@ class Database {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email);
     if (err) return fail(err, 400);
-    const db = await this.user(dbUtil.USER_KEYS.system);
+    const db = await this.user(util.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length !== 1) return fail(`User ${email} not found`, 401);
     await db.append('core', 'user_private', existing[0].id, {tokens: [token]});
@@ -79,7 +78,7 @@ class Database {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
-    const db = await this.user(dbUtil.USER_KEYS.system);
+    const db = await this.user(util.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (!existing.length) return fail(`User ${email} not found`, 401);
     const user = existing[0].data;
@@ -89,7 +88,7 @@ class Database {
   }
 
   async signInWithToken(token) {
-    const db = await this.user(dbUtil.USER_KEYS.system);
+    const db = await this.user(util.USER_KEYS.system);
     const col = db.getCollection('core', 'user_private');
     const user = await col.find({'data.tokens': {$in: [token]}}).toArray();
     if (user.length !== 1) return fail(`The provided token is invalid`);
@@ -158,11 +157,11 @@ class DatabaseForUser {
       let allowKey = ['acl', accessType, access].join('.');
       let disallowKey = ['acl', 'disallowed', access].join('.');
       const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
-      ownerQuery.$and[1][allowKey] = {$in: [dbUtil.USER_KEYS.owner]};
-      ownerQuery.$and[2][disallowKey] = {$nin: [dbUtil.USER_KEYS.owner]};
+      ownerQuery.$and[1][allowKey] = {$in: [util.USER_KEYS.owner]};
+      ownerQuery.$and[2][disallowKey] = {$nin: [util.USER_KEYS.owner]};
       const accessQuery = {$and: [{}, {}]};
-      accessQuery.$and[0][allowKey] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
-      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
+      accessQuery.$and[0][allowKey] = {$in: [this.user.id, util.USER_KEYS.all]};
+      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, util.USER_KEYS.all]};
       query.$and.push({$or: [ownerQuery, accessQuery]});
     });
     return query;
@@ -193,7 +192,7 @@ class DatabaseForUser {
     if (err) return fail(err);
     const existing = await this.get(namespace, schema, id);
     if (existing) return fail(`Item ${namespace}/${schema}/${id} already exists`);
-    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || dbUtil.DEFAULT_ACL)));
+    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[schema].initial_acl || util.DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (schema === 'schema') {
