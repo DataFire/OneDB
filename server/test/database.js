@@ -167,6 +167,18 @@ describe('Database', () => {
     expect(item.data).to.equal("Goodbye world!");
   });
 
+  it('should not allow duplicate ID for invisible thing', async () => {
+    const user1DB = await database.user(USERS[0].id);
+    const user2DB = await database.user(USERS[1].id);
+    const item1 = await user1DB.create('foo', 'thing', "hello", "unique");
+    await user1DB.setACL('foo', 'thing', 'unique', {disallowed: {read: [USERS[1].id]}});
+
+    const item1ForUser2 = await user2DB.get('foo', 'thing', 'unique');
+    expect(item1ForUser2).to.equal(undefined);
+
+    await expectError(user2DB.create('foo', 'thing', 'goodbye', 'unique'), /already exists/);
+  })
+
   it('should not allow first user to access or alter second thing', async () => {
     const userDB = await database.user(USERS[0].id);
     let thing = await userDB.get('foo', 'thing', 'thing2');
@@ -188,7 +200,7 @@ describe('Database', () => {
   it('should allow user to retrieve all things', async () => {
     const userDB = await database.user(USERS[0].id);
     let items = await userDB.getAll('foo', 'thing');
-    expect(items.length).to.equal(1);
+    expect(items.length).to.equal(2);
     expect(items[0].data).to.equal("Hello world!");
   });
 
@@ -246,7 +258,7 @@ describe('Database', () => {
     expect(item.data).to.equal('Goodbye world!');
 
     const list = await userDB.getAll('foo', 'thing');
-    expect(list.length).to.equal(1);
+    expect(list.length).to.equal(2);
     expect(list[0].data).to.equal("Goodbye world!");
   });
 

@@ -150,6 +150,7 @@ class DatabaseForUser {
   }
 
   buildQuery(query={}, accesses='read', modifyACL=false) {
+    if (accesses === 'force') return query;
     let accessType = modifyACL ? 'modify' : 'allowed';
     query.$and = query.$and || [];
     if (typeof accesses === 'string') accesses = [accesses];
@@ -190,7 +191,7 @@ class DatabaseForUser {
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
     let err = validate.validators.itemID(id);
     if (err) return fail(err);
-    const existing = await this.get(namespace, type, id);
+    const existing = await this.get(namespace, type, id, 'force');
     if (existing) return fail(`Item ${namespace}/${type}/${id} already exists`);
     const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.DEFAULT_ACL)));
     acl.owner = this.user.id;
@@ -243,7 +244,7 @@ class DatabaseForUser {
   async append(namespace, type, id, data) {
     const query = this.buildQuery({id}, 'append');
     const col = this.getCollection(namespace, type);
-    const existing = (await col.find({id}).toArray())[0];
+    const existing = await this.get(namespace, type, id, 'force');
     if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     const doc = {$push: {}}
