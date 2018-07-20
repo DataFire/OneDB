@@ -377,6 +377,15 @@ describe('Database', () => {
     }
     await expectError(userDB.append('list', 'list', list.id, {things: ['a']}), /would exceed the maximum of 1000 bytes/);
     config.maxBytesPerItem = oldMaxBytes;
+  });
+
+  it('should allow ref to external item', async () => {
+    const userDB = await database.user(USERS[0].id);
+    const data = {
+      $ref: 'https://example.com/data/foo/thing/abc',
+    };
+    const item = await userDB.create('foo', 'thing', data);
+    expect(item.data).to.deep.equal(data);
   })
 });
 

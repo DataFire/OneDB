@@ -119,8 +119,12 @@ class DatabaseForUser {
     return this.db.collection(collectionName);
   }
 
-  async validate(obj, schema=null) {
+  async validate(obj, schema=null, namespace='', type='') {
     if (schema) {
+      if (!namespace || !type) throw new Error("Need a namespace and type to validate schema");
+      schema = {
+        anyOf: [schema, validate.getRefSchema(namespace, type)],
+      }
       let err = validate.validators.data(obj.data, schema);
       if (err) return fail(err);
     }
@@ -207,7 +211,7 @@ class DatabaseForUser {
     }
 
     const obj = {id, data, info, acl};
-    await this.validate(obj, schemaInfo.data);
+    await this.validate(obj, schemaInfo.data, namespace, schema);
     const col = this.getCollection(namespace, schema);
     const result = await col.insert(util.encodeDocument([obj]));
 
@@ -225,7 +229,7 @@ class DatabaseForUser {
   async update(namespace, schema, id, data) {
     const query = this.buildQuery({id}, 'write');
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, schema);
-    await this.validate({data}, schemaInfo.data);
+    await this.validate({data}, schemaInfo.data, namespace, schema);
     const col = this.getCollection(namespace, schema);
     const result = await col.update(query, {
       $set: {
@@ -247,7 +251,7 @@ class DatabaseForUser {
     for (let key in data) {
       let schema = schemaInfo.data.properties && schemaInfo.data.properties[key];
       if (!schema) return fail(`Schema not found for key ${key}`, 400);
-      await this.validate({data: data[key]}, schemaInfo.data.properties[key]);
+      await this.validate({data: data[key]}, schemaInfo.data.properties[key], namespace, schema);
       existing[key] = (existing[key] || []).concat(data[key]);
       doc.$push['data.' + key] = {$each: data[key]};
     }

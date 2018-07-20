@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const validate = require('./validate');
 
 const DOLLAR = "\uFF04";
 const DOT = "\uFF0E";
@@ -53,15 +54,7 @@ module.exports.fixSchemaRefs = function(schema, rootID) {
   if (schema.$ref) {
     if (schema.$ref === '#') schema.$ref = '/data/core/schema/' + rootID;
     let [dummy, namespace, type] = schema.$ref.split('/');
-    let newSchema = {
-      type: 'object',
-      properties: {
-        $ref: {
-          type: 'string',
-          pattern: `.*/${namespace}/${type}/\\w+`,
-        },
-      },
-    }
+    let newSchema = validate.getRefSchema(namespace, type);
     for (let key in schema) delete schema[key];
     Object.assign(schema, newSchema);
   } else {

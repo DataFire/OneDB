@@ -90,4 +90,16 @@ module.exports.type = (req, res, next) => {
   let message = validators.data(req.body.data, req.type.schema) || validators.acl(req.body.acl);
   if (message) return sendError(res, message);
   next();
-};
+}
+
+module.exports.getRefSchema = (namespace, type) => {
+  return {
+    type: 'object',
+    properties: {
+      $ref: {
+        type: 'string',
+        pattern: `^(https?:\\/\\/(\\w+\\.)*\\w+(:\\d+)?)?/data/${namespace}/${type}/\\w+$`,
+      },
+    },
+  }
+}

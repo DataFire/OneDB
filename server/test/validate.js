@@ -104,5 +104,26 @@ describe('Validation', () => {
       expect(err).to.be.a('string');
       expect(err.length).to.not.equal(0);
     })
+  });
+
+  it('should create valid ref schema', () => {
+    const schema = validate.getRefSchema('foo', 'bar');
+    const regex = new RegExp(schema.properties.$ref.pattern);
+
+    expect(regex.test('/data/foo/bar/xyz')).to.equal(true);
+    expect(regex.test('http://example.com/data/foo/bar/xyx')).to.equal(true);
+    expect(regex.test('https://example.com/data/foo/bar/xyx')).to.equal(true);
+    expect(regex.test('https://example.com:3000/data/foo/bar/xyx')).to.equal(true);
+    expect(regex.test('https://example.co.uk/data/foo/bar/xyx')).to.equal(true);
+    expect(regex.test('https://foo.bar.example.co.uk/data/foo/bar/xyx')).to.equal(true);
+    expect(regex.test('https://localhost:3000/data/foo/bar/xyx')).to.equal(true);
+
+    expect(regex.test('https://example.com/data/foo/nope/abc')).to.equal(false)
+    expect(regex.test('https://example.com/data/nope/bar/abc')).to.equal(false)
+    expect(regex.test('http://foo%bar/data/foo/bar/xyx')).to.equal(false);
+    expect(regex.test('abc')).to.equal(false);
+    expect(regex.test('/data/foo/bar/^%$')).to.equal(false);
+    expect(regex.test('http://example.com/foo')).to.equal(false);
+    expect(regex.test('abc')).to.equal(false);
   })
 })
