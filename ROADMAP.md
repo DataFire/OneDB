@@ -39,6 +39,8 @@ The goal of the alpha release is a simple proof of concept. It leaves out many f
   * owner
   * field equality
 * resolve $refs in client
+* usernames
+* `create` permissions
 * more tests
 * documentation
 
@@ -78,6 +80,10 @@ The goal for the Stable release is to have a full functionality and security.
 ## Payments
 * Ability to move funds from one user to another
 * Ability to charge for access to data
+
+## Metadata
+* content-types
+* Usage rights
 
 ## Documentation
 * Separate documentation website
