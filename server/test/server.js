@@ -116,7 +116,7 @@ describe("Server", () => {
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
       owner: USER_1.id,
-      allowed: {
+      allow: {
         read: ['_all'],
         write: [],
         append: [],

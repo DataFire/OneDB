@@ -65,13 +65,13 @@ describe('Database', () => {
   it('should have core schemas', async () => {
     let user = await systemDB.get('core', 'schema', 'schema');
     expect(user.acl.owner).to.equal('_system');
-    expect(user.acl.allowed.read).to.deep.equal(['_all']);
+    expect(user.acl.allow.read).to.deep.equal(['_all']);
     expect(user.data.type).to.deep.equal(['object', 'boolean']);
 
     let schema = await systemDB.get('core', 'schema', 'user');
     expect(schema.acl).to.deep.equal({
       owner: '_system',
-      allowed: {
+      allow: {
         read: ['_all'],
         write: [],
         append: [],
@@ -84,7 +84,7 @@ describe('Database', () => {
         destroy: [],
       },
     });
-    expect(schema.acl.allowed.read).to.deep.equal(['_all']);
+    expect(schema.acl.allow.read).to.deep.equal(['_all']);
     expect(schema.data.type).to.equal('object');
   });
 
@@ -225,7 +225,7 @@ describe('Database', () => {
     const user1DB = await database.user(USERS[0].id);
     const user2DB = await database.user(USERS[1].id);
     const item1 = await user1DB.create('foo', 'thing', "hello", "unique");
-    await user1DB.setACL('foo', 'thing', 'unique', {disallowed: {read: [USERS[1].id]}});
+    await user1DB.setACL('foo', 'thing', 'unique', {disallow: {read: [USERS[1].id]}});
 
     const item1ForUser2 = await user2DB.get('foo', 'thing', 'unique');
     expect(item1ForUser2).to.equal(undefined);
@@ -240,7 +240,7 @@ describe('Database', () => {
     let thing = await user1DB.get('foo', 'thing', 'thing2');
     expect(thing).to.equal(undefined);
     await expectError(user1DB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(user1DB.setACL('foo', 'thing', 'thing2', {allowed: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
+    await expectError(user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(user1DB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
@@ -249,7 +249,7 @@ describe('Database', () => {
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', "Hello");
     await user1DB.create('foo', 'thing', "Goodbye", 'thing2');
-    await user1DB.setACL('foo', 'thing', 'thing2', {allowed: {read: ['_all']}});
+    await user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
     let items = await user0DB.getAll('foo', 'thing');
     expect(items.length).to.equal(2);
     expect(items[0].data).to.equal("Hello");
@@ -281,14 +281,14 @@ describe('Database', () => {
   it('should not allow invalid ACL', async () => {
     const userDB = await database.user(USERS[0].id);
     await userDB.create('foo', 'thing', "Hello", 'thing2')
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allowed: {read: {}}}), /ACL is invalid. data.allowed.read should be array/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: {}}}), /ACL is invalid. data.allow.read should be array/);
   });
 
   it('should allow user to update ACL', async () => {
     const user0DB = await database.user(USERS[0].id);
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', "Hello", 'thing2')
-    await user0DB.setACL('foo', 'thing', 'thing2', {allowed: {read: ['_all'], write: ['_all']}});
+    await user0DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all'], write: ['_all']}});
     await user1DB.update('foo', 'thing', 'thing2', "Goodbye");
     let thing = await user0DB.get('foo', 'thing', 'thing2');
     expect(thing.data).to.equal("Goodbye");
@@ -298,18 +298,18 @@ describe('Database', () => {
     const user0DB = await database.user(USERS[0].id);
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', "Hello", 'thing2')
-    await user0DB.setACL('foo', 'thing', 'thing2', {allowed: {read: ['_all']}});
+    await user0DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
     await expectError(user1DB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(user1DB.setACL('foo', 'thing', 'thing2', {allowed: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
+    await expectError(user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(user1DB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
   it('should allow blacklisting access to thing2', async () => {
     const user1DB = await database.user(USERS[1].id);
     await user1DB.create('foo', 'thing', "Hello", 'thing2');
-    await user1DB.setACL('foo', 'thing', 'thing2', {allowed: {read: ['_all']}, disallowed: {read: [USERS[2].id]}});
+    await user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}, disallow: {read: [USERS[2].id]}});
     let item = await user1DB.get('foo', 'thing', 'thing2');
-    expect(item.acl.disallowed).to.deep.equal({read: [USERS[2].id]});
+    expect(item.acl.disallow).to.deep.equal({read: [USERS[2].id]});
 
     const user2DB = await database.user(USERS[2].id);
     item = await user2DB.get('foo', 'thing', 'thing2');
@@ -323,7 +323,7 @@ describe('Database', () => {
   it('should allow transfer of ownership', async () => {
     const userDB = await database.user(USERS[1].id);
     await userDB.create('foo', 'thing', "Hello", 'thing2');
-    await userDB.setACL('foo', 'thing', 'thing2', {owner: USERS[0].id, allowed: {read: ['_all']}});
+    await userDB.setACL('foo', 'thing', 'thing2', {owner: USERS[0].id, allow: {read: ['_all']}});
     const item = await userDB.get('foo', 'thing', 'thing2');
     expect(item.acl.owner).to.equal(USERS[0].id);
   });
@@ -333,7 +333,7 @@ describe('Database', () => {
     await userDB.create('foo', 'thing', "Hello", 'thing2');
     await userDB.setACL('foo', 'thing', 'thing2', {owner: USERS[0].id});
     await expectError(userDB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allowed: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
@@ -356,7 +356,7 @@ describe('Database', () => {
           schema: {$ref: '/data/core/schema/thing'},
           initial_acl: {
             owner: 'flooob',
-            allowed: {
+            allow: {
               read: ['_all'],
               destroy: [],
             },
@@ -371,7 +371,7 @@ describe('Database', () => {
     let created = await userDB.create('foo2', 'thing', "Hi there");
     expect(created.acl).to.deep.equal({
       owner: USERS[0].id,
-      allowed: {
+      allow: {
         read: ['_all'],
         write: ['_owner'],
         append: ['_owner'],

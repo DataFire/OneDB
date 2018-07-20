@@ -30,7 +30,7 @@ const SYSTEM_INFO = {
 }
 
 const DEFAULT_ACL = module.exports.DEFAULT_ACL = {
-  allowed: {
+  allow: {
     read: [USER_KEYS.owner],
     write: [USER_KEYS.owner],
     append: [USER_KEYS.owner],
@@ -46,7 +46,7 @@ const DEFAULT_ACL = module.exports.DEFAULT_ACL = {
 
 const SYSTEM_ACL = module.exports.SYSTEM_ACL = {
   owner: USER_KEYS.system,
-  allowed: {
+  allow: {
     read: [USER_KEYS.all],
     write: [USER_KEYS.system],
     append: [USER_KEYS.system],
@@ -61,7 +61,7 @@ const SYSTEM_ACL = module.exports.SYSTEM_ACL = {
 };
 
 const PRIVATE_ACL = module.exports.PRIVATE_ACL = JSON.parse(JSON.stringify(SYSTEM_ACL));
-PRIVATE_ACL.allowed.read = [USER_KEYS.system];
+PRIVATE_ACL.allow.read = [USER_KEYS.system];
 
 const CORE_TYPES = module.exports.CORE_TYPES = [{
   id: 'namespace',
@@ -111,7 +111,7 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
           user: {
             schema: {$ref: '/data/core/schema/user'},
             initial_acl: {
-              allowed: {
+              allow: {
                 read: [USER_KEYS.all],
                 write: [USER_KEYS.owner],
               }
@@ -120,7 +120,7 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
           schema: {
             schema: {$ref: '/data/core/schema/schema'},
             initial_acl: {
-              allowed: {
+              allow: {
                 read: [USER_KEYS.all],
                 write: [],
                 append: [],
@@ -137,7 +137,7 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
           namespace: {
             schema: {$ref: '/data/core/schema/namespace'},
             initial_acl: {
-              allowed: {
+              allow: {
                 read: [USER_KEYS.all],
                 write: [],
                 //append: [USER_KEYS.owner],  TODO: enable append for versioning

@@ -40,8 +40,8 @@ const ACL_SCHEMA = module.exports = {
   required: ['owner'],
   properties: {
     owner: IDENTITY_SCHEMA,
-    allowed: ACL_SET_WITH_DEFAULT_SCHEMA,
-    disallowed: ACL_SET_SCHEMA,
+    allow: ACL_SET_WITH_DEFAULT_SCHEMA,
+    disallow: ACL_SET_SCHEMA,
     modify: ACL_SET_WITH_DEFAULT_SCHEMA,
   },
 }

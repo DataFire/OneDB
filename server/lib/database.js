@@ -151,12 +151,12 @@ class DatabaseForUser {
 
   buildQuery(query={}, accesses='read', modifyACL=false) {
     if (accesses === 'force') return query;
-    let accessType = modifyACL ? 'modify' : 'allowed';
+    let accessType = modifyACL ? 'modify' : 'allow';
     query.$and = query.$and || [];
     if (typeof accesses === 'string') accesses = [accesses];
     accesses.forEach(access => {
       let allowKey = ['acl', accessType, access].join('.');
-      let disallowKey = ['acl', 'disallowed', access].join('.');
+      let disallowKey = ['acl', 'disallow', access].join('.');
       const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
       ownerQuery.$and[1][allowKey] = {$in: [util.USER_KEYS.owner]};
       ownerQuery.$and[2][disallowKey] = {$nin: [util.USER_KEYS.owner]};
