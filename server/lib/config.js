@@ -3,7 +3,7 @@ const OVERRIDE_FILE = __dirname + '/../../server-config.json';
 const FIFTEEN_MIN = 15 * 60 * 1000;
 
 module.exports = {
-  maxDataSize: '1000kb',
+  maxDataSize: '100kb',
   host: 'http://localhost:3000',
   rateLimit: {
     all: {
