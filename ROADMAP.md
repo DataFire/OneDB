@@ -27,17 +27,9 @@ The goal of the alpha release is a simple proof of concept. It leaves out many f
 ## TODO
 * email verification
 * password reset
-* `list` query params
-  * sort
-  * created_since
-  * created_before
-  * updated_since
-  * updated_before
-  * owner
-  * field equality
 * resolve $refs in client
 * usernames
-* `create` permissions
+* `create` permissions?
 * more tests
 * documentation
 
@@ -55,6 +47,7 @@ The goal for the Beta release is to be able to support fully functional FreeDB a
 
 ## Decentralization
 * Move type/namespace/user registration to a blockchain
+* collate data in client
 
 ## Sample apps
 * Tooter
