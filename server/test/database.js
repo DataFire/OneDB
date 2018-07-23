@@ -532,6 +532,22 @@ describe('Database', () => {
     schema = {
       type: 'object',
       properties: {
+        '_foo': {type: 'string'},
+      }
+    }
+    await expectError(userDB.create('core', 'schema', schema), /Object key _foo is invalid/);
+
+    schema = {
+      type: 'object',
+      properties: {
+        '1foo': {type: 'string'},
+      }
+    }
+    await expectError(userDB.create('core', 'schema', schema), /Object key 1foo is invalid/);
+
+    schema = {
+      type: 'object',
+      properties: {
         '$foo': {type: 'string'},
       }
     }
