@@ -9,9 +9,9 @@ import { appRoutes } from './app.routing';
 import { AppComponent }       from './app.component';
 import { HomeComponent }       from './home/home.component';
 import { NavbarComponent }       from './navbar/navbar.component';
-import {ReadmeComponent} from './readme/readme.component'
 
 import {PlatformService} from './services/platform.service';
+import {FreeDBService} from './services/freedb.service'
 
 import { environment } from '../environments/environment';
 
@@ -25,12 +25,12 @@ import { environment } from '../environments/environment';
   providers: [
     {provide: APP_BASE_HREF, useValue: environment.baseHref || '/'},
     PlatformService,
+    FreeDBService,
   ],
   declarations: [
     AppComponent,
     HomeComponent,
     NavbarComponent,
-    ReadmeComponent,
   ],
   bootstrap: [ AppComponent ],
 })

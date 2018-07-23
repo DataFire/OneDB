@@ -9,7 +9,7 @@
   "scripts": {
     "postinstall": "node webpack.cli-additions",
     "ng": "ng",
-    "start": "ng serve --port 3000 --host 0.0.0.0",
+    "start": "ng serve --port 3001 --host 0.0.0.0",
     "clean": "rm -rf dist",
     "build": "npm run clean && npm run build:static",
     "build:gh-pages": "npm run build && rm -rf ./docs && cp -r ./dist/browser ./docs",
@@ -48,6 +48,7 @@
     "apply-loader": "^2.0.0",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.2",
+    "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.6.1",
     "bootstrap": "^3.3.7",
     "bootstrap-loader": "^2.1.0",
