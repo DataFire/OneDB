@@ -1,6 +1,7 @@
 const npath = require('path');
 const express = require('express');
 const RateLimit = require('express-rate-limit');
+const cors = require('cors');
 const packageInfo = require('../package.json');
 const validate = require('./validate');
 const crud = require('./crud');
@@ -33,7 +34,6 @@ class Server {
     this.app = express();
     this.app.set('view engine', 'pug');
     this.app.set('views', npath.join(__dirname, '../web/views'));
-
     this.app.enable('trust proxy');
     this.app.use(new RateLimit(this.config.rateLimit.all));
 
@@ -63,7 +63,7 @@ class Server {
         mutateRateLimit(req, res, next);
       }
     });
-    this.app.use('/data', crud(database));
+    this.app.use('/data', cors(), crud(database));
 
     this.app.use((err, req, res, next) => {
       res.status(err.statusCode || 500).json({message: err.message || "Unknown error"});

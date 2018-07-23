@@ -11,6 +11,7 @@
   "dependencies": {
     "ajv": "^6.5.1",
     "body-parser": "^1.18.3",
+    "cors": "^2.8.4",
     "express": "^4.16.3",
     "express-rate-limit": "^2.11.0",
     "jsonwebtoken": "^8.3.0",
