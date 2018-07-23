@@ -3,6 +3,7 @@ const expect = require('chai').expect;
 const axios = require('axios');
 const config = require('../lib/config');
 const Server = require('../lib/server');
+config.jwtSecret = 'thisisasecret';
 
 const mongod = new MongoMemoryServer();
 
@@ -92,7 +93,7 @@ describe("Server", () => {
   });
 
   it('should allow registration', async () => {
-    const resp = await axios.post(HOST + '/register', {}, {auth: USER_1});
+    const resp = await axios.post(HOST + '/users/register', {}, {auth: USER_1});
     expect(resp.data).to.be.a('string');
     USER_1.id = resp.data;
   });
@@ -157,7 +158,7 @@ describe("Server", () => {
   });
 
   it('should allow authorization', async () => {
-    let resp = await axios.post(HOST + '/authorize', {}, {auth: USER_1, validateStatus: () => true});
+    let resp = await axios.post(HOST + '/users/authorize', {}, {auth: USER_1, validateStatus: () => true});
     expect(resp.data).to.be.a('string');
     let data = {type: 'string'};
     resp = await axios.post(HOST + '/data/core/schema/bar', data, {headers: {Authorization: 'Bearer ' + resp.data}});

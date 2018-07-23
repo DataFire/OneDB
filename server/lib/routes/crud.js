@@ -1,9 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const validate = require('./validate');
-const config = require('./config');
-const errorGuard = require('./error-guard');
-const fail = require('./fail');
+const validate = require('../validate');
+const config = require('../config');
+const errorGuard = require('../error-guard');
+const fail = require('../fail');
 
 const NAMESPACE_PATH = '/:namespace';
 const TYPE_PATH = NAMESPACE_PATH + '/:typeID';
