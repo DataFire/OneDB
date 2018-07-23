@@ -6,6 +6,7 @@ module.exports = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           version: {type: 'string'},
           types: {
@@ -16,7 +17,7 @@ module.exports = {
               additionalProperties: false,
               properties: {
                 schema: {$ref: '/data/core/schema/schema'},
-                initial_acl: {$ref: '/data/core/schema/acl'},
+                initial_acl: require('./acl'),
               }
             }
           }

@@ -50,7 +50,7 @@ describe('Database', () => {
       versions: [{
         version: '0',
         types: {
-          'thing': {schema: {$ref: '/data/core/schema/thing'}},
+          'thing': {schema: {$ref: '/data/core/schema/thing'}, initial_acl: {allow: {read: ['_all']}}},
           'list': {schema: {$ref: '/data/core/schema/list'}},
         }
       }]
@@ -83,6 +83,7 @@ describe('Database', () => {
         append: [],
         destroy: [],
       },
+      disallow: {},
     });
     expect(schema.acl.allow.read).to.deep.equal(['_all']);
     expect(schema.data.type).to.equal('object');
@@ -130,6 +131,20 @@ describe('Database', () => {
     }
     await userDB.create('core', 'namespace', ns, 'foo2');
   });
+
+  it('should not allow creating namespace with additional properties', async () => {
+    const userDB = await database.user(USERS[0].id);
+    const ns = {
+      versions: [{
+        version: '0',
+        foo: 'bar',
+        types: {
+          'thing': {schema: {$ref: '/data/core/schema/thing'}},
+        }
+      }]
+    }
+    await expectError(userDB.create('core', 'namespace', ns, 'foo2'), /Data does not match schema. data.versions\[0\] should NOT have additional properties/);
+  })
 
   it('should allow creating schema', async () => {
     const userDB = await database.user(USERS[0].id);
@@ -196,12 +211,12 @@ describe('Database', () => {
       versions: [{
         version: '0',
         types: {
-          'thing': {schema: {$ref: '/data/core/schema/thing'}, initial_acl: {destroy: []}},
+          'thing': {schema: {$ref: '/data/core/schema/thing'}, initial_acl: {allow: {destroy: []}}},
         }
       }]
     }
     await user0DB.create('core', 'namespace', ns, 'foo2');
-    ns.versions[0].version = 1;
+    ns.versions[0].version = '1';
     return expectError(user0DB.update('core', 'namespace', 'foo2', ns), /User .* cannot update core\/namespace\/foo/);
   });
 
@@ -222,21 +237,22 @@ describe('Database', () => {
   });
 
   it('should not allow duplicate ID for invisible thing', async () => {
-    const user1DB = await database.user(USERS[0].id);
-    const user2DB = await database.user(USERS[1].id);
-    const item1 = await user1DB.create('foo', 'thing', "hello", "unique");
-    await user1DB.setACL('foo', 'thing', 'unique', {disallow: {read: [USERS[1].id]}});
+    const user0DB = await database.user(USERS[0].id);
+    const user1DB = await database.user(USERS[1].id);
+    const item1 = await user0DB.create('foo', 'thing', "hello", "unique");
+    await user0DB.setACL('foo', 'thing', 'unique', {disallow: {read: [USERS[1].id]}});
 
-    const item1ForUser2 = await user2DB.get('foo', 'thing', 'unique');
-    expect(item1ForUser2).to.equal(undefined);
+    const item1ForUser1 = await user1DB.get('foo', 'thing', 'unique');
+    expect(item1ForUser1).to.equal(undefined);
 
-    await expectError(user2DB.create('foo', 'thing', 'goodbye', 'unique'), /already exists/);
+    await expectError(user1DB.create('foo', 'thing', 'goodbye', 'unique'), /already exists/);
   })
 
   it('should not allow one user to access or alter another user\'s thing', async () => {
     const user0DB = await database.user(USERS[0].id);
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', "Hello!", 'thing2');
+    await user0DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_owner']}});
     let thing = await user1DB.get('foo', 'thing', 'thing2');
     expect(thing).to.equal(undefined);
     await expectError(user1DB.update('foo', 'thing', 'thing2', "This is a new string"), /User .* cannot update foo\/thing\/thing2/);
@@ -347,7 +363,7 @@ describe('Database', () => {
     expect(item.data).to.equal("This is a new string");
   });
 
-  it('should allow namespace with default_acl', async () => {
+  it('should allow namespace with initial_acl', async () => {
     const userDB = await database.user(USERS[0].id);
     const ns = {versions: [{
       version: '0',
@@ -355,7 +371,6 @@ describe('Database', () => {
         thing: {
           schema: {$ref: '/data/core/schema/thing'},
           initial_acl: {
-            owner: 'flooob',
             allow: {
               read: ['_all'],
               destroy: [],
@@ -383,6 +398,7 @@ describe('Database', () => {
         append: ['_owner'],
         destroy: [],
       },
+      disallow: {},
     })
   });
 

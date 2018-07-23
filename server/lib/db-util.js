@@ -215,7 +215,7 @@ module.exports.fixSchemaRefs = function(schema, rootID) {
   if (Array.isArray(schema)) schema.forEach(sub => module.exports.fixSchemaRefs(sub, rootID));
   if (schema.$ref) {
     if (schema.$ref === '#') schema.$ref = '/data/core/schema/' + rootID;
-    let [dummy, namespace, type] = schema.$ref.split('/');
+    let [dummy, dummy2, namespace, type] = schema.$ref.split('/');
     let newSchema = validate.getRefSchema(namespace, type);
     for (let key in schema) delete schema[key];
     Object.assign(schema, newSchema);

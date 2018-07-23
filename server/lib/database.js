@@ -237,8 +237,8 @@ class DatabaseForUser {
         'info.updated': (new Date()).toISOString(),
       },
     });
-    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
-    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
+    if (result.result.n === 0) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
+    if (result.result.n > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
   }
 
   async append(namespace, type, id, data) {
@@ -271,7 +271,8 @@ class DatabaseForUser {
   }
 
   async setACL(namespace, type, id, acl) {
-    await this.validate({acl: Object.assign({owner: 'dummy'}, acl)});
+    const copyACL = JSON.parse(JSON.stringify(acl)); // Make a copy where defaults are set
+    await this.validate({acl: Object.assign({owner: 'dummy'}, copyACL)});
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     const necessaryPermissions = [];
     let query = {$and: [{id}]};
@@ -290,8 +291,8 @@ class DatabaseForUser {
     query = this.buildQuery(query, necessaryPermissions, true);
     const col = this.getCollection(namespace, type);
     const result = await col.update(query, update);
-    if (result.result.nModified === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
-    if (result.result.nModified > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
+    if (result.result.n === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
+    if (result.result.n > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
   }
 
   async destroy(namespace, type, id) {

@@ -95,6 +95,8 @@ module.exports.type = (req, res, next) => {
 module.exports.getRefSchema = (namespace, type) => {
   return {
     type: 'object',
+    additionalProperties: false,
+    required: ['$ref'],
     properties: {
       $ref: {
         type: 'string',
