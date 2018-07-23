@@ -26,13 +26,20 @@ class Client {
 
   onMessage(event) {
     if (event.origin !== this.options.host) return;
-    console.log(event.data);
+    this.options.token = event.data;
+    this.request('GET', '/users/me').then(user => {
+      this.user = user;
+      if (this.callback) this.callback(user);
+      this.callback = null;
+    })
   }
 
-  async authorize() {
+  authorize(callback) {
     let origin = window.location.protocol + '//' + window.location.host;
-    let path = '/authorize?origin=' + encodeURIComponent(origin);
+    let path = '/users/authorize?origin=' + encodeURIComponent(origin);
+    console.log('auth', this.options.host, path);
     window.open(this.options.host + path, '_blank');
+    this.callback = callback;
   }
 
   async request(method, path, query={}, body=null) {
@@ -42,7 +49,6 @@ class Client {
     })
     let url = this.options.host + path;
     let headers = {
-      'User-Agent': 'FreeDB Client v' + packageInfo.version,
       'Content-Type': 'application/json',
     }
     let requestOpts = {method, url, headers};
@@ -50,7 +56,9 @@ class Client {
     if (body !== null) {
       requestOpts.data = JSON.stringify(body);
     }
-    if (this.options.username) {
+    if (this.options.token) {
+      requestOpts.headers['Authorization'] = 'Bearer ' + this.options.token;
+    } else if (this.options.username) {
       requestOpts.auth = {
         username: this.options.username,
         password: this.options.password,
@@ -67,7 +75,7 @@ class Client {
   async createUser(username, password) {
     this.options.username = username;
     this.options.password = password;
-    return this.request('post', '/register');
+    return this.request('post', '/users/register');
   }
 
   async loadNamespace(namespace) {
