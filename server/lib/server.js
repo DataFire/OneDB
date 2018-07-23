@@ -11,17 +11,12 @@ const Database = require('./database');
 
 const DEFAULT_PORT = 3000;
 
-function replaceProtocol(str) {
-  return str.replace(/^\w+:\/\/(www\.)?/, '');
-}
-
 class Server {
   constructor(config={}) {
     this.config = Object.assign({}, defaultConfig, config);
     this.config.rateLimit = Object.assign({}, defaultConfig.rateLimit, this.config.rateLimit);
     if (!this.config.mongodb) throw new Error("config.mongodb specified");
     if (!this.config.jwtSecret) throw new Error("config.jwtSecret not specified");
-    this.config.hostWithoutProtocol = replaceProtocol(this.config.host);
   }
 
   async listen(port=DEFAULT_PORT) {

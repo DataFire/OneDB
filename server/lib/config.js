@@ -1,5 +1,5 @@
 const fs = require('fs');
-const OVERRIDE_FILE = __dirname + '/../../server-config.json';
+const OVERRIDE_FILE = __dirname + '/../../.server-config.json';
 const ONE_MIN = 60 * 1000;
 const FIVE_MIN = 5 * ONE_MIN;
 const FIFTEEN_MIN = 15 * ONE_MIN;

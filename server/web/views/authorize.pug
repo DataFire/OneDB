@@ -50,7 +50,7 @@ html
           email = $('#SignIn input[name="email"]').val();
           pass = $('#SignIn input[name="password"]').val();
         }
-        sendRequest('/authorize', email, pass, function(data) {
+        sendRequest('/users/authorize', email, pass, function(data) {
           sendToken(data);
         });
         return false;
@@ -63,8 +63,8 @@ html
         if (pass !== confirmPass) {
           showError("Passwords don't match");
         } else {
-          sendRequest('/register', email, pass, function(data) {
-            sendRequest('/authorize', email, pass, function(data) {
+          sendRequest('/users/register', email, pass, function(data) {
+            sendRequest('/users/authorize', email, pass, function(data) {
               sendToken(data);
             })
           });
