@@ -15,8 +15,15 @@ html
       crossorigin="anonymous")
     script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js")
     script.
+      var ORIGIN = !{JSON.stringify(query.origin)};
+
       function showError(msg) {
         alert(msg);
+      }
+
+      function sendToken(token) {
+        window.opener.postMessage(token, ORIGIN);
+        window.close();
       }
 
       function sendRequest(url, email, pass, callback) {
@@ -44,7 +51,7 @@ html
           pass = $('#SignIn input[name="password"]').val();
         }
         sendRequest('/authorize', email, pass, function(data) {
-          alert(data);
+          sendToken(data);
         });
         return false;
       }
@@ -57,9 +64,8 @@ html
           showError("Passwords don't match");
         } else {
           sendRequest('/register', email, pass, function(data) {
-            alert(data);
             sendRequest('/authorize', email, pass, function(data) {
-              alert(data);
+              sendToken(data);
             })
           });
         }

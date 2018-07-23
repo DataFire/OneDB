@@ -21,6 +21,18 @@ class Client {
         return resp.data;
       }
     });
+    window.addEventListener("message", (evt) => this.onMessage(evt), false);
+  }
+
+  onMessage(event) {
+    if (event.origin !== this.options.host) return;
+    console.log(event.data);
+  }
+
+  async authorize() {
+    let origin = window.location.protocol + '//' + window.location.host;
+    let path = '/authorize?origin=' + encodeURIComponent(origin);
+    window.open(this.options.host + path, '_blank');
   }
 
   async request(method, path, query={}, body=null) {
@@ -67,7 +79,8 @@ class Client {
     }
     let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
     for (let type in version.types) {
-      version.types[type].validate = await this.ajv.compileAsync(version.types[type].schema);
+      let typeInfo = version.types[type];
+      typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
     }
     if (namespace === 'core') {
       await this.validateItem('core', 'namespace', nsInfo);
