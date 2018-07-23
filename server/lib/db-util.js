@@ -106,7 +106,7 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
     acl: SYSTEM_ACL,
     data: {
       versions: [{
-        verision: '0',
+        version: '0',
         types: {
           user: {
             schema: {$ref: '/data/core/schema/user'},
