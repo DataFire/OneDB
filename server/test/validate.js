@@ -55,14 +55,13 @@ describe('Validation', () => {
       'foo',
       123,
       [],
-      {},
-      {read: []},
+      {read: 'abc'},
       {owner: 'me', read: [1]},
       {owner: 'me', foo: []},
     ];
     let errors = acls.map(validate.validators.acl);
     errors.forEach((err, idx) => {
-      expect(err).to.be.a('string');
+      expect(err).to.be.a('string', JSON.stringify(acls[idx]));
       expect(err.length).to.not.equal(0);
     })
   });

@@ -272,6 +272,58 @@ describe('Database', () => {
     expect(items[1].data).to.equal("Goodbye");
   });
 
+  it('should allow filtering and sorting', async () => {
+    const user0DB = await database.user(USERS[0].id);
+    const user1DB = await database.user(USERS[1].id);
+    await user0DB.create('foo', 'thing', "one", "one");
+    await user0DB.create('foo', 'thing', "two", "two");
+    const midpoint = new Date().toISOString();
+    await user0DB.create('foo', 'thing', "three", "three");
+    await user0DB.create('foo', 'thing', "four", "four");
+
+    let list = (await user0DB.list('foo', 'thing')).map(d => d.data);
+    expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
+
+    list = (await user0DB.list('foo', 'thing', {}, {'info.created': -1})).map(d => d.data);
+    expect(list).to.deep.equal(['four', 'three', 'two', 'one']);
+
+    list = (await user0DB.list('foo', 'thing', {}, {data: 1})).map(d => d.data);
+    expect(list).to.deep.equal(['four', 'one', 'three', 'two']);
+
+    list = (await user0DB.list('foo', 'thing', {}, {data: -1})).map(d => d.data);
+    expect(list).to.deep.equal(['two', 'three', 'one', 'four']);
+
+    list = (await user0DB.list('foo', 'thing', {created_before: midpoint})).map(d => d.data);
+    expect(list).to.deep.equal(['one', 'two']);
+
+    list = (await user0DB.list('foo', 'thing', {created_since: midpoint})).map(d => d.data);
+    expect(list).to.deep.equal(['three', 'four']);
+
+    list = (await user0DB.list('foo', 'thing', {data: 'four'})).map(d => d.data);
+    expect(list).to.deep.equal(['four']);
+
+    await user1DB.create('foo', 'thing', "five", 'five');
+    let five = await user1DB.get('foo', 'thing', 'five');
+    list = (await user0DB.list('foo', 'thing')).map(d => d.data);
+    expect(list).to.deep.equal(['one', 'two', 'three', 'four', 'five']);
+
+    list = (await user0DB.list('foo', 'thing', {owner: USERS[1].id})).map(d => d.data);
+    expect(list).to.deep.equal(['five']);
+
+    list = (await user0DB.list('foo', 'thing', {owner: USERS[0].id})).map(d => d.data);
+    expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
+
+    const beforeModify = new Date().toISOString();
+    await user0DB.update('foo', 'thing', 'two', "TWO");
+    list = (await user0DB.list('foo', 'thing', {updated_since: beforeModify})).map(d => d.data);
+    expect(list).to.deep.equal(['TWO']);
+
+    list = (await user0DB.list('foo', 'thing')).map(d => d.info);
+
+    list = (await user0DB.list('foo', 'thing', {updated_before: beforeModify})).map(d => d.data);
+    expect(list).to.deep.equal(['one', 'three', 'four', 'five']);
+  });
+
   it('should allow user to destroy thing', async () => {
     const userDB = await database.user(USERS[0].id);
     await userDB.create('foo', 'thing', "Hello", 'thing1');

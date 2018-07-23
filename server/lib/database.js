@@ -8,6 +8,7 @@ const config = require('./config');
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
 const STAGING_KEY = 'staging';
+const DEFAULT_SORT = {'info.created': 1};
 
 class Database {
   constructor(opts={}) {
@@ -168,10 +169,10 @@ class DatabaseForUser {
     return query;
   }
 
-  async getAll(namespace, type, query={}, access='read') {
+  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT) {
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(query, access);
-    let arr = await col.find(query).toArray();
+    let arr = await col.find(query).sort(sort).toArray();
     let decoded = util.decodeDocument(arr);
     return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
   }
@@ -181,6 +182,52 @@ class DatabaseForUser {
     if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     if (!arr.length) return;
     return arr[0];
+  }
+
+  async list(namespace, type, params={}, sort=DEFAULT_SORT) {
+    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    const query = {};
+    if (params.created_since) {
+      query['info.created'] = {$gte: params.created_since}
+    }
+    if (params.created_before) {
+      query['info.created'] = {$lte: params.created_before}
+    }
+    if (params.updated_since) {
+      query['info.updated'] = {$gte: params.updated_since}
+    }
+    if (params.updated_before) {
+      query['info.updated'] = {$lte: params.updated_before}
+    }
+    if (params.owner) {
+      query['acl.owner'] = {$eq: params.owner}
+    }
+    for (let key in params) {
+      if (key !== 'data' && !key.startsWith('data.')) continue;
+      let parts = key.split('.');
+      parts.shift();
+      let schema = schemaInfo.data;
+      for (let part of parts) {
+        schema = schema && ((schema.properties && schema.properties[part]) || schema.additionalProperties);
+      }
+      if (!schema) return fail(`No schema found for ${key}`, 400);
+      if (schema.type === 'number') {
+        try {
+          query[key] = parseFloat(params[key]);
+        } catch(e) {}
+      } else if (schema.type === 'integer') {
+        try {
+          query[key] = parseInt(params[key]);
+        } catch (e) {}
+      } else if (schema.type === 'boolean') {
+        try {
+          query[key] = parseBoolean(params[key]);
+        } catch (e) {}
+      } else {
+        query[key] = params[key];
+      }
+    }
+    return this.getAll(namespace, type, query, 'read', sort);
   }
 
   async create(namespace, type, data, id='') {
@@ -203,7 +250,7 @@ class DatabaseForUser {
       }
     }
 
-    const time = (new Date()).toISOString();
+    const time = new Date().toISOString();
     const info = {
       created: time,
       updated: time,
@@ -234,7 +281,7 @@ class DatabaseForUser {
     const result = await col.update(query, {
       $set: {
         data: util.encodeDocument(data),
-        'info.updated': (new Date()).toISOString(),
+        'info.updated': new Date().toISOString(),
       },
     });
     if (result.result.n === 0) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);

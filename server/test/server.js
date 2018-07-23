@@ -127,7 +127,8 @@ describe("Server", () => {
         write: [],
         append: [],
         destroy: [],
-      }
+      },
+      disallow: {},
     });
     const ns = {
       versions: [{
