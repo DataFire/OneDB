@@ -98,6 +98,15 @@ describe("Server", () => {
     USER_1.id = resp.data;
   });
 
+  it('should show current user', async () => {
+    let resp = await axios.get(HOST + '/users/me', {validateStatus: () => true});
+    expect(resp.status).to.equal(401);
+
+    resp = await axios.get(HOST + '/users/me', {auth: USER_1});
+    expect(resp.status).to.equal(200);
+    expect(resp.data).to.deep.equal({publicKey: "", id: USER_1.id});
+  })
+
   it('should not allow directly adding user', async () => {
     let resp = await axios.post(HOST + '/data/core/user', {}, {auth: USER_1, validateStatus: () => true});
     expect(resp.status).to.equal(401);

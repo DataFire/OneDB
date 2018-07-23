@@ -3,10 +3,16 @@ const RateLimit = require('express-rate-limit');
 const middleware = require('../middleware');
 const validate = require('../validate');
 const errorGuard = require('../error-guard');
+const fail = require('../fail');
 const config = require('../config');
 
 module.exports = function(database) {
   const router = module.exports = new express.Router();
+  router.get('/me', middleware.authenticate(database), (req, res) => {
+    if (!req.user) return fail("You are not logged in", 401);
+    req.db.user.data.id = req.db.user.id;
+    res.json(req.db.user.data);
+  });
   router.post('/register', new RateLimit(config.rateLimit.createUser), errorGuard(middleware.register(database)));
   router.get('/authorize', errorGuard((req, res) => {
     let error = validate.validators.url(req.query.origin || '');

@@ -85,7 +85,7 @@ class Database {
     const user = existing[0].data;
     const isValid = await util.checkPassword(password, user.hash, user.salt);
     if (!isValid) return fail(`Invalid password for ${email}`);
-    return user;
+    return user.id;
   }
 
   async signInWithToken(token) {

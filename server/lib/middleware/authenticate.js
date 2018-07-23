@@ -16,7 +16,7 @@ module.exports = function(database) {
       email = creds[0];
       password = creds[1];
       req.user = await database.signIn(email, password);
-      req.db = await database.user(req.user.id);
+      req.db = await database.user(req.user);
       next();
     } else if (parts[0] === 'Bearer') {
       let token = parts[1];
