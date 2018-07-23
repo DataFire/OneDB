@@ -5,6 +5,14 @@ module.exports = function(opts) {
   return server.listen(opts.port);
 }
 
-if (require.main === module) {
-  module.exports(require('yargs').argv);
-}
+;(async () => {
+  if (require.main === module) {
+    try {
+      await module.exports(require('yargs').argv);
+    } catch (e) {
+      console.log(e.message);
+      console.log(e.stack);
+      throw e;
+    }
+  }
+})();
