@@ -1,6 +1,7 @@
 import {Component} from '@angular/core';
 import {Router} from '@angular/router';
 import {FreeDBService} from '../services/freedb.service';
+const settings = require('../../../../../.server-config.json');
 
 declare let window:any;
 
@@ -9,7 +10,7 @@ declare let window:any;
     templateUrl: './home.pug',
 })
 export class HomeComponent {
-  host:string = "https://freedb.io";
+  host:string = settings.host || 'https://alpha.freedb.io';
   user:any;
   constructor(private freedb:FreeDBService) {}
 
