@@ -1,12 +1,9 @@
-nav.navbar.navbar-default
+nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
   .container
-    .navbar-header
-      button.navbar-toggle.collapsed(type="button" data-toggle="collapse" data-target="#NavbarCollapse" aria-expanded="false")
-        span.sr-only Toggle navigation
-        i.fa.fa-bars
-      a.navbar-brand(routerLink="/") Brand
-    #NavbarCollapse.collapse.navbar-collapse
-      ul.nav.navbar-nav.navbar-right
+    a.navbar-brand(routerLink="/") Brand
+    button.navbar-toggler(type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent")
+    .collapse.navbar-collapse#navbarSupportedContent
+      ul.navbar-nav.ml-auto
         li
           a.nav-link(routerLink="/home") Home
 

@@ -1,9 +1,10 @@
 import {Component} from '@angular/core';
 import {Router} from '@angular/router';
 import {FreeDBService} from '../services/freedb.service';
-const settings = require('../../../../../.server-config.json');
 
 declare let window:any;
+declare let require:any;
+const settings = require('../../../../../.server-config.json');
 
 @Component({
     selector: 'home',

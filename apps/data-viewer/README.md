@@ -1,7 +1,7 @@
-# Angluar 4.0 Template Project
+# Angluar 6.0 Template Project
 I use this template as a starter for any new Angular projects.
 
-Check out [the demo](https://bobby-brennan.github.io/angular4-template)
+Check out [the demo](https://bobby-brennan.github.io/angular6-template)
 
 #### Features
 * Angular Universal (prerendering)
@@ -41,7 +41,7 @@ the `docs/` folder on the `master` branch.
 ## Customizing
 
 ### Base href
-The app uses the base href `/` for development builds, and `/angular4-template`
+The app uses the base href `/` for development builds, and `/angular6-template`
 for production builds (to accomodate GitHub pages, which uses the repository
 name in the URL's path). You will probably want to change the base href in
 `./src/environments/environment.prod.ts`.

@@ -1,4 +1,3 @@
-const cryptico = require('cryptico');
 const axios = require('axios');
 const packageInfo = require('../package.json');
 const Ajv = require('ajv');
