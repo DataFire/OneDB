@@ -2,7 +2,7 @@ const axios = require('axios');
 const packageInfo = require('../package.json');
 const Ajv = require('ajv');
 
-const KEY_SIZE = 2048;
+const TIMEOUT = 30000;
 
 class Client {
   constructor(options={}) {
@@ -20,7 +20,9 @@ class Client {
         return resp.data;
       }
     });
-    window.addEventListener("message", (evt) => this.onMessage(evt), false);
+    if (typeof window !== 'undefined') {
+      window.addEventListener("message", (evt) => this.onMessage(evt), false);
+    }
   }
 
   onMessage(event) {
@@ -34,9 +36,9 @@ class Client {
   }
 
   authorize(callback) {
+    if (typeof window === 'undefined') throw new Error("Cannot call authorize() outside of browser context");
     let origin = window.location.protocol + '//' + window.location.host;
     let path = '/users/authorize?origin=' + encodeURIComponent(origin);
-    console.log('auth', this.options.host, path);
     window.open(this.options.host + path, '_blank');
     this.callback = callback;
   }
@@ -50,7 +52,7 @@ class Client {
     let headers = {
       'Content-Type': 'application/json',
     }
-    let requestOpts = {method, url, headers};
+    let requestOpts = {method, url, headers, timeout: TIMEOUT};
     requestOpts.validateStatus = () => true;
     if (body !== null) {
       requestOpts.data = JSON.stringify(body);
