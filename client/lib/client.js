@@ -28,11 +28,15 @@ class Client {
   onMessage(event) {
     if (event.origin !== this.options.host) return;
     this.options.token = event.data;
-    this.request('GET', '/users/me').then(user => {
+    this.getUser().then(user => {
       this.user = user;
       if (this.callback) this.callback(user);
       this.callback = null;
     })
+  }
+
+  async getUser() {
+    return this.request('GET', '/users/me');
   }
 
   authorize(callback) {
@@ -44,15 +48,11 @@ class Client {
   }
 
   async request(method, path, query={}, body=null) {
-    Object.keys(query).forEach((key, idx) => {
-      path += idx === 0 ? '?' : '&';
-      path += encodeURIComponent(key) + '=' + encodeURIComponent(query[key]);
-    })
     let url = this.options.host + path;
     let headers = {
       'Content-Type': 'application/json',
     }
-    let requestOpts = {method, url, headers, timeout: TIMEOUT};
+    let requestOpts = {method, url, headers, params: query, timeout: TIMEOUT};
     requestOpts.validateStatus = () => true;
     if (body !== null) {
       requestOpts.data = JSON.stringify(body);
@@ -108,6 +108,14 @@ class Client {
     let item = await this.request('get', '/data/' + namespace + '/' + type + '/' + id);
     await this.validateItem(namespace, type, item);
     return item;
+  }
+
+  async list(namespace, type, params, sort) {
+    let items = await this.request('get', '/data/' + namespace + '/' + type, params);
+    for (let item of items) {
+      await this.validateItem(namespace, type, item);
+    }
+    return items;
   }
 
   async create(namespace, type, data, id='') {
