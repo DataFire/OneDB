@@ -111,7 +111,7 @@ describe("Server", () => {
   });
 
   it('should allow POST with auth', async () => {
-    const data = {type: 'string'};
+    const data = {type: 'object'};
     let resp = await axios.post(HOST + '/data/core/schema/foo', data, {auth: USER_1, validateStatus: () => true});
     expect(resp.data).to.equal('foo');
 
@@ -163,7 +163,7 @@ describe("Server", () => {
   it('should allow authorization', async () => {
     let resp = await axios.post(HOST + '/users/authorize', {}, {auth: USER_1, validateStatus: () => true});
     expect(resp.data).to.be.a('string');
-    let data = {type: 'string'};
+    let data = {type: 'object'};
     resp = await axios.post(HOST + '/data/core/schema/bar', data, {headers: {Authorization: 'Bearer ' + resp.data}});
     expect(resp.data).to.be.a('string');
   });

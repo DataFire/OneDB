@@ -33,12 +33,11 @@ class Database {
       }
     }
     let db = await this.user(util.USER_KEYS.system);
-    let coreTypes = JSON.parse(JSON.stringify(util.CORE_DEFINITIONS));
+    let coreTypes = JSON.parse(JSON.stringify(util.CORE_SCHEMAS));
     for (let type in coreTypes) {
       let existing = await db.get('core', 'schema', type);
       if (!existing) {
-        let schema = Object.assign({definitions: coreTypes}, coreTypes[type]);
-        existing = await db.create('core', 'schema', schema, type);
+        existing = await db.create('core', 'schema', coreTypes[type], type);
       }
     }
   }
@@ -267,7 +266,11 @@ class DatabaseForUser {
     const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
-      if (type === 'user') {
+      if (type === 'schema' && id !== 'schema') {
+        if (!data || data.type !== 'object') {
+          return fail(`All top-level schemas must have type 'object'`);
+        }
+      } else if (type === 'user') {
         acl.owner = id;
       } else if (type === 'namespace') {
         for (let version of data.versions) {

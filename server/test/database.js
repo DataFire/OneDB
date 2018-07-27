@@ -135,20 +135,20 @@ describe('Database', () => {
         }
       }]
     });
-    let user = await systemDB.get('core', 'schema', 'schema');
-    expect(user.acl.owner).to.equal('_system');
-    expect(user.acl.allow.read).to.deep.equal(['_all']);
-    expect(user.data.type).to.deep.equal(['object', 'boolean']);
+    let schema = await systemDB.get('core', 'schema', 'schema');
+    expect(schema.acl.owner).to.equal('_system');
+    expect(schema.acl.allow.read).to.deep.equal(['_all']);
+    expect(schema.data.type).to.deep.equal(['object', 'boolean']);
 
-    let schema = await systemDB.get('core', 'schema', 'user');
-    expect(schema.acl).to.deep.equal({
+    let user = await systemDB.get('core', 'schema', 'user');
+    expect(user.acl).to.deep.equal({
       owner: '_system',
       allow: readACL,
       modify: blankACL,
       disallow: {},
     });
-    expect(schema.acl.allow.read).to.deep.equal(['_all']);
-    expect(schema.data.type).to.equal('object');
+    expect(user.acl.allow.read).to.deep.equal(['_all']);
+    expect(user.data.type).to.equal('object');
   });
 
   it('should not create item for missing namespace', () => {
@@ -210,15 +210,21 @@ describe('Database', () => {
 
   it('should allow creating schema', async () => {
     const userDB = await database.user(USERS[0].id);
-    const schema = {type: 'string'};
+    const schema = {type: 'object'};
     const created = await userDB.create('core', 'schema', schema, 'thingamajig');
     expect(created.data.id).to.equal(schema.id);
     expect(created.data.schema).to.deep.equal(schema.schema);
   });
 
-  it('should not allow destroying schema', async () => {
+  it('should not allow creating primitive schema', async () => {
     const userDB = await database.user(USERS[0].id);
     const schema = {type: 'string'};
+    await expectError(userDB.create('core', 'schema', schema, 'thingamajig'), /must have type 'object'/);
+  })
+
+  it('should not allow destroying schema', async () => {
+    const userDB = await database.user(USERS[0].id);
+    const schema = {type: 'object'};
     const created = await userDB.create('core', 'schema', schema, 'thingamajig');
     return expectError(userDB.destroy('core', 'schema', 'thingamajig'), /User .* cannot destroy core\/schema\/thingamajig/)
   });

@@ -64,18 +64,21 @@ const PRIVATE_ACL = module.exports.PRIVATE_ACL = JSON.parse(JSON.stringify(SYSTE
 delete PRIVATE_ACL.owner;
 PRIVATE_ACL.allow.read = [USER_KEYS.system];
 
-const CORE_DEFINITIONS = module.exports.CORE_DEFINITIONS = {
+const CORE_SCHEMAS = module.exports.CORE_SCHEMAS = {
   namespace:  require('../namespaces/core/namespace'),
   user: require('../namespaces/core/user'),
   user_private: require('../namespaces/core/user_private'),
   schema: JSON.parse(JSON.stringify(require('../namespaces/core/schema'))),
 }
-delete CORE_DEFINITIONS.schema.$id;
-Object.assign(CORE_DEFINITIONS, CORE_DEFINITIONS.schema.definitions);
+CORE_SCHEMAS.namespace.definitions = {schema: JSON.parse(JSON.stringify(CORE_SCHEMAS.schema))};
+Object.assign(CORE_SCHEMAS.namespace.definitions, CORE_SCHEMAS.schema.definitions);
 function rewriteCoreSchema(schema) {
   if (schema.$ref === '#') schema.$ref = '#/definitions/schema';
   if (schema.properties) {
     for (let key in schema.properties) rewriteCoreSchema(schema.properties[key]);
+  }
+  if (schema.definitions) {
+    for (let key in schema.definitions) rewriteCoreSchema(schema.definitions[key]);
   }
   (schema.anyOf || []).forEach(rewriteCoreSchema);
   (schema.allOf || []).forEach(rewriteCoreSchema);
@@ -83,8 +86,9 @@ function rewriteCoreSchema(schema) {
   if (schema.items) rewriteCoreSchema(schema.items);
   if (schema.additionalProperties) rewriteCoreSchema(schema.additionalProperties);
 }
-rewriteCoreSchema(CORE_DEFINITIONS.schema);
-delete CORE_DEFINITIONS.schema.definitions;
+delete CORE_SCHEMAS.namespace.definitions.schema.definitions;
+delete CORE_SCHEMAS.namespace.definitions.schema.$id;
+rewriteCoreSchema(CORE_SCHEMAS.namespace.definitions.schema);
 
 const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
   namespace: 'core',
