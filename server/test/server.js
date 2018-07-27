@@ -166,6 +166,8 @@ describe("Server", () => {
     let data = {type: 'object'};
     resp = await axios.post(HOST + '/data/core/schema/bar', data, {headers: {Authorization: 'Bearer ' + resp.data}});
     expect(resp.data).to.be.a('string');
+    resp = await axios.post(HOST + '/data/core/schema/bar', data, {validateStatus: () => true, headers: {Authorization: 'Bearer foo'}});
+    expect(resp.status).to.equal(401);
   });
 
   it('should respect max bytes per item', async () => {

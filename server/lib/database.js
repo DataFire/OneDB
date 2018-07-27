@@ -92,7 +92,7 @@ class Database {
     const db = await this.user(util.USER_KEYS.system);
     const col = db.getCollection('core', 'user_private');
     const user = await col.find({'data.tokens': {$in: [token]}}).toArray();
-    if (user.length !== 1) return fail(`The provided token is invalid`);
+    if (user.length !== 1) return fail(`The provided token is invalid`, 401);
     return user[0].data;
   }
 }
