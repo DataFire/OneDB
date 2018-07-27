@@ -12,10 +12,7 @@ const DIR = npath.join(process.cwd(), args.directory);
   for (let file of files) {
     const name = file.replace(/\.schema\.json$/, '');
     const schema = require(npath.join(DIR, file));
-    const id = await client.create('core', 'schema', schema);
-    types[name] = {
-      schema: {$ref: '/data/core/schema/' + id},
-    }
+    types[name] = {schema}
   }
   for (let type in types) {
     const aclFile = npath.join(DIR, type + '.acl.json');
