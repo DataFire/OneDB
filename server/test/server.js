@@ -65,13 +65,7 @@ describe("Server", () => {
 
   it('should allow GET without auth', async () => {
     const resp = await axios.get(HOST + '/data/core/schema/user');
-    expect(resp.data).to.deep.equal({
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        publicKey: {type: 'string'},
-      }
-    })
+    expect(resp.data.type).to.equal('object');
   });
 
   it('should GET for acl', async () => {
@@ -122,7 +116,7 @@ describe("Server", () => {
     expect(resp.data).to.equal('foo');
 
     resp = await axios.get(HOST + '/data/core/schema/foo');
-    expect(resp.data).to.deep.equal(data);
+    expect(resp.data).to.deep.equal(Object.assign({_id: 'foo'}, data));
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
       owner: USER_1.id,

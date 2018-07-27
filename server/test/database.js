@@ -37,21 +37,29 @@ describe('Database', () => {
     USERS.push(await database.createUser('user3@example.com', 'abcdefgh'));
 
     const userDB = await database.user(USERS[0].id);
-    const thingSchema = {type: 'string'};
+    const thingSchema = {
+      type: 'string',
+      /*
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        message: {type: 'string'},
+      }
+      */
+    }
     const listSchema = {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        things: {type: 'array', items: {type: 'string'}},
+        things: {type: 'array', items: {$ref: '#/definitions/thing'}},
       },
     }
-    await userDB.create('core', 'schema', thingSchema, 'thing');
-    await userDB.create('core', 'schema', listSchema, 'list');
     const ns = {
       versions: [{
         version: '0',
         types: {
-          'thing': {schema: {$ref: '/data/core/schema/thing'}, initial_acl: {allow: {read: ['_all']}}},
-          'list': {schema: {$ref: '/data/core/schema/list'}},
+          'thing': {schema: thingSchema, initial_acl: {allow: {read: ['_all']}}},
+          'list': {schema: listSchema},
         }
       }]
     }
@@ -63,6 +71,65 @@ describe('Database', () => {
   })
 
   it('should have core schemas', async () => {
+    let ns = await systemDB.get('core', 'namespace', 'core');
+    let systemACL = {
+	  "append": ["_system"],
+	  "destroy": ["_system"],
+	  "read": ["_system"],
+	  "write": ["_system"],
+	}
+    let readACL = {
+      append: [],
+      destroy: [],
+      read: ['_all'],
+      write: [],
+    }
+    let ownerACL = {
+      read: ['_all'],
+      write: ['_owner'],
+    }
+    let blankACL = {
+      append: [],
+      destroy: [],
+      read: [],
+      write: [],
+    }
+
+    expect(ns.data).to.deep.equal({
+      versions: [{
+        version: '0',
+        types: {
+          user_private: {
+            schema: {$ref: '/data/core/schema/user_private'},
+            initial_acl: {
+              modify: systemACL,
+              allow: systemACL,
+            },
+          },
+          user: {
+            schema: {$ref: '/data/core/schema/user'},
+            initial_acl: {
+              //modify: systemACL,
+              allow: ownerACL,
+            },
+          },
+          schema: {
+            schema: {$ref: '/data/core/schema/schema'},
+            initial_acl: {
+              modify: blankACL,
+              allow: readACL,
+            },
+          },
+          namespace: {
+            schema: {$ref: '/data/core/schema/namespace'},
+            initial_acl: {
+              modify: blankACL,
+              allow: readACL,
+            },
+          },
+        }
+      }]
+    });
     let user = await systemDB.get('core', 'schema', 'schema');
     expect(user.acl.owner).to.equal('_system');
     expect(user.acl.allow.read).to.deep.equal(['_all']);
@@ -71,22 +138,17 @@ describe('Database', () => {
     let schema = await systemDB.get('core', 'schema', 'user');
     expect(schema.acl).to.deep.equal({
       owner: '_system',
-      allow: {
-        read: ['_all'],
-        write: [],
-        append: [],
-        destroy: [],
-      },
-      modify: {
-        read: [],
-        write: [],
-        append: [],
-        destroy: [],
-      },
+      allow: readACL,
+      modify: blankACL,
       disallow: {},
     });
     expect(schema.acl.allow.read).to.deep.equal(['_all']);
     expect(schema.data.type).to.equal('object');
+
+    let foo = await systemDB.get('core', 'namespace', 'foo');
+    let ref = foo.data.versions[0].types.thing.schema.$ref;
+    let schemaID = ref.split('/').pop();
+    let thingSchema = await systemDB.get('core', 'schema', schemaID);
   });
 
   it('should not create item for missing namespace', () => {
@@ -421,7 +483,7 @@ describe('Database', () => {
       version: '0',
       types: {
         thing: {
-          schema: {$ref: '/data/core/schema/thing'},
+          schema: {type: 'string'},
           initial_acl: {
             allow: {
               read: ['_all'],
@@ -508,6 +570,51 @@ describe('Database', () => {
     };
     const item = await userDB.create('foo', 'thing', data);
     expect(item.data).to.deep.equal(data);
+  });
+
+  it('should resolve created refs', async () => {
+    const userDB = await database.user(USERS[0].id);
+    const listSchema = {
+      type: 'object',
+      properties: {
+        entries: {
+          type: 'array',
+          items: {
+            $ref: '#/definitions/entry',
+          }
+        }
+      }
+    };
+    const entrySchema = {
+      type: 'object',
+      properties: {
+        title: {type: 'string'},
+      }
+    };
+    const ns = {
+      versions: [{
+        version: '0',
+        types: {
+          list: {
+            schema: listSchema,
+          },
+          entry: {
+            schema: entrySchema,
+          }
+        }
+      }]
+    }
+    await userDB.create('core', 'namespace', ns, 'todo');
+    let schema = (await userDB.getSchema('todo', 'list')).schemaInfo.data;
+    const list = {
+      entries: [{
+        title: 'hello',
+      }]
+    }
+
+    const listID = await userDB.create('todo', 'list', list);
+    const listBack = await userDB.get('todo', 'list', listID.id);
+    expect(listBack.data.entries[0].$ref).to.be.a('string');
   });
 
   it('should not allow keys with special characters', async() => {

@@ -16,7 +16,7 @@ module.exports = {
               required: ['schema'],
               additionalProperties: false,
               properties: {
-                schema: {$ref: '/data/core/schema/schema'},
+                schema: {$ref: '#/definitions/schema'},
                 initial_acl: require('./acl'),
               }
             }
@@ -25,6 +25,5 @@ module.exports = {
       }
     },
   },
-  additionalProperties: false,
 }
 

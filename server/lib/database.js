@@ -25,7 +25,7 @@ class Database {
     this.db = this.client.db(DB_NAME);
     let coreObjects = JSON.parse(JSON.stringify(util.CORE_OBJECTS));
     for (let obj of coreObjects) {
-      let coll = this.db.collection(obj.namespace + '-' + obj.schema);
+      let coll = this.db.collection(obj.namespace + '-' + obj.type);
       let existing = await coll.find({id: obj.document.id}).toArray();
       if (!existing[0]) {
         let encoded = util.encodeDocument(obj.document);
@@ -33,11 +33,12 @@ class Database {
       }
     }
     let db = await this.user(util.USER_KEYS.system);
-    let coreTypes = JSON.parse(JSON.stringify(util.CORE_TYPES));
-    for (let type of coreTypes) {
-      let existing = await db.get('core', 'schema', type.id);
+    let coreTypes = JSON.parse(JSON.stringify(util.CORE_DEFINITIONS));
+    for (let type in coreTypes) {
+      let existing = await db.get('core', 'schema', type);
       if (!existing) {
-        existing = await db.create('core', 'schema', type.schema, type.id);
+        let schema = Object.assign({definitions: coreTypes}, coreTypes[type]);
+        existing = await db.create('core', 'schema', schema, type);
       }
     }
   }
@@ -123,7 +124,8 @@ class DatabaseForUser {
     if (schema) {
       if (!namespace || !type) throw new Error("Need a namespace and type to validate schema");
       schema = {
-        anyOf: [schema, validate.getRefSchema(namespace, type)],
+        definitions: schema.definitions,
+        anyOf: [Object.assign({definitions: {}}, schema), validate.getRefSchema(namespace, type)],
       }
       let err = validate.validators.data(obj.data, schema);
       if (err) return fail(err);
@@ -230,6 +232,26 @@ class DatabaseForUser {
     return this.getAll(namespace, type, query, 'read', sort);
   }
 
+  async disassemble(namespace, data, schema) {
+    if (!schema || (typeof data) !== 'object') return;
+    if (Array.isArray(data)) {
+      for (let datum of data) {
+        await this.disassemble(namespace, datum, schema.items);
+      }
+      return;
+    }
+    if (schema.$ref) {
+      let match = schema.$ref.match(/#\/definitions\/(\w+)/);
+      if (!match) return;
+      let item = await this.create(namespace, match[1], data);
+      data.$ref = '/data/' + namespace + '/' + match[1] + '/' + item.id;
+    }
+    for (let key in data) {
+      let subschema = (schema.properties || {})[key] || schema.additionalProperties;
+      await this.disassemble(namespace, data[key], subschema);
+    }
+  }
+
   async create(namespace, type, data, id='') {
     if (this.user.data.items >= config.maxItemsPerUser) {
       return fail(`You have hit your maximum of ${config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
@@ -243,10 +265,25 @@ class DatabaseForUser {
     const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
-      if (type === 'schema') {
-        util.fixSchemaRefs(data, id);
-      } else if (type === 'user') {
+      if (type === 'user') {
         acl.owner = id;
+      } else if (type === 'namespace') {
+        for (let version of data.versions) {
+          let definitions = {};
+          for (let type in version.types) {
+            let schema = version.types[type].schema;
+            if (!schema.$ref) {
+              definitions[type] = schema;
+            }
+          }
+          for (let type in version.types) {
+            let schema = Object.assign({definitions}, version.types[type].schema);
+            if (!schema.$ref) {
+              let newSchema = await this.create('core', 'schema', schema);
+              version.types[type].schema = {$ref: '/data/core/schema/' + newSchema.id};
+            }
+          }
+        }
       }
     }
 
@@ -259,6 +296,9 @@ class DatabaseForUser {
 
     const obj = {id, data, info, acl};
     await this.validate(obj, schemaInfo.data, namespace, type);
+    if (namespace !== 'core') {
+      await this.disassemble(namespace, data, schemaInfo.data);
+    }
     const col = this.getCollection(namespace, type);
     const result = await col.insert(util.encodeDocument([obj]));
 
@@ -298,6 +338,7 @@ class DatabaseForUser {
     for (let key in data) {
       let schema = schemaInfo.data.properties && schemaInfo.data.properties[key];
       if (!schema) return fail(`Schema not found for key ${key}`, 400);
+      schema.definitions = schemaInfo.data.definitions;
       await this.validate({data: data[key]}, schemaInfo.data.properties[key], namespace, type);
       existing[key] = (existing[key] || []).concat(data[key]);
       doc.$push['data.' + key] = {$each: data[key]};

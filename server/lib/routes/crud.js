@@ -23,6 +23,14 @@ const requireLogin = errorGuard(async function(req, res, next) {
   else return fail("You need to log in to do that", 401);
 });
 
+const getData = function(item) {
+  const data = item.data;
+  if (typeof data === 'object' && !Array.isArray(data)) {
+    data._id = item.id;
+  }
+  return data;
+}
+
 module.exports = function(database) {
   const router = module.exports = new express.Router();
   router.use(bodyParser.json({strict: false, limit: config.maxBytesPerItem}));
@@ -54,7 +62,7 @@ module.exports = function(database) {
    * Retrieve Data
    */
   router.get(ITEM_PATH, (req, res) => {
-    res.json(req.item.data);
+    res.json(getData(req.item));
   });
 
   /**
@@ -76,8 +84,14 @@ module.exports = function(database) {
    */
   router.get(TYPE_PATH, errorGuard(async (req, res) => {
     // TODO: validate search params
-    let items = req.db.getAll(req.params.namespace, req.params.typeID, req.query);
-    items = items.map(i => i.data);
+    const sort = {};
+    if (req.query.sort) {
+      const parts = req.query.sort.split(':');
+      if (parts.length === 1) parts.push('ascending');
+      sort[parts[0]] = parts[1] === 'ascending' ? 1 : -1;
+    }
+    let items = await req.db.list(req.params.namespace, req.params.typeID, req.query, sort);
+    items = items.map(getData);
     res.json(items);
   }));
 

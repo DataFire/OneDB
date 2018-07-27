@@ -61,23 +61,34 @@ const SYSTEM_ACL = module.exports.SYSTEM_ACL = {
 };
 
 const PRIVATE_ACL = module.exports.PRIVATE_ACL = JSON.parse(JSON.stringify(SYSTEM_ACL));
+delete PRIVATE_ACL.owner;
 PRIVATE_ACL.allow.read = [USER_KEYS.system];
 
-const CORE_TYPES = module.exports.CORE_TYPES = [{
-  id: 'namespace',
-  schema: require('./schemas/namespace'),
-}, {
-  id: 'user',
-  schema: require('./schemas/user'),
-}, {
-  id: 'user_private',
-  schema: require('./schemas/user_private'),
-}];
-
+const CORE_DEFINITIONS = module.exports.CORE_DEFINITIONS = {
+  namespace:  require('../namespaces/core/namespace'),
+  user: require('../namespaces/core/user'),
+  user_private: require('../namespaces/core/user_private'),
+  schema: JSON.parse(JSON.stringify(require('../namespaces/core/schema'))),
+}
+delete CORE_DEFINITIONS.schema.$id;
+Object.assign(CORE_DEFINITIONS, CORE_DEFINITIONS.schema.definitions);
+function rewriteCoreSchema(schema) {
+  if (schema.$ref === '#') schema.$ref = '#/definitions/schema';
+  if (schema.properties) {
+    for (let key in schema.properties) rewriteCoreSchema(schema.properties[key]);
+  }
+  (schema.anyOf || []).forEach(rewriteCoreSchema);
+  (schema.allOf || []).forEach(rewriteCoreSchema);
+  (schema.oneOf || []).forEach(rewriteCoreSchema);
+  if (schema.items) rewriteCoreSchema(schema.items);
+  if (schema.additionalProperties) rewriteCoreSchema(schema.additionalProperties);
+}
+rewriteCoreSchema(CORE_DEFINITIONS.schema);
+delete CORE_DEFINITIONS.schema.definitions;
 
 const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
   namespace: 'core',
-  schema: 'user',
+  type: 'user',
   document: {
     id: USER_KEYS.system,
     info: SYSTEM_INFO,
@@ -88,7 +99,7 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
   }
 }, {
   namespace: 'core',
-  schema: 'user',
+  type: 'user',
   document: {
     id: USER_KEYS.all,
     info: SYSTEM_INFO,
@@ -99,7 +110,7 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
   }
 }, {
   namespace: 'core',
-  schema: 'namespace',
+  type: 'namespace',
   document: {
     id: 'core',
     info: SYSTEM_INFO,
@@ -154,7 +165,7 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
           },
           user_private: {
             schema: {$ref: '/data/core/schema/user_private'},
-            initial_acl: PRIVATE_ACL,
+            initial_acl: Object.assign({owner: undefined}, PRIVATE_ACL),
           }
         },
       }],
@@ -162,17 +173,17 @@ const CORE_OBJECTS = module.exports.CORE_OBJECTS = [{
   }
 }, {
   namespace: 'core',
-  schema: 'schema',
+  type: 'schema',
   document: {
     id: 'schema',
     info: SYSTEM_INFO,
     acl: SYSTEM_ACL,
-    data: require('./schemas/schema'),
+    data: require('../namespaces/core/schema'),
   }
 }]
 
 module.exports.setRefHost = function(host) {
-  let coreNS = CORE_OBJECTS.filter(o => o.namespace === 'core' && o.schema === 'namespace').pop();
+  let coreNS = CORE_OBJECTS.filter(o => o.namespace === 'core' && o.type === 'namespace').pop();
   let types = coreNS.document.data.versions[0].types;
   for (let type in types) {
     types[type].schema.$ref = host + types[type].schema.$ref;
@@ -208,20 +219,6 @@ module.exports.decodeDocument = function(schema) {
     obj[newKey] = module.exports.decodeDocument(schema[key]);
   }
   return obj;
-}
-
-module.exports.fixSchemaRefs = function(schema, rootID) {
-  if (typeof schema !== 'object' || schema === null) return;
-  if (Array.isArray(schema)) schema.forEach(sub => module.exports.fixSchemaRefs(sub, rootID));
-  if (schema.$ref) {
-    if (schema.$ref === '#') schema.$ref = '/data/core/schema/' + rootID;
-    let [dummy, dummy2, namespace, type] = schema.$ref.split('/');
-    let newSchema = validate.getRefSchema(namespace, type);
-    for (let key in schema) delete schema[key];
-    Object.assign(schema, newSchema);
-  } else {
-    for (let key in schema) module.exports.fixSchemaRefs(schema[key], rootID);
-  }
 }
 
 const SALT_LENGTH = 32;

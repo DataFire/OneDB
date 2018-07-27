@@ -11,8 +11,8 @@ const REGEX = {
 }
 
 let ajvCore = new Ajv({useDefaults: true});
-let validateACL = ajvCore.compile(require('./schemas/acl'));
-let validateInfo = ajvCore.compile(require('./schemas/info'));
+let validateACL = ajvCore.compile(require('../namespaces/core/acl'));
+let validateInfo = ajvCore.compile(require('../namespaces/core/info'));
 
 let sendError = module.exports.sendError = (res, message="Unknown error", details=undefined, statusCode=400) => {
   res.status(statusCode).json({error: message, details});
