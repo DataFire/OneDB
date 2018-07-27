@@ -571,7 +571,9 @@ describe('Database', () => {
     config.maxBytesPerItem = 1000;
     const userDB = await database.user(USERS[0].id);
     const list = await userDB.create('foo', 'list', {things: []});
-    for (let i = 0; i < (config.maxBytesPerItem / 13) - 15; ++i) {
+    // each message is {"$ref":"/data/foo/list/12345678"}, = 35 bytes
+    // whole list is {"things":[...]} = 13 bytes
+    for (let i = 0; i < ((config.maxBytesPerItem - 13) / 36); ++i) {
       await userDB.append('foo', 'list', list.id, {things: [{message: 'a'}]});
     }
     await expectError(userDB.append('foo', 'list', list.id, {things: [{message: 'a'}]}), /would exceed the maximum of 1000 bytes/);
@@ -587,49 +589,68 @@ describe('Database', () => {
     expect(item.data).to.deep.equal(data);
   });
 
-  it('should resolve created refs', async () => {
+  it('should disassemble data', async () => {
     const userDB = await database.user(USERS[0].id);
-    const listSchema = {
-      type: 'object',
-      properties: {
-        entries: {
-          type: 'array',
-          items: {
-            $ref: '#/definitions/entry',
-          }
-        }
-      }
-    };
-    const entrySchema = {
-      type: 'object',
-      properties: {
-        title: {type: 'string'},
-      }
-    };
-    const ns = {
-      versions: [{
-        version: '0',
-        types: {
-          list: {
-            schema: listSchema,
-          },
-          entry: {
-            schema: entrySchema,
-          }
-        }
-      }]
-    }
-    await userDB.create('core', 'namespace', ns, 'todo');
-    let schema = (await userDB.getSchema('todo', 'list')).schemaInfo.data;
     const list = {
-      entries: [{
-        title: 'hello',
+      things: [{
+        message: 'hello',
       }]
     }
 
-    const listID = await userDB.create('todo', 'list', list);
-    const listBack = await userDB.get('todo', 'list', listID.id);
-    expect(listBack.data.entries[0].$ref).to.be.a('string');
+    const listID = (await userDB.create('foo', 'list', list)).id;
+    let listBack = await userDB.get('foo', 'list', listID);
+    expect(listBack.data.things[0].$ref).to.be.a('string');
+    expect(Object.keys(listBack.data.things[0]).length).to.equal(1);
+    let [dummy1, dummy2, namespace, type, message0ID] = listBack.data.things[0].$ref.split('/');
+    expect(namespace).to.equal('foo');
+    expect(type).to.equal('thing');
+    const message0 = await userDB.get(namespace, type, message0ID);
+    expect(message0.data).to.deep.equal({message: 'hello'});
+
+    await userDB.append('foo', 'list', listID, {things: [{message: 'goodbye'}]});
+    listBack = await userDB.get('foo', 'list', listID);
+    expect(listBack.data.things[1].$ref).to.be.a('string');
+    expect(Object.keys(listBack.data.things[1]).length).to.equal(1);
+    [dummy1, dummy2, namespace, type, message1ID] = listBack.data.things[1].$ref.split('/');
+    expect(namespace).to.equal('foo');
+    expect(type).to.equal('thing');
+    const message1 = await userDB.get(namespace, type, message1ID);
+    expect(message1.data).to.deep.equal({message: 'goodbye'});
+
+    const newList = {
+      things: [{
+        _id: message0ID,
+        message: "hello",
+      }, {
+        _id: message1ID,
+        message: "goodbye2",
+      }]
+    }
+    await userDB.update('foo', 'list', listID, newList);
+    const newListBack = await userDB.get('foo', 'list', listID);
+    expect(newListBack.data).to.deep.equal({
+      things: [{
+        $ref: '/data/foo/thing/' + message0ID,
+      }, {
+        $ref: '/data/foo/thing/' + message1ID,
+      }]
+    });
+    const message1Updated = await userDB.get('foo', 'thing', message1ID);
+    expect(message1Updated.data).to.deep.equal({message: 'goodbye2'})
+
+    const newList2 = {
+      things: [{
+        message: 'hello2',
+      }, {
+        _id: message1ID,
+        message: 'goodbye2',
+      }]
+    }
+    await userDB.update('foo', 'list', listID, newList2);
+    const newListBack2 = await userDB.get('foo', 'list', listID);
+    expect(newListBack2.data.things[1].$ref).to.equal('/data/foo/thing/' + message1ID);
+    expect(newListBack2.data.things[0].$ref).to.be.a('string');
+    expect(newListBack2.data.things[0].$ref).to.not.equal('/data/foo/thing/' + message0ID);
   });
 
   it('should not allow keys with special characters', async() => {

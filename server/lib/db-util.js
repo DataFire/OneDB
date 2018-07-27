@@ -259,3 +259,25 @@ module.exports.checkPassword = (password, hash, salt) => {
     })
   });
 }
+
+const REF_MATCH = /^#\/definitions\/(\w+)$/;
+module.exports.schemaRefsToDBRefs = function(namespace, schema) {
+  if (typeof schema !== 'object' || schema === null) return schema;
+  if (schema.$ref) {
+    const match = schema.$ref.match(REF_MATCH);
+    if (match) {
+      const type = match[1];
+      return validate.getRefSchema(namespace, type)
+    }
+  }
+  if (schema.properties) {
+    for (let key in schema.properties) {
+      schema.properties[key] = module.exports.schemaRefsToDBRefs(namespace, schema.properties[key]);
+    }
+  }
+  if (schema.items) {
+    schema.items = module.exports.schemaRefsToDBRefs(namespace, schema.items);
+  }
+  return schema
+}
+

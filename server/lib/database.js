@@ -122,6 +122,9 @@ class DatabaseForUser {
   async validate(obj, schema=null, namespace='', type='') {
     if (schema) {
       if (!namespace || !type) throw new Error("Need a namespace and type to validate schema");
+      if (namespace !== 'core') {
+        schema = util.schemaRefsToDBRefs(namespace, schema);
+      }
       schema = {
         definitions: schema.definitions,
         anyOf: [Object.assign({definitions: {}}, schema), validate.getRefSchema(namespace, type)],
@@ -243,8 +246,16 @@ class DatabaseForUser {
     if (schema.$ref) {
       let match = schema.$ref.match(/#\/definitions\/(\w+)/);
       if (!match) return data;
-      let item = await this.create(namespace, match[1], data);
-      return {$ref: '/data/' + namespace + '/' + match[1] + '/' + item.id};
+      let id = null;
+      if (data._id) {
+        id = data._id;
+        delete data._id;
+        await this.update(namespace, match[1], id, data);
+      } else {
+        let item = await this.create(namespace, match[1], data);
+        id = item.id;
+      }
+      return {$ref: '/data/' + namespace + '/' + match[1] + '/' + id};
     }
     for (let key in data) {
       let subschema = (schema.properties || {})[key] || schema.additionalProperties;
@@ -300,10 +311,10 @@ class DatabaseForUser {
     }
 
     const obj = {id, data, info, acl};
-    await this.validate(obj, schemaInfo.data, namespace, type);
     if (namespace !== 'core') {
       data = await this.disassemble(namespace, data, schemaInfo.data);
     }
+    await this.validate(obj, schemaInfo.data, namespace, type);
     const col = this.getCollection(namespace, type);
     const result = await col.insert(util.encodeDocument([obj]));
 
@@ -321,6 +332,7 @@ class DatabaseForUser {
   async update(namespace, type, id, data) {
     const query = this.buildQuery({id}, 'write');
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    data = await this.disassemble(namespace, data, schemaInfo.data)
     await this.validate({data}, schemaInfo.data, namespace, type);
     const col = this.getCollection(namespace, type);
     const result = await col.update(query, {
@@ -339,14 +351,23 @@ class DatabaseForUser {
     const existing = await this.get(namespace, type, id, 'force');
     if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    data = await this.disassemble(namespace, data, schemaInfo.data);
     const doc = {$push: {}}
     for (let key in data) {
+      if (!Array.isArray(data[key])) continue;
       let schema = schemaInfo.data.properties && schemaInfo.data.properties[key];
+      schema = schema && schema.items;
       if (!schema) return fail(`Schema not found for key ${key}`, 400);
       schema.definitions = schemaInfo.data.definitions;
-      await this.validate({data: data[key]}, schemaInfo.data.properties[key], namespace, type);
+      let subtype = type;
+      if (schema.$ref) {
+        subtype = schema.$ref.split('/').pop();
+      }
+      for (let item of data[key]) {
+        await this.validate({data: item}, schema, namespace, subtype);
+      }
       existing[key] = (existing[key] || []).concat(data[key]);
-      doc.$push['data.' + key] = {$each: data[key]};
+      doc.$push['data.' + key] = {$each: util.encodeDocument(data[key])};
     }
 
     const newDoc = JSON.stringify(existing.data);
