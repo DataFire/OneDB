@@ -58,6 +58,15 @@ describe('Database', () => {
         things: {type: 'array', items: thingSchema},
       },
     }
+    const multiSchema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        title: {type: 'string'},
+        description: {type: 'string'},
+        things: {type: 'array', items: {$ref: '#/definitions/thing'}},
+      }
+    }
     const ns = {
       versions: [{
         version: '0',
@@ -65,6 +74,7 @@ describe('Database', () => {
           'thing': {schema: thingSchema, initial_acl: {allow: {read: ['_all']}}},
           'list': {schema: listSchema},
           'inline_list': {schema: inlineListSchema},
+          'multi': {schema: multiSchema},
         }
       }]
     }
@@ -250,12 +260,12 @@ describe('Database', () => {
       versions: [{
         version: '0',
         types: {
-          'thing': {schema: {$ref: '/data/core/schema/thing'}},
+          'thing': {schema: {type: 'object'}},
         }
       }]
     }
     await user0DB.create('core', 'namespace', ns, 'foo2');
-    return expectError(user1DB.create('core', 'namespace', {}, 'foo2'), /Item core\/namespace\/foo2 already exists/);
+    return expectError(user1DB.create('core', 'namespace', ns, 'foo2'), /Item core\/namespace\/foo2 already exists/);
   });
 
   it('should not allow other user to publish namespace', async () => {
@@ -265,7 +275,7 @@ describe('Database', () => {
       versions: [{
         version: '0',
         types: {
-          'thing': {schema: {$ref: '/data/core/schema/thing'}},
+          'thing': {schema: {type: 'object', properties: {}}},
         }
       }]
     }
@@ -279,7 +289,7 @@ describe('Database', () => {
       versions: [{
         version: '0',
         types: {
-          'thing': {schema: {$ref: '/data/core/schema/thing'}, initial_acl: {allow: {destroy: []}}},
+          'thing': {schema: {type: 'object', properties: {}}},
         }
       }]
     }
@@ -303,6 +313,20 @@ describe('Database', () => {
     item = await userDB.get('foo', 'thing', item.id);
     expect(item.data).to.deep.equal({message: "Goodbye world!"});
   });
+
+  it('should allow creation of multi', async () => {
+    const userDB = await database.user(USERS[1].id);
+    let data = {
+      title: 'foo',
+      description: 'bar',
+      things: [{
+        message: 'hello',
+      }]
+    }
+    await userDB.create('foo', 'multi', data, 'mymulti');
+    let item = await userDB.get('foo', 'multi', 'mymulti');
+    expect(item.data).to.deep.equal(data);
+  })
 
   it('should not allow duplicate ID for invisible thing', async () => {
     const user0DB = await database.user(USERS[0].id);

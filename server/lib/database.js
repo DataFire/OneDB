@@ -235,6 +235,7 @@ class DatabaseForUser {
   }
 
   async disassemble(namespace, data, schema) {
+    if (namespace === 'core') return data;  // TODO: remove special case
     if (!schema || (typeof data) !== 'object') return data;
     if (Array.isArray(data)) {
       let newData = [];
@@ -260,8 +261,8 @@ class DatabaseForUser {
     for (let key in data) {
       let subschema = (schema.properties || {})[key] || schema.additionalProperties;
       data[key] = await this.disassemble(namespace, data[key], subschema);
-      return data;
     }
+    return data;
   }
 
   async create(namespace, type, data, id='') {
@@ -313,9 +314,7 @@ class DatabaseForUser {
     }
 
     const obj = {id, data, info, acl};
-    if (namespace !== 'core') {
-      data = await this.disassemble(namespace, data, schemaInfo.data);
-    }
+    data = await this.disassemble(namespace, data, schemaInfo.data);
     await this.validate(obj, schemaInfo.data, namespace, type);
     delete data._id;
     if (namespace === 'core' && type === 'schema') {
