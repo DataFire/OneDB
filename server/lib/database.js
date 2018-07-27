@@ -233,22 +233,24 @@ class DatabaseForUser {
   }
 
   async disassemble(namespace, data, schema) {
-    if (!schema || (typeof data) !== 'object') return;
+    if (!schema || (typeof data) !== 'object') return data;
     if (Array.isArray(data)) {
+      let newData = [];
       for (let datum of data) {
-        await this.disassemble(namespace, datum, schema.items);
+        newData.push(await this.disassemble(namespace, datum, schema.items));
       }
-      return;
+      return newData;
     }
     if (schema.$ref) {
       let match = schema.$ref.match(/#\/definitions\/(\w+)/);
-      if (!match) return;
+      if (!match) return data;
       let item = await this.create(namespace, match[1], data);
-      data.$ref = '/data/' + namespace + '/' + match[1] + '/' + item.id;
+      return {$ref: '/data/' + namespace + '/' + match[1] + '/' + item.id};
     }
     for (let key in data) {
       let subschema = (schema.properties || {})[key] || schema.additionalProperties;
-      await this.disassemble(namespace, data[key], subschema);
+      data[key] = await this.disassemble(namespace, data[key], subschema);
+      return data;
     }
   }
 
@@ -297,7 +299,7 @@ class DatabaseForUser {
     const obj = {id, data, info, acl};
     await this.validate(obj, schemaInfo.data, namespace, type);
     if (namespace !== 'core') {
-      await this.disassemble(namespace, data, schemaInfo.data);
+      data = await this.disassemble(namespace, data, schemaInfo.data);
     }
     const col = this.getCollection(namespace, type);
     const result = await col.insert(util.encodeDocument([obj]));
