@@ -14,11 +14,12 @@ export class HomeComponent {
   host:string = settings.host || 'https://alpha.freedb.io';
   lists:any[];
   constructor(private freedb:FreeDBService) {
-    this.initialize();
+    this.freedb.onUser.subscribe(user => {
+      if (user) this.loadTodoLists();
+    });
   }
 
   async initialize() {
-    await this.freedb.maybeRestore();
     if (this.freedb.user) this.loadTodoLists();
   }
 

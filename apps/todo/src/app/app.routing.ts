@@ -5,6 +5,7 @@ import {ListComponent} from './list/list.component';
 export const appRoutes: Routes = [
   { path: 'home', component: HomeComponent },
   { path: 'new-list', component: ListComponent },
+  { path: 'list/:list_id', component: ListComponent },
   { path: '**', redirectTo: 'home' },
 ];
 

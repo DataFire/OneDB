@@ -4,7 +4,7 @@
     "title": {"type": "string", "maxLength": 100, "minLength": 1},
     "items": {
       "type": "array",
-      "items": {"$ref": "#item"}
+      "items": {"$ref": "#/definitions/item"}
     }
   }
 }
