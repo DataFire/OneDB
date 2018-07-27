@@ -36,9 +36,11 @@ describe("FreeDB Client", () => {
   it('should retrieve core types without login', async () => {
     let item = await client.get('core', 'schema', 'user');
     expect(item).to.deep.equal({
+      _id: 'user',
       type: 'object',
       additionalProperties: false,
       properties: {
+        _id: {type: 'string'},
         publicKey: {type: 'string'},
       }
     })
@@ -49,13 +51,20 @@ describe("FreeDB Client", () => {
   });
 
   it('should allow creating user', async () => {
-    await client.createUser('user1', 'password');
+    await client.createUser('user1@example.com', 'password');
   })
 
   it('should allow creating type after login', async () => {
-    await client.create('core', 'schema', {type: 'string'}, 'message');
+    let schema = {
+      type: 'object',
+      properties: {
+        _id: {type: 'string'},
+        message: {type: 'string'},
+      }
+    }
+    await client.create('core', 'schema', schema, 'message');
     let item = await client.get('core', 'schema', 'message');
-    expect(item).to.deep.equal({type: 'string'});
+    expect(item).to.deep.equal(Object.assign({_id: 'message'}, schema));
   });
 
   it('should allow creating namespace', async () => {
@@ -64,7 +73,12 @@ describe("FreeDB Client", () => {
         version: '0',
         types: {
           message: {
-            schema: {$ref: HOST + '/data/core/schema/message'},
+            schema: {
+              type: 'object',
+              properties: {
+                message: {type: 'string'},
+              }
+            }
           }
         }
       }]
@@ -73,27 +87,27 @@ describe("FreeDB Client", () => {
   });
 
   it('should allow creating message', async () => {
-    let id = await client.create('messages', 'message', "Hello world!");
+    let id = await client.create('messages', 'message', {message: "Hello world!"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
-    expect(msg).to.equal("Hello world!");
+    expect(msg.message).to.equal("Hello world!");
   });
 
   it('should allow updating message', async () => {
-    let id = await client.create('messages', 'message', "Hello world");
+    let id = await client.create('messages', 'message', {message: "Hello world"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
-    expect(msg).to.equal("Hello world");
-    await client.update('messages', 'message', id, "Hi world");
+    expect(msg.message).to.equal("Hello world");
+    await client.update('messages', 'message', id, {message: "Hi world"});
     msg = await client.get('messages', 'message', id);
-    expect(msg).to.equal("Hi world");
+    expect(msg.message).to.equal("Hi world");
   });
 
   it('should allow destroying message', async () => {
-    let id = await client.create('messages', 'message', "Hello world");
+    let id = await client.create('messages', 'message', {message: "Hello world"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
-    expect(msg).to.equal("Hello world");
+    expect(msg.message).to.equal("Hello world");
     await client.destroy('messages', 'message', id);
     await expectError(client.get('messages', 'message', id), /Item messages\/message\/.* not found/);
   })

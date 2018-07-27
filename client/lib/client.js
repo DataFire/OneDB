@@ -48,7 +48,10 @@ class Client {
   }
 
   async request(method, path, query={}, body=null) {
-    let url = this.options.host + path;
+    let url = path;
+    if (!url.startsWith(this.options.host)) {
+      url = this.options.host + path;
+    }
     let headers = {
       'Content-Type': 'application/json',
     }
@@ -81,19 +84,17 @@ class Client {
 
   async loadNamespace(namespace) {
     let nsInfo = null;
-    if (namespace === 'core') {
-      nsInfo = await this.request('get', '/data/core/namespace/core');
-    } else {
-      nsInfo = await this.get('core', 'namespace', namespace);
-    }
+    nsInfo = await this.get('core', 'namespace', namespace, namespace === 'core');
     let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
     for (let type in version.types) {
       let typeInfo = version.types[type];
-      typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
+      if (namespace === 'core' && type === 'schema') {
+        typeInfo.validate = this.ajv.compile.bind(this.ajv);
+      } else {
+        typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
+      }
     }
-    if (namespace === 'core') {
-      await this.validateItem('core', 'namespace', nsInfo);
-    }
+    // TODO: validate core namespace
   }
 
   async validateItem(namespace, type, item) {
@@ -104,9 +105,33 @@ class Client {
     }
   }
 
-  async get(namespace, type, id) {
+  async resolveRefs(obj) {
+    if (typeof obj !== 'object' || obj === null) {
+      return obj;
+    } else if (Array.isArray(obj)) {
+      const resolved = [];
+      for (let item of obj) {
+        resolved.push(await this.resolveRefs(item))
+      }
+      return resolved;
+    } else if (obj.$ref && !obj.$ref.startsWith('#')) {
+      // TODO: resolve refs on other servers
+      obj = await this.request('get', obj.$ref);
+      return obj;
+    } else {
+      for (let key in obj) {
+        obj[key] = await this.resolveRefs(obj[key]);
+      }
+      return obj;
+    }
+  }
+
+  async get(namespace, type, id, noValidate=false) {
     let item = await this.request('get', '/data/' + namespace + '/' + type + '/' + id);
-    await this.validateItem(namespace, type, item);
+    await this.resolveRefs(item);
+    if (!noValidate) {
+      await this.validateItem(namespace, type, item);
+    }
     return item;
   }
 

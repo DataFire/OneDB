@@ -27,7 +27,6 @@ The goal of the alpha release is a simple proof of concept. It leaves out many f
 ## TODO
 * email verification
 * password reset
-* resolve $refs in client
 * usernames
 * `create` permissions?
 * more tests
