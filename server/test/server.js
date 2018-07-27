@@ -116,7 +116,7 @@ describe("Server", () => {
     expect(resp.data).to.equal('foo');
 
     resp = await axios.get(HOST + '/data/core/schema/foo');
-    expect(resp.data).to.deep.equal(Object.assign({_id: 'foo'}, data));
+    expect(resp.data).to.deep.equal(Object.assign({_id: 'foo', properties: {_id: {type: 'string'}}}, data));
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
       owner: USER_1.id,

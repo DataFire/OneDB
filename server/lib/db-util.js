@@ -13,7 +13,7 @@ const KEY_REPLACEMENTS = {
   },
 }
 
-const KEY_REGEX = /^(\$ref|\$id|\$comment|\$schema|[A-Za-z]\w*)$/;
+const KEY_REGEX = /^(_id|\$ref|\$id|\$comment|\$schema|[A-Za-z]\w*)$/;
 
 const START_TIME = (new Date()).toISOString();
 

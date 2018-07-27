@@ -277,9 +277,11 @@ class DatabaseForUser {
     const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.DEFAULT_ACL)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
-      if (type === 'schema' && id !== 'schema') {
-        if (!data || data.type !== 'object') {
-          return fail(`All top-level schemas must have type 'object'`);
+      if (type === 'schema') {
+        if (id !== 'schema') {
+          if (!data || data.type !== 'object') {
+            return fail(`All top-level schemas must have type 'object'`);
+          }
         }
       } else if (type === 'user') {
         acl.owner = id;
@@ -315,6 +317,11 @@ class DatabaseForUser {
       data = await this.disassemble(namespace, data, schemaInfo.data);
     }
     await this.validate(obj, schemaInfo.data, namespace, type);
+    delete data._id;
+    if (namespace === 'core' && type === 'schema') {
+      data.properties = data.properties || {};
+      data.properties._id = {type: 'string'};
+    }
     const col = this.getCollection(namespace, type);
     const result = await col.insert(util.encodeDocument([obj]));
 
