@@ -1,0 +1,15 @@
+form((submit)="signIn()")
+  .form-group
+    p Enter the server you want to log into, then click "Log In".
+    .input-group
+      input.form-control([(ngModel)]="host" name="host")
+      .input-group-append
+        button.btn.btn-outline-secondary(type="submit") Log In
+div(*ngIf="freedb.user")
+  h2 You're logged in as {{ freedb.user.id }}
+div(*ngIf="lists")
+  p(*ngIf="!lists.length")
+    span You haven't made any todo lists. 
+    a(routerLink="/new-list") Start one now
+  .list(*ngFor="let list of lists")
+    h4 {{ list.title }}

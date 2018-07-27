@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {"type": "string", "maxLength": 100, "minLength": 1},
+    "description": {"type": "string", "maxLength": 1000, "minLength": 1},
+    "done": {"type": "boolean", "default": false}
+  }
+}

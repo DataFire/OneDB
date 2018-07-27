@@ -1,0 +1,11 @@
+div(*ngIf="editing")
+div(*ngIf="!editing")
+  .form-group
+    input.form-control.form-control-lg([(ngModel)]="list.title")
+  .form-group
+    input.form-control([(ngModel)]="list.description")
+  .item(*ngFor="let item of list.items")
+    h4
+      i.fa.fa-left([class.fa-square-o]="!item.done", [class.fa-check-square]="item.done")
+      input.form-control([(ngModel)]="item.title")
+  a.btn.btn-secondary((click)="list.items.push(newItem())") Add a new item
