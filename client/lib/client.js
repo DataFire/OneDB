@@ -67,7 +67,12 @@ class Client {
       if (!host.username && !host.token) {
         host.user = null;
       } else {
-        host.user = await this.request(host, 'GET', '/users/me');
+        try {
+          host.user = await this.request(host, 'GET', '/users/me');
+        } catch (e) {
+          host.username = host.password = host.token = null;
+          return this.getUser(host);
+        }
         host.displayName = host.user._id + '@' + replaceProtocol(host.location);
       }
     }
