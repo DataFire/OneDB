@@ -688,6 +688,20 @@ describe('Database', () => {
       }
     }
     await expectError(userDB.create('core', 'schema', schema), /Object key \$foo is invalid/);
+  });
+
+  it('should not allow a vulnerable regex', async () => {
+    const userDB = await database.user(USERS[0].id);
+    const schema = {
+      type: 'object',
+      properties: {
+        str: {
+          type: 'string',
+          pattern: '(\\w+)+',
+        }
+      }
+    };
+    await expectError(userDB.create('core', 'schema', schema), /Pattern .* is not allowed/)
   })
 });
 

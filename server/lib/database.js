@@ -258,6 +258,25 @@ class DatabaseForUser {
     return data;
   }
 
+  async disassembleNamespace(data) {
+    for (let version of data.versions) {
+      let definitions = {};
+      for (let type in version.types) {
+        let schema = version.types[type].schema;
+        if (!schema.$ref) {
+          definitions[type] = schema;
+        }
+      }
+      for (let type in version.types) {
+        let schema = Object.assign({definitions}, version.types[type].schema);
+        if (!schema.$ref) {
+          let newSchema = await this.create('core', 'schema', schema);
+          version.types[type].schema = {$ref: '/data/core/schema/' + newSchema.id};
+        }
+      }
+    }
+  }
+
   async create(namespace, type, data, id='') {
     if (this.user.data.items >= config.maxItemsPerUser) {
       return fail(`You have hit your maximum of ${config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
@@ -271,31 +290,13 @@ class DatabaseForUser {
     const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.OWNER_ACL_SET)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
-      if (type === 'schema') {
-        if (id !== 'schema') {
-          if (!data || data.type !== 'object') {
-            return fail(`All top-level schemas must have type 'object'`);
-          }
-        }
+      if (type === 'schema' && id !== 'schema') {
+        let err = validate.validators.schema(data);
+        if (err) return fail(err, 400);
       } else if (type === 'user') {
         acl.owner = id;
       } else if (type === 'namespace') {
-        for (let version of data.versions) {
-          let definitions = {};
-          for (let type in version.types) {
-            let schema = version.types[type].schema;
-            if (!schema.$ref) {
-              definitions[type] = schema;
-            }
-          }
-          for (let type in version.types) {
-            let schema = Object.assign({definitions}, version.types[type].schema);
-            if (!schema.$ref) {
-              let newSchema = await this.create('core', 'schema', schema);
-              version.types[type].schema = {$ref: '/data/core/schema/' + newSchema.id};
-            }
-          }
-        }
+        await this.disassembleNamespace(data);
       }
     }
 

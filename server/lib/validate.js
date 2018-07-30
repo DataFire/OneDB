@@ -1,5 +1,7 @@
 const Ajv = require('ajv');
 const validator = require('validator');
+const redos = require('redos');
+const util = require('./util');
 
 const MIN_PASSWORD_LENGTH = 8;
 const WORDY_REGEX = /^[a-zA-Z0-9]\w{1,29}$/; // starts with a letter, 2-30 characters
@@ -67,6 +69,22 @@ let validators = module.exports.validators = {
     if (password.length < MIN_PASSWORD_LENGTH) {
       return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
     }
+  },
+  schema: (schema, isNested=false) => {
+    if (!isNested) {
+      if (!schema || schema.type !== 'object') return "Top-level schema must have type 'object'";
+    }
+    let err = null;
+    util.iterateSchema(schema, subschema => {
+      if (err) return;
+      if (subschema.pattern) {
+        let rx = new RegExp(subschema.pattern);
+        let results = redos(rx.toString()).results();
+        let badResult = results.filter(r => !r.safe).pop();
+        if (badResult) err = "Pattern " + subschema.pattern + " is not allowed";
+      }
+    });
+    return err;
   }
 }
 
