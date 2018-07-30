@@ -17,7 +17,7 @@ module.exports = function(database) {
   router.use('/me', cors());
   router.get('/me', middleware.authenticate(database), (req, res) => {
     if (!req.user) return fail("You are not logged in", 401);
-    req.db.user.data.id = req.db.user.id;
+    req.db.user.data._id = req.db.user.id;
     res.json(req.db.user.data);
   });
   router.post('/register', new RateLimit(config.rateLimit.createUser), errorGuard(middleware.register(database)));
