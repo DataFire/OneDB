@@ -1,8 +1,11 @@
 import {Injectable} from '@angular/core';
 import {BehaviorSubject} from 'rxjs';
 
+declare let window:any;
 declare let require:any;
 const Client = require('../../../../../client');
+const settings = require('../../../../../.server-config.json');
+const CORE_HOST = settings.host;
 
 const STORAGE_KEY = 'freedb_auth';
 
@@ -14,35 +17,32 @@ export class FreeDBService {
   onUser = new BehaviorSubject(null);
 
   constructor() {
+    window.freedbService = this;
+    this.client = new Client({
+      hosts: {
+        core: {
+          location: CORE_HOST,
+        }
+      },
+      onUser: user => this.onUser.next(user),
+    });
     this.maybeRestore();
-  }
-
-  async initialize(options) {
-    this.client = new Client(options);
+    this.onUser.subscribe(user => {
+      this.user = user;
+      if (!window.localStorage) return
+      const toStore = {
+        hosts: this.client.hosts,
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore))
+    })
   }
 
   async maybeRestore() {
     if (!window.localStorage) return;
-    let existing = window.localStorage.getItem(STORAGE_KEY);
+    let existing:any = window.localStorage.getItem(STORAGE_KEY);
     if (!existing) return;
     existing = JSON.parse(existing);
-    await this.initialize(existing);
-    this.user = await this.client.getUser();
-    this.onUser.next(this.user);
-  }
-
-  async signIn(host) {
-    await this.initialize(host);
-    return new Promise((resolve, reject) => {
-      this.client.authorize(user => {
-        this.user = user;
-        this.onUser.next(user);
-        if (window.localStorage) {
-          const toStore = {host, token: this.client.options.token};
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore))
-        }
-        resolve();
-      })
-    });
+    if (!existing || !existing.hosts) return;
+    await this.client.setHosts(existing.hosts);
   }
 }

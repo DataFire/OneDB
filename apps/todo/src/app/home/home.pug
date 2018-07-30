@@ -1,17 +1,20 @@
-form((submit)="signIn()")
-  .form-group
-    p Enter the server you want to log into, then click "Log In".
-    .input-group
-      input.form-control([(ngModel)]="host" name="host")
-      .input-group-append
-        button.btn.btn-outline-secondary(type="submit") Log In
-div(*ngIf="freedb.user")
-  h2 You're logged in as {{ freedb.user.id }}
-  a.btn.btn-success(routerLink="/new-list") Create a new Todo List
-div(*ngIf="lists")
-  p(*ngIf="!lists.length")
-    span You haven't made any todo lists. 
-    a(routerLink="/new-list") Start one now
-  .list(*ngFor="let list of lists")
-    h4
-      a([routerLink]="['/list', list._id]") {{ list.title }}
+h1 Welcome to Open Todo
+p.
+  This is a free and open source tool for creating todo lists. Open Todo uses FreeDB
+  for cloud storage, which means <b>you</b> get to decide where your data is stored -
+  on your hard drive, in the cloud, or on your company's servers.
+div(*ngIf="freedb.client.hosts.primary.user")
+  h2 Your Todo Lists
+  h2(*ngIf="!lists")
+    i.fa.fa-spin.fa-refresh
+  div(*ngIf="lists")
+    div(*ngIf="!lists.length")
+      h1
+        i.fa.fa-5x.fa-list-ol
+      p
+        span You haven't made any todo lists. 
+        a(routerLink="/new-list") Start one now
+    div(*ngIf="lists.length")
+      .list(*ngFor="let list of lists")
+        h4
+          a([routerLink]="['/list', list._id]") {{ list.title }}
