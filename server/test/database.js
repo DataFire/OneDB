@@ -5,6 +5,7 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const config = require('../lib/config');
 const Database = require('../lib/database');
+const dbUtil = require('../lib/db-util');
 
 let database = null;
 let systemDB = null;
@@ -87,75 +88,43 @@ describe('Database', () => {
 
   it('should have core schemas', async () => {
     let ns = await systemDB.get('core', 'namespace', 'core');
-    let systemACL = {
-	  "append": ["_system"],
-	  "destroy": ["_system"],
-	  "read": ["_system"],
-	  "write": ["_system"],
-	}
-    let readACL = {
-      append: [],
-      destroy: [],
-      read: ['_all'],
-      write: [],
-    }
-    let ownerACL = {
-      read: ['_all'],
-      write: ['_owner'],
-    }
-    let blankACL = {
-      append: [],
-      destroy: [],
-      read: [],
-      write: [],
-    }
 
-    expect(ns.data).to.deep.equal({
-      versions: [{
-        version: '0',
-        types: {
-          user_private: {
-            schema: {$ref: '/data/core/schema/user_private'},
-            initial_acl: {
-              modify: systemACL,
-              allow: systemACL,
-            },
-          },
-          user: {
-            schema: {$ref: '/data/core/schema/user'},
-            initial_acl: {
-              //modify: systemACL,
-              allow: ownerACL,
-            },
-          },
-          schema: {
-            schema: {$ref: '/data/core/schema/schema'},
-            initial_acl: {
-              modify: blankACL,
-              allow: readACL,
-            },
-          },
-          namespace: {
-            schema: {$ref: '/data/core/schema/namespace'},
-            initial_acl: {
-              modify: blankACL,
-              allow: readACL,
-            },
-          },
-        }
-      }]
+    expect(ns.data.versions.length).to.equal(1);
+    let types = ns.data.versions[0].types;
+    expect(Object.keys(types)).to.have.members(['user_private', 'user', 'schema', 'namespace']);
+    expect(types.user_private).to.deep.equal({
+      schema: {$ref: '/data/core/schema/user_private'},
+      initial_acl: dbUtil.PRIVATE_ACL_SET,
     });
+    expect(types.user).to.deep.equal({
+      schema: {$ref: '/data/core/schema/user'},
+      initial_acl: {
+        allow: {
+          read: [dbUtil.USER_KEYS.all],
+          write: [dbUtil.USER_KEYS.owner],
+        },
+        modify: dbUtil.SYSTEM_ACL,
+      }
+    });
+    expect(types.schema).to.deep.equal({
+      schema: {$ref: '/data/core/schema/schema'},
+      initial_acl: dbUtil.READ_ONLY_ACL_SET,
+    });
+    expect(types.namespace).to.deep.equal({
+      schema: {$ref: '/data/core/schema/namespace'},
+      initial_acl: dbUtil.READ_ONLY_ACL_SET,
+    });
+
     let schema = await systemDB.get('core', 'schema', 'schema');
     expect(schema.acl.owner).to.equal('_system');
     expect(schema.acl.allow.read).to.deep.equal(['_all']);
-    expect(schema.data.type).to.deep.equal(['object', 'boolean']);
+    expect(schema.data.oneOf[1].type).to.deep.equal(['object', 'boolean']);
 
     let user = await systemDB.get('core', 'schema', 'user');
     expect(user.acl).to.deep.equal({
       owner: '_system',
-      allow: readACL,
-      modify: blankACL,
-      disallow: {},
+      allow: dbUtil.READ_ONLY_ACL,
+      modify: dbUtil.SYSTEM_ACL,
     });
     expect(user.acl.allow.read).to.deep.equal(['_all']);
     expect(user.data.type).to.equal('object');

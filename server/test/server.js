@@ -3,6 +3,7 @@ const expect = require('chai').expect;
 const axios = require('axios');
 const config = require('../lib/config');
 const Server = require('../lib/server');
+const dbUtil = require('../lib/db-util');
 config.jwtSecret = 'thisisasecret';
 
 const mongod = new MongoMemoryServer();
@@ -120,18 +121,8 @@ describe("Server", () => {
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
       owner: USER_1.id,
-      allow: {
-        read: ['_all'],
-        write: [],
-        append: [],
-        destroy: [],
-      },
-      modify: {
-        read: [],
-        write: [],
-        append: [],
-        destroy: [],
-      },
+      allow: dbUtil.READ_ONLY_ACL,
+      modify: dbUtil.SYSTEM_ACL,
       disallow: {},
     });
     const ns = {
@@ -157,7 +148,7 @@ describe("Server", () => {
   it('should have $refs set with host', async () => {
     let resp = await axios.get(HOST + '/data/core/namespace/core');
     let version = resp.data.versions[0];
-    expect(version.types.user.schema.$ref).to.equal('http://localhost:3333/data/core/schema/user');
+    expect(version.types.user.schema.$ref).to.equal('/data/core/schema/user');
   });
 
   it('should allow authorization', async () => {

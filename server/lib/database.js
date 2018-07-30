@@ -20,7 +20,6 @@ class Database {
 
   async initialize() {
     if (this.client) return fail("Database already initialized");
-    if (this.options.host) util.setRefHost(this.options.host);
     this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
     let coreObjects = JSON.parse(JSON.stringify(util.CORE_OBJECTS));
@@ -30,14 +29,6 @@ class Database {
       if (!existing[0]) {
         let encoded = util.encodeDocument(obj.document);
         await coll.insert(encoded);
-      }
-    }
-    let db = await this.user(util.USER_KEYS.system);
-    let coreTypes = JSON.parse(JSON.stringify(util.CORE_SCHEMAS));
-    for (let type in coreTypes) {
-      let existing = await db.get('core', 'schema', type);
-      if (!existing) {
-        existing = await db.create('core', 'schema', coreTypes[type], type);
       }
     }
   }
@@ -130,15 +121,17 @@ class DatabaseForUser {
         anyOf: [Object.assign({definitions: {}}, schema), validate.getRefSchema(namespace, type)],
       }
       let err = validate.validators.data(obj.data, schema);
-      if (err) return fail(err);
+      if (err) {
+        return fail(`Invalid ${namespace}/${type}: ${err}`);
+      }
     }
     if (obj.acl) {
       let err = validate.validators.acl(obj.acl);
-      if (err) return fail(err);
+      if (err) return fail(`Invalid ACL: ${err}`);
     }
     if (obj.info) {
       let err = validate.validators.info(obj.info);
-      if (err) return fail(err);
+      if (err) return fail(`Invalid info: ${err}`);
     }
   }
 
@@ -275,7 +268,7 @@ class DatabaseForUser {
     if (err) return fail(err);
     const existing = await this.get(namespace, type, id, 'force');
     if (existing) return fail(`Item ${namespace}/${type}/${id} already exists`);
-    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.DEFAULT_ACL)));
+    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.OWNER_ACL_SET)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (type === 'schema') {
