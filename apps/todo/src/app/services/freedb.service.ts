@@ -1,4 +1,4 @@
-import {Injectable} from '@angular/core';
+import {Injectable, NgZone} from '@angular/core';
 import {BehaviorSubject} from 'rxjs';
 
 declare let window:any;
@@ -16,7 +16,7 @@ export class FreeDBService {
 
   onUser = new BehaviorSubject(null);
 
-  constructor() {
+  constructor(private zone:NgZone) {
     window.freedbService = this;
     this.client = new Client({
       hosts: {
@@ -24,7 +24,9 @@ export class FreeDBService {
           location: CORE_HOST,
         }
       },
-      onUser: user => this.onUser.next(user),
+      onUser: user => {
+        this.zone.run(_ => this.onUser.next(user));
+      }
     });
     this.maybeRestore();
     this.onUser.subscribe(user => {
