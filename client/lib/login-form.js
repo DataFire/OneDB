@@ -55,7 +55,7 @@ function hostTemplate(host, idx) {
     <div class="input-group">
       ${idx === -1 ? '' : `
         <div class="input-group-prepend">
-          <button class="btn btn-danger" onclick="freeDBRemoveHost(${idx})">
+          <button class="btn btn-danger" onclick="freeDBRemoveHost(${idx})" type="button">
             &times;
           </button>
         </div>
