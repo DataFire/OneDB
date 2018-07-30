@@ -77,4 +77,31 @@ export class ListComponent {
     this.saving = false;
     await this.router.navigate(['/list', id]);
   }
+
+  async destroyItem(item) {
+    this.error = null;
+    if (item._id) {
+      try {
+        await this.freedb.client.destroy('alpha_todo', 'item', item._id);
+      } catch (e) {
+        this.error = e.message;
+        return;
+      }
+    }
+    this.list.items = this.list.items.filter(i => i !== item);
+    if (item._id) {
+      await this.save();
+    }
+  }
+
+  async destroy() {
+    this.error = null;
+    try {
+      await this.freedb.client.destroy('alpha_todo', 'list', this.list._id);
+    } catch (e) {
+      this.error = e.message;
+      return;
+    }
+    await this.router.navigate(['/home']);
+  }
 }

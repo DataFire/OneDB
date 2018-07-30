@@ -9,13 +9,20 @@ div(*ngIf="list")
     a.checkbox((click)="item.done = !item.done")
       i.fa.fa-2x.fa-left([class.fa-square-o]="!item.done", [class.fa-check-square]="item.done")
     .item-title
-      input.form-control([(ngModel)]="item.title" autofocus)
+      .input-group
+        input.form-control([(ngModel)]="item.title" autofocus)
+        .input-group-append
+          button.btn.btn-danger(type="button", (click)="destroyItem(item)")
+            i.fa.fa-times
   .form-group
     .row
       .col
         button.btn.btn-min-width.btn-secondary((click)="list.items.push(newItem())") Add a new item
       .col
-        button.btn.btn-min-width.btn-success.float-right((click)="save()")
-          span(*ngIf="!saving") Save
-          i.fa.fa-spin.fa-refresh(*ngIf="saving")
+        .btn-toolbar.float-right
+          button.btn.btn-min-width.btn-success.mr-4((click)="save()")
+            span(*ngIf="!saving") Save
+            i.fa.fa-spin.fa-refresh(*ngIf="saving")
+          button.btn.btn-min-width.btn-danger((click)="destroy()")
+            span Delete
 .alert.alert-danger(*ngIf="error" role="alert") {{ error }}
