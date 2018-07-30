@@ -8,7 +8,12 @@ const HOST = 'http://localhost:' + PORT;
 
 const mongod = new MongoMemoryServer();
 let server = null;
-const client = new Client(HOST);
+const client = new Client({
+  hosts: {
+    core: {location: HOST},
+    primary: {location: HOST},
+  }
+});
 
 const expectError = function(prom, regex) {
   return prom.then(() => {
@@ -29,7 +34,7 @@ describe("FreeDB Client", () => {
   });
 
   it('should work', async () => {
-    let resp = await client.request('get', '/ping');
+    let resp = await client.request(client.hosts.core, 'get', '/ping');
     expect(resp).to.equal('pong');
   });
 
@@ -51,7 +56,7 @@ describe("FreeDB Client", () => {
   });
 
   it('should allow creating user', async () => {
-    await client.createUser('user1@example.com', 'password');
+    await client.createUser(client.hosts.primary, 'user1@example.com', 'password');
   })
 
   it('should allow creating type after login', async () => {

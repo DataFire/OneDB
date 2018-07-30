@@ -1,16 +1,22 @@
 const axios = require('axios');
 const packageInfo = require('../package.json');
 const Ajv = require('ajv');
+const loginForm = require('./login-form');
 
-const TIMEOUT = 30000;
+const TIMEOUT = 10000;
+const DEFAULT_CORE = 'https://alpha.freedb.io';
+const DEFAULT_PRIMARY = DEFAULT_CORE;
+
+const HOST_REGEX = /(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?/;
+
+function replaceProtocol(str) {
+  return str.replace(/^\w+:\/\/(www\.)?/, '');
+}
 
 class Client {
   constructor(options={}) {
-    if (typeof options === 'string') {
-      options = {host: options};
-    }
     this.options = options;
-    if (!this.options.host) throw new Error("No host specified");
+    this.setHosts(this.options.hosts);
     this.namespaces = {};
     this.ajv = new Ajv({
       allErrors: true,
@@ -25,32 +31,74 @@ class Client {
     }
   }
 
+  async setHosts(hosts) {
+    this.hosts = hosts;
+    this.hosts.core = this.hosts.core || {location: DEFAULT_CORE};
+    this.hosts.primary = this.hosts.primary || {location: DEFAULT_PRIMARY};
+    this.hosts.secondary = this.hosts.secondary || [];
+    if (this.hosts.primary) {
+      await this.getUser(this.hosts.primary);
+    }
+    for (let host of this.hosts.secondary) {
+      await this.getUser(host);
+    }
+  }
+
+  getHost(url) {
+    let match = url.match(HOST_REGEX);
+    if (!match) throw new Error("Bad URL: " + url);
+    let location = match[1];
+    let hosts = [this.hosts.primary].concat(this.hosts.secondary);
+    hosts.push(this.hosts.core);
+    for (let host of hosts) {
+      if (host.location === location) return host;
+    }
+  }
+
   onMessage(event) {
-    if (event.origin !== this.options.host) return;
-    this.options.token = event.data;
-    this.getUser().then(user => {
-      this.user = user;
-      if (this.callback) this.callback(user);
-      this.callback = null;
-    })
+    if (!this.hosts.authorizing) return;
+    if (event.origin !== this.hosts.authorizing.location) return;
+    this.hosts.authorizing.token = event.data;
+    this.getUser(this.hosts.authorizing);
   }
 
-  async getUser() {
-    return this.request('GET', '/users/me');
+  async getUser(host) {
+    if (host) {
+      if (!host.username && !host.token) {
+        host.user = null;
+      } else {
+        host.user = await this.request(host, 'GET', '/users/me');
+        host.displayName = host.user._id + '@' + replaceProtocol(host.location);
+      }
+    }
+    if (this.options.onUser) {
+      this.options.onUser(host);
+    }
   }
 
-  authorize(callback) {
-    if (typeof window === 'undefined') throw new Error("Cannot call authorize() outside of browser context");
+  async createUser(host, username, password) {
+    host.username = username;
+    host.password = password;
+    return this.request(host, 'post', '/users/register');
+  }
+
+  authorize(host) {
+    if (typeof window === 'undefined') {
+      throw new Error("Cannot call authorize() outside of browser context");
+    }
+    this.hosts.authorizing = host;
+
     let origin = window.location.protocol + '//' + window.location.host;
     let path = '/users/authorize?origin=' + encodeURIComponent(origin);
-    window.open(this.options.host + path, '_blank');
-    this.callback = callback;
+    window.open(this.hosts.authorizing.location + path, '_blank');
   }
 
-  async request(method, path, query={}, body=null) {
+  async request(host, method, path, query={}, body=null) {
     let url = path;
-    if (!url.startsWith(this.options.host)) {
-      url = this.options.host + path;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = host.location + path;
+    } else {
+      host = this.getHost(url) || {location: hostLocation};
     }
     let headers = {
       'Content-Type': 'application/json',
@@ -60,26 +108,21 @@ class Client {
     if (body !== null) {
       requestOpts.data = JSON.stringify(body);
     }
-    if (this.options.token) {
-      requestOpts.headers['Authorization'] = 'Bearer ' + this.options.token;
-    } else if (this.options.username) {
+    if (host.token) {
+      requestOpts.headers['Authorization'] = 'Bearer ' + host.token;
+    } else if (host.username) {
       requestOpts.auth = {
-        username: this.options.username,
-        password: this.options.password,
+        username: host.username,
+        password: host.password,
       }
     }
     let response = await axios.request(requestOpts);
     if (response.status >= 300) {
-      let message = (response.data && response.data.message) || `Error code ${response.status} for ${method.toUpperCase()} ${path}`;
-      throw new Error(message);
+      let message = (response.data && response.data.message)
+      message = message || `Error code ${response.status} for ${method.toUpperCase()} ${path}`;
+      return Promise.reject(Error(message));
     }
     return response.data;
-  }
-
-  async createUser(username, password) {
-    this.options.username = username;
-    this.options.password = password;
-    return this.request('post', '/users/register');
   }
 
   async loadNamespace(namespace) {
@@ -105,30 +148,30 @@ class Client {
     }
   }
 
-  async resolveRefs(obj) {
+  async resolveRefs(obj, defaultHost) {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
       const resolved = [];
       for (let item of obj) {
-        resolved.push(await this.resolveRefs(item))
+        resolved.push(await this.resolveRefs(item, defaultHost))
       }
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
-      // TODO: resolve refs on other servers
-      obj = await this.request('get', obj.$ref);
+      obj = await this.request(defaultHost, 'get', obj.$ref);
       return obj;
     } else {
       for (let key in obj) {
-        obj[key] = await this.resolveRefs(obj[key]);
+        obj[key] = await this.resolveRefs(obj[key], defaultHost);
       }
       return obj;
     }
   }
 
   async get(namespace, type, id, noValidate=false) {
-    let item = await this.request('get', '/data/' + namespace + '/' + type + '/' + id);
-    await this.resolveRefs(item);
+    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    let item = await this.request(host, 'get', '/data/' + namespace + '/' + type + '/' + id);
+    await this.resolveRefs(item, host);
     if (!noValidate) {
       await this.validateItem(namespace, type, item);
     }
@@ -136,7 +179,8 @@ class Client {
   }
 
   async list(namespace, type, params, sort) {
-    let items = await this.request('get', '/data/' + namespace + '/' + type, params);
+    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    let items = await this.request(host, 'get', '/data/' + namespace + '/' + type, params);
     for (let item of items) {
       await this.validateItem(namespace, type, item);
     }
@@ -146,17 +190,19 @@ class Client {
   async create(namespace, type, data, id='') {
     let url = '/data/' + namespace + '/' + type;
     if (id) url += '/' + id;
-    id = await this.request('post', url, {}, data);
+    id = await this.request(this.hosts.primary, 'post', url, {}, data);
     return id;
   }
 
   async update(namespace, type, id, data) {
-    await this.request('put', '/data/' + namespace + '/' + type + '/' + id, {}, data);
+    await this.request(this.hosts.primary, 'put', '/data/' + namespace + '/' + type + '/' + id, {}, data);
   }
 
   async destroy(namespace, type, id) {
-    await this.request('delete', '/data/' + namespace + '/' + type + '/' + id);
+    await this.request(this.hosts.primary, 'delete', '/data/' + namespace + '/' + type + '/' + id);
   }
 }
+
+Client.prototype.loginForm = require('./login-form');
 
 module.exports = Client;
