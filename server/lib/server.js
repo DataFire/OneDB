@@ -31,10 +31,11 @@ class Server {
     this.app.enable('trust proxy');
     this.app.use(new RateLimit(this.config.rateLimit.all));
 
+    this.app.use(cors());
     this.app.use(routes.info());
     this.app.use('/users', new RateLimit(this.config.rateLimit.users), routes.users(database));
 
-    this.app.use(errorGuard(middleware.authenticate(database)));
+    this.app.use(middleware.authenticate(database));
 
     let getRateLimit = new RateLimit(this.config.rateLimit.getData);
     let mutateRateLimit = new RateLimit(this.config.rateLimit.mutateData);
@@ -45,7 +46,7 @@ class Server {
         mutateRateLimit(req, res, next);
       }
     });
-    this.app.use('/data', cors(), routes.crud(database));
+    this.app.use('/data', routes.crud(database));
 
     this.app.use((err, req, res, next) => {
       res.status(err.statusCode || 500).json({message: err.message || "Unknown error"});

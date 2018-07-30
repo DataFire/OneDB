@@ -20,14 +20,14 @@ module.exports = function(database) {
     req.db.user.data._id = req.db.user.id;
     res.json(req.db.user.data);
   });
-  router.post('/register', new RateLimit(config.rateLimit.createUser), errorGuard(middleware.register(database)));
+  router.post('/register', new RateLimit(config.rateLimit.createUser), middleware.register(database));
   router.get('/authorize', errorGuard((req, res) => {
     let error = validate.validators.url(req.query.origin || '');
     if (error) return res.status(400).send(error);
     req.query.originNoProtocol = replaceProtocol(req.query.origin);
     res.render('authorize', {query: req.query, config: config});
   }));
-  router.post('/authorize', errorGuard(middleware.authorize(database)));
+  router.post('/authorize', middleware.authorize(database));
   return router;
 }
 

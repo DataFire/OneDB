@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 const fail = require('../fail');
+const errorGuard = require('../error-guard');
 
 module.exports = function(database) {
-  return async (req, res, next) => {
+  return errorGuard(async (req, res, next) => {
     let auth = req.get('authorization');
     if (!auth) {
       req.db = await database.user('_all');
@@ -31,5 +32,5 @@ module.exports = function(database) {
     } else {
       return fail("Invalid authorization header", 401);
     }
-  }
+  })
 }

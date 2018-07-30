@@ -1,5 +1,7 @@
+const errorGuard = require('../error-guard');
+
 module.exports = function(database) {
-  return async (req, res, next) => {
+  return errorGuard(async (req, res, next) => {
     let auth = req.get('authorization');
     if (!auth) {
       return res.status(400).json({message: "Invalid authorization header"});
@@ -15,5 +17,5 @@ module.exports = function(database) {
     } else {
       res.status(400).send("Invalid authorization header");
     }
-  }
+  });
 }
