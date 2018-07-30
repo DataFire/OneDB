@@ -1,11 +1,28 @@
 import {Component, Input} from '@angular/core';
 import {FreeDBService} from '../services/freedb.service';
-import { ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 
 
 @Component({
     selector: 'list',
     templateUrl: './list.pug',
+    styles: [`
+      .item {
+        display: flex;
+      }
+      .checkbox {
+        width: 40px;
+        line-height: 54px;
+      }
+      .item-title {
+        flex-grow: 1;
+      }
+      input[type="text"] {
+        border-left: none;
+        border-right: none;
+        border-top: none;
+      }
+    `]
 })
 export class ListComponent {
   @Input() list:any = {
@@ -13,9 +30,12 @@ export class ListComponent {
     items: [],
   };
   @Input() editing:boolean = false;
+  error:string;
+  saving:boolean;
 
   constructor(
         private freedb:FreeDBService,
+        private router:Router,
         private route:ActivatedRoute) {
     this.route.params.subscribe(params => {
       if (params['list_id']) {
@@ -25,21 +45,36 @@ export class ListComponent {
   }
 
   newItem() {
-    return {title: "Do something", done: false}
+    return {title: "", done: false}
   }
 
   async load(id:string) {
-    this.list = await this.freedb.client.get('alpha_todo', 'list', id);
+    this.list = null;
+    this.error = null;
+    try {
+      this.list = await this.freedb.client.get('alpha_todo', 'list', id);
+    } catch (e) {
+      this.error = e.message;
+    }
   }
 
   async save() {
     let id = null;
-    if (!this.list._id) {
-      id = await this.freedb.client.create('alpha_todo', 'list', this.list);
-    } else {
-      id = this.list._id;
-      await this.freedb.client.update('alpha_todo', 'list', this.list._id, this.list);
+    this.error = null;
+    this.saving = true;
+    try {
+      if (!this.list._id) {
+        id = await this.freedb.client.create('alpha_todo', 'list', this.list);
+      } else {
+        id = this.list._id;
+        await this.freedb.client.update('alpha_todo', 'list', this.list._id, this.list);
+      }
+    } catch (e) {
+      this.error = e.message;
+      this.saving = false;
+      return;
     }
-    await this.load(id);
+    this.saving = false;
+    await this.router.navigate(['/list', id]);
   }
 }

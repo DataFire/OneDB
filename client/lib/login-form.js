@@ -36,13 +36,9 @@ module.exports = function() {
       self.authorize(host);
     },
     logout: function(idx) {
-      if (idx === -1) {
-        let host = getHost(idx);
-        host.username = host.password = host.token = null;
-        self.getUser(host);
-      } else {
-        window._freeDBHelpers.removeHost(idx);
-      }
+      let host = getHost(idx);
+      host.username = host.password = host.token = null;
+      self.getUser(host);
     }
   }
 
@@ -54,7 +50,7 @@ ${hostTemplate(this.hosts.primary, -1)}
 <h4>Secondary</h4>
 <p>
   You can optionally broadcast changes to other hosts. They won't store your data - they'll
-  just get a pointer to your primary host.
+  just get a link to the data on your primary host.
 </p>
 ${this.hosts.secondary.map(hostTemplate).join('\n')}
 <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a secondary host</a>
@@ -66,6 +62,13 @@ function hostTemplate(host, idx) {
 <form onsubmit="_freeDBHelpers.login(${idx}); return false">
   <div class="form-group">
     <div class="input-group">
+      ${idx === -1 ? '' : `
+        <div class="input-group-prepend">
+          <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost(${idx})">
+            &times;
+          </button>
+        </div>
+      `}
       ${!host.user ? '' : `
         <div class="input-group-prepend">
           <span class="input-group-text">${host.user._id}@</span>

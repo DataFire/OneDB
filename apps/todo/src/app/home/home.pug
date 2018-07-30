@@ -1,20 +1,28 @@
-h1 Welcome to Open Todo
+log-in-modal(#logInModal)
+h1 Hey there!
 p.
-  This is a free and open source tool for creating todo lists. Open Todo uses FreeDB
+  Open To-Do is a free and open source tool for creating to-do lists.
+p.
+  Open Todo uses FreeDB
   for cloud storage, which means <b>you</b> get to decide where your data is stored -
-  on your hard drive, in the cloud, or on your company's servers.
+  in the cloud, or on your company's servers, or on your local hard drive.
+p(*ngIf="!freedb.client.hosts.primary.user")
+  a((click)="logInModal.open()" href="javascript:void(0)") Get a free account now
+.alert.alert-danger(*ngIf="error" role="alert") {{ error }}
 div(*ngIf="freedb.client.hosts.primary.user")
-  h2 Your Todo Lists
+  hr
+  h2.text-center Your To-Do Lists
   h2(*ngIf="!lists")
     i.fa.fa-spin.fa-refresh
   div(*ngIf="lists")
     div(*ngIf="!lists.length")
-      h1
-        i.fa.fa-5x.fa-list-ol
-      p
-        span You haven't made any todo lists. 
+      h1.text-center
+        i.fa.fa-4x.fa-list-ul
+      p.text-center
+        span You haven't made any to-do lists. 
         a(routerLink="/new-list") Start one now
     div(*ngIf="lists.length")
       .list(*ngFor="let list of lists")
         h4
           a([routerLink]="['/list', list._id]") {{ list.title }}
+      a.btn.btn-min-width.btn-success(routerLink="/new-list") Create a new to-do list

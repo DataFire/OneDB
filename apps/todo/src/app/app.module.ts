@@ -18,6 +18,7 @@ import {PlatformService} from './services/platform.service';
 import {FreeDBService} from './services/freedb.service'
 
 import { environment } from '../environments/environment';
+import { AutofocusDirective } from './autofocus.directive';
 
 @NgModule({
   imports: [
@@ -38,6 +39,7 @@ import { environment } from '../environments/environment';
     NavbarComponent,
     ListComponent,
     LogInModalComponent,
+    AutofocusDirective,
   ],
   bootstrap: [ AppComponent ],
 })

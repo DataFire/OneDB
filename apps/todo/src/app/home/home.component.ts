@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {Component, ViewChild} from '@angular/core';
 import {Router} from '@angular/router';
 import {FreeDBService} from '../services/freedb.service';
 
@@ -10,7 +10,9 @@ declare let require:any;
     templateUrl: './home.pug',
 })
 export class HomeComponent {
+  @ViewChild('logInModal') logInModal;
   lists:any[];
+  error:string;
   constructor(private freedb:FreeDBService) {
     this.freedb.onUser.subscribe(user => {
       if (user) this.loadTodoLists();
@@ -22,6 +24,11 @@ export class HomeComponent {
   }
 
   async loadTodoLists() {
-    this.lists = await this.freedb.client.list('alpha_todo', 'list');
+    this.error = null;
+    try {
+      this.lists = await this.freedb.client.list('alpha_todo', 'list');
+    } catch (e) {
+      this.error = e.message;
+    }
   }
 }
