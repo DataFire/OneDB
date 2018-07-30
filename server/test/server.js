@@ -98,7 +98,7 @@ describe("Server", () => {
 
     resp = await axios.get(HOST + '/users/me', {auth: USER_1});
     expect(resp.status).to.equal(200);
-    expect(resp.data).to.deep.equal({publicKey: "", id: USER_1.id});
+    expect(resp.data).to.deep.equal({publicKey: "", _id: USER_1.id});
   })
 
   it('should not allow directly adding user', async () => {
