@@ -71,6 +71,11 @@ const CORE_SCHEMAS = module.exports.CORE_SCHEMAS = {
   user_private: require('../namespaces/core/user_private'),
   schema: require('../namespaces/core/schema'),
 }
+for (let key in CORE_SCHEMAS) {
+  let schema = CORE_SCHEMAS[key];
+  if (key === 'schema') schema = schema.oneOf[1];
+  schema.properties._id = {type: 'string'}
+}
 
 let schemaSchemaCopy = JSON.parse(JSON.stringify(CORE_SCHEMAS.schema));
 delete schemaSchemaCopy.definitions;

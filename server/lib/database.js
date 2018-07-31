@@ -293,6 +293,8 @@ class DatabaseForUser {
       if (type === 'schema' && id !== 'schema') {
         let err = validate.validators.schema(data);
         if (err) return fail(err, 400);
+        data.properties = data.properties || {}
+        data.properties._id = {type: 'string'};
       } else if (type === 'user') {
         acl.owner = id;
       } else if (type === 'namespace') {

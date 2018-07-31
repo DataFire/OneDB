@@ -136,11 +136,7 @@ class Client {
     let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
     for (let type in version.types) {
       let typeInfo = version.types[type];
-      if (namespace === 'core' && type === 'schema') {
-        typeInfo.validate = this.ajv.compile.bind(this.ajv);
-      } else {
-        typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
-      }
+      typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
     }
     // TODO: validate core namespace
   }
