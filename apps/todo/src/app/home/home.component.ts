@@ -13,7 +13,7 @@ export class HomeComponent {
   @ViewChild('logInModal') logInModal;
   lists:any[];
   error:string;
-  constructor(private freedb:FreeDBService) {
+  constructor(public freedb:FreeDBService) {
     this.freedb.onUser.subscribe(user => {
       if (user) this.loadTodoLists();
     });
