@@ -12,6 +12,8 @@ import { AppComponent }       from './app.component';
 import { HomeComponent }       from './home/home.component';
 import { NavbarComponent }       from './navbar/navbar.component';
 import {LogInModalComponent} from './log-in-modal/log-in-modal.component'
+import {NamespaceComponent} from './namespace/namespace.component'
+import {ItemComponent} from './item/item.component'
 
 import {PlatformService} from './services/platform.service';
 import {FreeDBService} from './services/freedb.service'
@@ -36,6 +38,8 @@ import { environment } from '../environments/environment';
     HomeComponent,
     NavbarComponent,
     LogInModalComponent,
+    NamespaceComponent,
+    ItemComponent,
   ],
   bootstrap: [ AppComponent ],
 })

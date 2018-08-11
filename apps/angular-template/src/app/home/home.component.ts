@@ -11,7 +11,6 @@ declare let require:any;
 })
 export class HomeComponent {
   @ViewChild('logInModal') logInModal;
-  lists:any[];
   error:string;
   constructor(public freedb:FreeDBService) {
     this.freedb.onUser.subscribe(user => {

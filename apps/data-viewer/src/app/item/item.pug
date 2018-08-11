@@ -1,0 +1,9 @@
+h1 {{ namespace }}/{{ type }}/{{item_id}}
+div(*ngIf="item")
+  ul
+    li Created: {{ info.created }}
+    li Updated: {{ info.updated }}
+    li Created: {{ info.created }}
+  pre
+    code
+      span {{ stringify(item) }}

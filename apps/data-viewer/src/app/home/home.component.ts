@@ -8,14 +8,20 @@ declare let require:any;
 @Component({
     selector: 'home',
     templateUrl: './home.pug',
+    styles: [`
+      ul {
+        padding-left: 0px;
+        list-style: none;
+      }
+    `]
 })
 export class HomeComponent {
   @ViewChild('logInModal') logInModal;
-  lists:any[];
+  user:any;
   error:string;
   constructor(public freedb:FreeDBService) {
     this.freedb.onUser.subscribe(user => {
-      console.log(user);
+      this.user = user.user;
     });
   }
 }
