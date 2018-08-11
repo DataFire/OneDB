@@ -2,13 +2,14 @@ doctype html
 html
   head
     link(rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css")
+    link(rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css")
     style.
-      .btn {
-        min-width: 150px;
-      }
       body {
         background-color: #eee;
-        padding-top: 100px;
+        padding-top: 25px;
+      }
+      .btn {
+        min-width: 150px;
       }
       .form {
         background-color: #fff;
@@ -22,7 +23,23 @@ html
       var ORIGIN = !{JSON.stringify(query.origin)};
 
       function showError(msg) {
-        alert(msg);
+        $('.alert.alert-danger').text(msg).css('opacity', 1);
+      }
+
+      function hideError() {
+        $('.alert.alert-danger').css('opacity', 0);
+      }
+
+      function showLoading() {
+        $('button.btn-success').attr('disabled', true);
+        $('button.btn-success span').hide();
+        $('button.btn-success i.fa').show();
+      }
+
+      function hideLoading() {
+        $('button.btn-success').attr('disabled', false);
+        $('button.btn-success span').show();
+        $('button.btn-success i.fa').hide();
       }
 
       function showSignUp() {
@@ -58,6 +75,8 @@ html
       }
 
       function sendRequest(method, url, callback) {
+        hideError();
+        showLoading();
         var headers = {};
         if (window.user) {
           headers.Authorization = "Basic " + btoa(window.user.email + ':' + window.user.pass);
@@ -66,8 +85,12 @@ html
           type: method,
           url: url,
           headers: headers,
-          success: callback,
+          success: function(data) {
+            hideLoading();
+            callback(data);
+          },
           error: function(req, textStatus, error) {
+            hideLoading();
             var message = textStatus;
             try {
               message = JSON.parse(req.responseText).message || message;
@@ -144,10 +167,14 @@ html
             label Confirm Password
             input.form-control(type="password" name="confirmPassword")
         .form-group
-          button.btn.btn-success(type="submit") #{signUp ? 'Sign up' : 'Sign in'}
+          button.btn.btn-success(type="submit")
+            i.fa.fa-spin.fa-refresh(style="display: none")
+            span #{signUp ? 'Sign up' : 'Sign in'}
     .container
       .row
         .col-12.col-md-6.offset-md-3
+          .alert.alert-danger(style="opacity: 0")
+            span &nbsp;
           #AuthorizationCard.card(style="display: none")
             .card-body
               h2.card-title #{query.originNoProtocol} would like your permission to:
