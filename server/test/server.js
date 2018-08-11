@@ -88,10 +88,27 @@ describe("Server", () => {
   });
 
   it('should allow registration', async () => {
-    const resp = await axios.post(HOST + '/users/register', {}, {auth: USER_1});
+    const username = 'foobar';
+    const resp = await axios.post(HOST + '/users/register/' + username, {}, {auth: USER_1});
     expect(resp.data).to.be.a('string');
+    expect(resp.data).to.equal(username);
     USER_1.id = resp.data;
   });
+
+  it('should suggest usernames', async () => {
+    let resp = await axios.get(HOST + '/users/register');
+    expect(resp.data).to.be.a('string');
+    expect(resp.data.length > 3).to.equal(true);
+
+    const availableName = 'barbaz';
+    resp = await axios.get(HOST + '/users/register/' + availableName);
+    expect(resp.data).to.be.a('string');
+    expect(resp.data).to.equal(availableName);
+
+    resp = await axios.get(HOST + '/users/register/' + USER_1.id);
+    expect(resp.data).to.be.a('string');
+    expect(resp.data).to.not.equal(USER_1.id);
+  })
 
   it('should show current user', async () => {
     let resp = await axios.get(HOST + '/users/me', {validateStatus: () => true});

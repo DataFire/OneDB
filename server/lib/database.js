@@ -1,7 +1,8 @@
 const mongodb = require('mongodb');
 const randomstring = require("randomstring");
 const validate = require('./validate');
-const util = require('./db-util');
+const dbUtil = require('./db-util');
+const util = require('./util');
 const fail = require('./fail');
 const config = require('./config');
 
@@ -22,12 +23,12 @@ class Database {
     if (this.client) return fail("Database already initialized");
     this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
-    let coreObjects = JSON.parse(JSON.stringify(util.CORE_OBJECTS));
+    let coreObjects = JSON.parse(JSON.stringify(dbUtil.CORE_OBJECTS));
     for (let obj of coreObjects) {
       let coll = this.db.collection(obj.namespace + '-' + obj.type);
       let existing = await coll.find({id: obj.document.id}).toArray();
       if (!existing[0]) {
-        let encoded = util.encodeDocument(obj.document);
+        let encoded = dbUtil.encodeDocument(obj.document);
         await coll.insert(encoded);
       }
     }
@@ -40,15 +41,22 @@ class Database {
     return db;
   }
 
-  async createUser(email, password) {
+  async getAvailableUsername(username) {
+    if (!username) username = util.randomName();
+    const coll = this.db.collection('core-user');
+    const existing = await coll.find({id: username}).toArray();
+    return existing.length ? this.getAvailableUsername() : username;
+  }
+
+  async createUser(email, password, username=undefined) {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
-    const user = await db.create('core', 'user', {publicKey: ''});
-    const creds = await util.computeCredentials(password);
+    const user = await db.create('core', 'user', {publicKey: ''}, username);
+    const creds = await dbUtil.computeCredentials(password);
     creds.email = email;
     creds.id = user.id;
     const userPrivate = await db.create('core', 'user_private', creds);
@@ -60,7 +68,7 @@ class Database {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email);
     if (err) return fail(err, 400);
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length !== 1) return fail(`User ${email} not found`, 401);
     await db.append('core', 'user_private', existing[0].id, {tokens: [token]});
@@ -70,17 +78,17 @@ class Database {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (!existing.length) return fail(`User ${email} not found`, 401);
     const user = existing[0].data;
-    const isValid = await util.checkPassword(password, user.hash, user.salt);
+    const isValid = await dbUtil.checkPassword(password, user.hash, user.salt);
     if (!isValid) return fail(`Invalid password for ${email}`);
     return user.id;
   }
 
   async signInWithToken(token) {
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const col = db.getCollection('core', 'user_private');
     const user = await col.find({'data.tokens': {$in: [token]}}).toArray();
     if (user.length !== 1) return fail(`The provided token is invalid`, 401);
@@ -114,7 +122,7 @@ class DatabaseForUser {
     if (schema) {
       if (!namespace || !type) throw new Error("Need a namespace and type to validate schema");
       if (namespace !== 'core') {
-        schema = util.schemaRefsToDBRefs(namespace, schema);
+        schema = dbUtil.schemaRefsToDBRefs(namespace, schema);
       }
       schema = {
         definitions: schema.definitions,
@@ -156,11 +164,11 @@ class DatabaseForUser {
       let allowKey = ['acl', accessType, access].join('.');
       let disallowKey = ['acl', 'disallow', access].join('.');
       const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
-      ownerQuery.$and[1][allowKey] = {$in: [util.USER_KEYS.owner]};
-      ownerQuery.$and[2][disallowKey] = {$nin: [util.USER_KEYS.owner]};
+      ownerQuery.$and[1][allowKey] = {$in: [dbUtil.USER_KEYS.owner]};
+      ownerQuery.$and[2][disallowKey] = {$nin: [dbUtil.USER_KEYS.owner]};
       const accessQuery = {$and: [{}, {}]};
-      accessQuery.$and[0][allowKey] = {$in: [this.user.id, util.USER_KEYS.all]};
-      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, util.USER_KEYS.all]};
+      accessQuery.$and[0][allowKey] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
+      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
       query.$and.push({$or: [ownerQuery, accessQuery]});
     });
     return query;
@@ -170,8 +178,8 @@ class DatabaseForUser {
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(query, access);
     let arr = await col.find(query).sort(sort).toArray();
-    let decoded = util.decodeDocument(arr);
-    return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
+    let decoded = dbUtil.decodeDocument(arr);
+    return dbUtil.decodeDocument(JSON.parse(JSON.stringify(arr)));
   }
 
   async get(namespace, type, id, access='read') {
@@ -287,7 +295,7 @@ class DatabaseForUser {
     if (err) return fail(err);
     const existing = await this.get(namespace, type, id, 'force');
     if (existing) return fail(`Item ${namespace}/${type}/${id} already exists`);
-    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.OWNER_ACL_SET)));
+    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || dbUtil.OWNER_ACL_SET)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (type === 'schema' && id !== 'schema') {
@@ -318,7 +326,7 @@ class DatabaseForUser {
       data.properties._id = {type: 'string'};
     }
     const col = this.getCollection(namespace, type);
-    const result = await col.insert(util.encodeDocument([obj]));
+    const result = await col.insert(dbUtil.encodeDocument([obj]));
 
     const userUpdate = {
       $inc: {'data.items': 1},
@@ -339,7 +347,7 @@ class DatabaseForUser {
     const col = this.getCollection(namespace, type);
     const result = await col.update(query, {
       $set: {
-        data: util.encodeDocument(data),
+        data: dbUtil.encodeDocument(data),
         'info.updated': new Date().toISOString(),
       },
     });
@@ -369,7 +377,7 @@ class DatabaseForUser {
         await this.validate({data: item}, schema, namespace, subtype);
       }
       existing[key] = (existing[key] || []).concat(data[key]);
-      doc.$push['data.' + key] = {$each: util.encodeDocument(data[key])};
+      doc.$push['data.' + key] = {$each: dbUtil.encodeDocument(data[key])};
     }
 
     const newDoc = JSON.stringify(existing.data);

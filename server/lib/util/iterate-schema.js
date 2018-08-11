@@ -1,4 +1,4 @@
-const iterateSchema = module.exports.iterateSchema = function(schema, fn) {
+const iterateSchema = module.exports = function(schema, fn) {
   fn(schema);
   if (schema.items) iterateSchema(schema.items, fn);
   for (let key in schema.properties) {

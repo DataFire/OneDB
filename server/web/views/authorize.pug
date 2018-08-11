@@ -36,7 +36,8 @@ html
       }
 
       function showAuthorization() {
-        $('.username').text(window.user.email);
+        console.log('show', window.user._id);
+        $('.username').text(window.user._id);
         $('#LogInCard').hide();
         $('#AuthorizationCard').show()
       }
@@ -57,12 +58,14 @@ html
       }
 
       function sendRequest(method, url, callback) {
+        var headers = {};
+        if (window.user) {
+          headers.Authorization = "Basic " + btoa(window.user.email + ':' + window.user.pass);
+        }
         $.ajax({
           type: method,
           url: url,
-          headers: {
-            Authorization: "Basic " + btoa(window.user.email + ':' + window.user.pass),
-          },
+          headers: headers,
           success: callback,
           error: function(req, textStatus, error) {
             var message = textStatus;
@@ -81,6 +84,7 @@ html
           pass: $('#SignIn input[name="password"]').val(),
         }
         sendRequest('GET', '/users/me', function(data) {
+          window.user._id = data._id;
           showAuthorization();
         });
         return false;
@@ -91,11 +95,13 @@ html
           email: $('#SignUp input[name="email"]').val(),
           pass: $('#SignUp input[name="password"]').val(),
         }
+        var username = $('#SignUp input[name="username"]').val()
         var confirmPass = $('#SignUp input[name="confirmPassword"]').val();
         if (window.user.pass !== confirmPass) {
           showError("Passwords don't match");
         } else {
-          sendRequest('POST', '/users/register', function(data) {
+          sendRequest('POST', '/users/register/' + username, function(data) {
+            window.user._id = data;
             showAuthorization();
           });
         }
@@ -109,12 +115,27 @@ html
         return false;
       }
 
+      $(document).ready(function() {
+        sendRequest('get', '/users/register', function(suggestedName) {
+          let input = $('input[name="username"]');
+          if (!input.val()) {
+            input.val(suggestedName);
+          }
+        })
+      });
+
   body
     mixin user-form(signUp=false)
       form(onsubmit= signUp ? 'return signUp()' : 'return signIn()')
         .form-group
           label Email Address
+            if signUp
+              small.help-text  - this will only be used to recover your account
           input.form-control(type="text" name="email")
+        if signUp
+          .form-group
+            label Username
+            input.form-control(type="text" name="username")
         .form-group
           label Password
           input.form-control(type="password" name="password")
