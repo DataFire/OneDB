@@ -1,9 +1,4 @@
-form((submit)="signIn()")
-  .form-group
-    p Enter the server you want to log into, then click "Log In".
-    .input-group
-      input.form-control([(ngModel)]="host" name="host")
-      .input-group-append
-        button.btn.btn-outline-secondary(type="submit") Log In
-div(*ngIf="user")
-  h2 You're logged in as {{ user.id }}
+log-in-modal(#logInModal)
+h1 Welcome to FreeDB!
+div(*ngIf="freedb.client.hosts.primary.user")
+  p You're logged in as {{ freedb.client.hosts.primary.user._id }}
