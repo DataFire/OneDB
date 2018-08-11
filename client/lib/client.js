@@ -103,7 +103,7 @@ class Client {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = host.location + path;
     } else {
-      host = this.getHost(url) || {location: hostLocation};
+      host = this.getHost(url) || {};
     }
     let headers = {
       'Content-Type': 'application/json',
@@ -177,6 +177,20 @@ class Client {
       await this.validateItem(namespace, type, item);
     }
     return item;
+  }
+
+  async getACL(namespace, type, id) {
+    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    let acl = await this.request(host, 'get', '/data/' + namespace + '/' + type + '/' + id + '/acl');
+    // TODO: validate
+    return acl;
+  }
+
+  async getInfo(namespace, type, id) {
+    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    let info = await this.request(host, 'get', '/data/' + namespace + '/' + type + '/' + id + '/info');
+    // TODO: validate
+    return info;
   }
 
   async list(namespace, type, params, sort) {
