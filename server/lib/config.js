@@ -21,9 +21,9 @@ module.exports = {
     },
     createUser: {
       windowMs: FIFTEEN_MIN,
-      max: 5,
+      max: 15,
       delayMs: 3 * 1000,
-      delayAfter: 1,
+      delayAfter: 10,
     },
     getData: {  // 1 qps
       windowMs: FIFTEEN_MIN,

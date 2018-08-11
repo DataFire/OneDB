@@ -60,7 +60,7 @@ describe("Server", () => {
       response = await axios.get(HOST + '/ping', {validateStatus: () => true});
     }
     expect(response.status).to.equal(429);
-    expect(response.data).to.deep.equal({message: 'Too many requests, please try again later.'});
+    expect(response.data).to.deep.equal({message: "You're doing that too much. Please wait and try again later"});
     return new Promise((resolve) => setTimeout(resolve, 2000));
   });
 

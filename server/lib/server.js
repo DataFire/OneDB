@@ -17,6 +17,11 @@ class Server {
     this.config.rateLimit = Object.assign({}, defaultConfig.rateLimit, this.config.rateLimit);
     if (!this.config.mongodb) throw new Error("config.mongodb specified");
     if (!this.config.jwtSecret) throw new Error("config.jwtSecret not specified");
+    for (let key in this.config.rateLimit) {
+      this.config.rateLimit[key].handler = (req, res, next) => {
+        res.status(429).json({message: "You're doing that too much. Please wait and try again later"})
+      }
+    }
   }
 
   async listen(port=DEFAULT_PORT) {
