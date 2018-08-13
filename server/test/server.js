@@ -60,7 +60,7 @@ describe("Server", () => {
       response = await axios.get(HOST + '/ping', {validateStatus: () => true});
     }
     expect(response.status).to.equal(429);
-    expect(response.data).to.deep.equal({message: 'Too many requests, please try again later.'});
+    expect(response.data).to.deep.equal({message: "You're doing that too much. Please wait and try again later"});
     return new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
@@ -72,6 +72,27 @@ describe("Server", () => {
   it('should GET for acl', async () => {
     const resp = await axios.get(HOST + '/data/core/schema/user/acl');
     expect(resp.data.owner).to.be.a('string');
+  })
+
+  it('should GET for info', async () => {
+    const resp = await axios.get(HOST + '/data/core/schema/user/info');
+    expect(resp.data.created).to.be.a('string');
+  });
+
+  it('should list schemas', async () => {
+    let resp = await axios.get(HOST + '/data/core/schema', {validateStatus: () => true});
+    expect(resp.data.total).to.equal(4);
+    expect(resp.data.items.length).to.equal(4);
+
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=3', {validateStatus: () => true});
+    expect(resp.data.total).to.equal(4);
+    expect(resp.data.items.length).to.equal(3);
+    expect(resp.data.hasNext).to.equal(true);
+
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=3&skip=3', {validateStatus: () => true});
+    expect(resp.data.total).to.equal(4);
+    expect(resp.data.items.length).to.equal(1);
+    expect(resp.data.hasNext).to.equal(false);
   })
 
   it('should give 404 for missing item', async () => {
@@ -88,10 +109,27 @@ describe("Server", () => {
   });
 
   it('should allow registration', async () => {
-    const resp = await axios.post(HOST + '/users/register', {}, {auth: USER_1});
+    const username = 'foobar';
+    const resp = await axios.post(HOST + '/users/register/' + username, {}, {auth: USER_1});
     expect(resp.data).to.be.a('string');
+    expect(resp.data).to.equal(username);
     USER_1.id = resp.data;
   });
+
+  it('should suggest usernames', async () => {
+    let resp = await axios.get(HOST + '/users/register');
+    expect(resp.data).to.be.a('string');
+    expect(resp.data.length > 3).to.equal(true);
+
+    const availableName = 'barbaz';
+    resp = await axios.get(HOST + '/users/register/' + availableName);
+    expect(resp.data).to.be.a('string');
+    expect(resp.data).to.equal(availableName);
+
+    resp = await axios.get(HOST + '/users/register/' + USER_1.id);
+    expect(resp.data).to.be.a('string');
+    expect(resp.data).to.not.equal(USER_1.id);
+  })
 
   it('should show current user', async () => {
     let resp = await axios.get(HOST + '/users/me', {validateStatus: () => true});

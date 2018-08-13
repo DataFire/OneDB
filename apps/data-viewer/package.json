@@ -62,6 +62,7 @@
     "jquery": "^3.2.1",
     "json-loader": "^0.5.7",
     "markdown-loader": "^2.0.1",
+    "moment": "^2.22.2",
     "pug": "^2.0.3",
     "pug-html-loader": "^1.1.5",
     "pug-loader": "^2.4.0",

@@ -2,12 +2,17 @@ doctype html
 html
   head
     link(rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css")
+    link(rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css")
     style.
-      h1,h2 {
-        margin-top: 100px;
+      body {
+        background-color: #eee;
+        padding-top: 25px;
       }
-      .dummy-form-group {
-        height: 86px;
+      .btn {
+        min-width: 150px;
+      }
+      .form {
+        background-color: #fff;
       }
     script(
       src="https://code.jquery.com/jquery-3.3.1.min.js"
@@ -18,7 +23,45 @@ html
       var ORIGIN = !{JSON.stringify(query.origin)};
 
       function showError(msg) {
-        alert(msg);
+        $('.alert.alert-danger').text(msg).css('opacity', 1);
+      }
+
+      function hideError() {
+        $('.alert.alert-danger').css('opacity', 0);
+      }
+
+      function showLoading() {
+        $('button.btn-success').attr('disabled', true);
+        $('button.btn-success span').hide();
+        $('button.btn-success i.fa').show();
+      }
+
+      function hideLoading() {
+        $('button.btn-success').attr('disabled', false);
+        $('button.btn-success span').show();
+        $('button.btn-success i.fa').hide();
+      }
+
+      function showSignUp() {
+        $('#SignUp').show()
+        $('#SignIn').hide()
+      }
+
+      function showSignIn() {
+        $('#SignIn').show();
+        $('#SignUp').hide();
+      }
+
+      function showAuthorization() {
+        console.log('show', window.user._id);
+        $('.username').text(window.user._id);
+        $('#LogInCard').hide();
+        $('#AuthorizationCard').show()
+      }
+
+      function showLogIn() {
+        $('#LogInCard').show();
+        $('#AuthorizationCard').hide()
       }
 
       function sendToken(token) {
@@ -26,15 +69,28 @@ html
         window.close();
       }
 
-      function sendRequest(url, email, pass, callback) {
+      function deny() {
+        window.opener.postMessage('', ORIGIN);
+        window.close();
+      }
+
+      function sendRequest(method, url, callback) {
+        hideError();
+        showLoading();
+        var headers = {};
+        if (window.user) {
+          headers.Authorization = "Basic " + btoa(window.user.email + ':' + window.user.pass);
+        }
         $.ajax({
-          type: 'POST',
+          type: method,
           url: url,
-          headers: {
-            Authorization: "Basic " + btoa(email + ':' + pass),
+          headers: headers,
+          success: function(data) {
+            hideLoading();
+            callback(data);
           },
-          success: callback,
           error: function(req, textStatus, error) {
+            hideLoading();
             var message = textStatus;
             try {
               message = JSON.parse(req.responseText).message || message;
@@ -45,38 +101,64 @@ html
         return false;
       }
 
-      function authorize(email, pass) {
-        if (!email) {
-          email = $('#SignIn input[name="email"]').val();
-          pass = $('#SignIn input[name="password"]').val();
+      function signIn() {
+        window.user = {
+          email: $('#SignIn input[name="email"]').val(),
+          pass: $('#SignIn input[name="password"]').val(),
         }
-        sendRequest('/users/authorize', email, pass, function(data) {
+        sendRequest('GET', '/users/me', function(data) {
+          window.user._id = data._id;
+          showAuthorization();
+        });
+        return false;
+      }
+
+      function signUp() {
+        window.user = {
+          email: $('#SignUp input[name="email"]').val(),
+          pass: $('#SignUp input[name="password"]').val(),
+        }
+        var username = $('#SignUp input[name="username"]').val()
+        var confirmPass = $('#SignUp input[name="confirmPassword"]').val();
+        if (window.user.pass !== confirmPass) {
+          showError("Passwords don't match");
+        } else {
+          sendRequest('POST', '/users/register/' + username, function(data) {
+            window.user._id = data;
+            showAuthorization();
+          });
+        }
+        return false;
+      }
+
+      function authorize() {
+        sendRequest('POST', '/users/authorize', function(data) {
           sendToken(data);
         });
         return false;
       }
 
-      function signUpAndAuthorize() {
-        var email = $('#SignUp input[name="email"]').val();
-        var pass = $('#SignUp input[name="password"]').val();
-        var confirmPass = $('#SignUp input[name="confirmPassword"]').val();
-        if (pass !== confirmPass) {
-          showError("Passwords don't match");
-        } else {
-          sendRequest('/users/register', email, pass, function(data) {
-            sendRequest('/users/authorize', email, pass, function(data) {
-              sendToken(data);
-            })
-          });
-        }
-        return false;
-      }
+      $(document).ready(function() {
+        sendRequest('get', '/users/register', function(suggestedName) {
+          let input = $('input[name="username"]');
+          if (!input.val()) {
+            input.val(suggestedName);
+          }
+        })
+      });
+
   body
     mixin user-form(signUp=false)
-      form(onsubmit= signUp ? 'return signUpAndAuthorize()' : 'return authorize()')
+      form(onsubmit= signUp ? 'return signUp()' : 'return signIn()')
         .form-group
           label Email Address
+            if signUp
+              small.help-text  - this will only be used to recover your account
           input.form-control(type="text" name="email")
+        if signUp
+          .form-group
+            label Username
+            input.form-control(type="text" name="username")
         .form-group
           label Password
           input.form-control(type="password" name="password")
@@ -84,29 +166,48 @@ html
           .form-group
             label Confirm Password
             input.form-control(type="password" name="confirmPassword")
-        else
-          .dummy-form-group
         .form-group
-          button.btn.btn-success(type="submit") Authorize #{query.originNoProtocol}
+          button.btn.btn-success(type="submit")
+            i.fa.fa-spin.fa-refresh(style="display: none")
+            span #{signUp ? 'Sign up' : 'Sign in'}
     .container
-      h1 Lucky you!
-      p.
-        #{query.originNoProtocol} uses FreeDB, which means you will always own your data.
-        You can come back here anytime to add, modify, and delete data from #{query.originNoProtocol}.
-      p
-        a(href="FreeDB" target="_blank") Learn more
-        span  about how FreeDB gives usesrs more control over their data.
-      h2 #{query.originNoProtocol} would like to access, modify, and create FreeDB data on #{config.hostWithoutProtocol}
       .row
-        .col
-          .card#SignIn
+        .col-12.col-md-6.offset-md-3
+          .alert.alert-danger(style="opacity: 0")
+            span &nbsp;
+          #AuthorizationCard.card(style="display: none")
             .card-body
-              h3 Sign in
-              p Sign into your existing FreeDB account on #{config.hostWithoutProtocol}
-              +user-form()
-        .col
-          .card#SignUp
+              h2.card-title #{query.originNoProtocol} would like your permission to:
+            ul.list-group.list-group-flush
+              li.list-group-item Read your data
+              li.list-group-item Create new data
+              li.list-group-item Modify your data
+              li.list-group-item Delete your data
             .card-body
-              h3 Sign up
-              p Don't have an account? Sign up for free!
-              +user-form(true)
+              .btn-toolbar
+                a.btn.btn-lg.btn-success.mr-2(href="#" onclick="authorize()") Allow
+                a.btn.btn-lg.btn-light(href="#" onclick="deny()") Deny
+            .card-body
+              p Signed in as <span class="username"></span>. 
+                a(onclick="showLogIn()" href="#") Switch accounts
+          #LogInCard.card
+            .card-body
+              h1.text-center Sign in with FreeDB
+              p.
+                <b>Lucky you!</b>  #{query.originNoProtocol} uses FreeDB,
+                which means you will always own your data.
+                Your data will be stored here at #{config.hostWithoutProtocol} - 
+                you can come back here anytime to modify or delete your data.
+              p
+                a(href="FreeDB" target="_blank") Learn more
+                span  about how FreeDB gives usesrs more control over their data.
+              #SignIn
+                h3 Sign in 
+                  small
+                    a(onclick="showSignUp()" href="#") or create a new account
+                +user-form()
+              #SignUp(style="display: none")
+                h3 Sign up 
+                  small
+                    a(onclick="showSignIn()" href="#") or use an existing account
+                +user-form(true)

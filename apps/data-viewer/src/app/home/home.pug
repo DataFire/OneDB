@@ -1,9 +1,18 @@
-form((submit)="signIn()")
-  .form-group
-    p Enter the server you want to log into, then click "Log In".
-    .input-group
-      input.form-control([(ngModel)]="host" name="host")
-      .input-group-append
-        button.btn.btn-outline-secondary(type="submit") Log In
+log-in-modal(#logInModal)
+h1 FreeDB Data Viewer
+p.
+  This site allows you to browse, modify, and delete data on your FreeDB accounts.
+p(*ngIf="!user")
+  a((click)="logInModal.open()" href="javascript:void(0)") Sign in to get started
 div(*ngIf="user")
-  h2 You're logged in as {{ user.id }}
+  p You're logged in as {{ user._id }}
+  .form-group
+    label Choose a Space:
+    .input-group
+      .input-group-prepend
+        span.input-group-text
+          i.fa.fa-search
+      input.form-control(type="text", [(ngModel)]="query")
+  ul
+    li(*ngFor="let namespace of user.namespaces", [hidden]="query && namespace.indexOf(query) === -1")
+      a([routerLink]="['/data', namespace]") {{namespace}}

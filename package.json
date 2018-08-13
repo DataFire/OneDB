@@ -1,0 +1,23 @@
+{
+  "name": "freedb",
+  "version": "1.0.0",
+  "description": "FreeDB is a decentralized backend-as-a-service.",
+  "main": "index.js",
+  "dependencies": {
+    "freedb-client": "^0.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "cd server && npm test && cd ../client && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bobby-brennan/FreeDB.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bobby-brennan/FreeDB/issues"
+  },
+  "homepage": "https://github.com/bobby-brennan/FreeDB#readme"
+}

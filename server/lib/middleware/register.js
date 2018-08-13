@@ -12,7 +12,7 @@ module.exports = function(database) {
       if (creds.length !== 2) return res.status(400).send("Invalid authorization header");
       email = creds[0];
       password = creds[1];
-      let user = await database.createUser(email, password);
+      let user = await database.createUser(email, password, req.params.username);
       res.json(user.id);
     } else {
       res.status(400).send("Invalid authorization header");

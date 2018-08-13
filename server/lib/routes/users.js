@@ -20,7 +20,8 @@ module.exports = function(database) {
     req.db.user.data._id = req.db.user.id;
     res.json(req.db.user.data);
   });
-  router.post('/register', new RateLimit(config.rateLimit.createUser), middleware.register(database));
+  router.get(['/register', '/register/:username'], middleware.checkUsername(database));
+  router.post(['/register', '/register/:username'], new RateLimit(config.rateLimit.createUser), middleware.register(database));
   router.get('/authorize', errorGuard((req, res) => {
     let error = validate.validators.url(req.query.origin || '');
     if (error) return res.status(400).send(error);

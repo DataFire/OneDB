@@ -184,7 +184,7 @@ describe('Database', () => {
         }
       }]
     }
-    await expectError(userDB.create('core', 'namespace', ns, 'foo2'), /Data does not match schema. data.versions\[0\] should NOT have additional properties/);
+    await expectError(userDB.create('core', 'namespace', ns, 'foo2'), /Data does not match schema. versions.0 should not have extra property foo/);
   })
 
   it('should allow creating schema', async () => {
@@ -329,8 +329,8 @@ describe('Database', () => {
     await user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
     let items = await user0DB.getAll('foo', 'thing');
     expect(items.length).to.equal(2);
-    expect(items[0].data).to.deep.equal({message: "Hello"});
-    expect(items[1].data).to.deep.equal({message: "Goodbye"});
+    expect(items[0].data).to.deep.equal({message: "Goodbye"});
+    expect(items[1].data).to.deep.equal({message: "Hello"});
   });
 
   it('should allow filtering and sorting', async () => {
@@ -343,10 +343,10 @@ describe('Database', () => {
     await user0DB.create('foo', 'thing', {message: "four"}, "four");
 
     let list = (await user0DB.list('foo', 'thing')).map(d => d.data.message);
-    expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
-
-    list = (await user0DB.list('foo', 'thing', {}, {'info.created': -1})).map(d => d.data.message);
     expect(list).to.deep.equal(['four', 'three', 'two', 'one']);
+
+    list = (await user0DB.list('foo', 'thing', {}, {'info.created': 1})).map(d => d.data.message);
+    expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
 
     list = (await user0DB.list('foo', 'thing', {}, {data: 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['four', 'one', 'three', 'two']);
@@ -354,34 +354,38 @@ describe('Database', () => {
     list = (await user0DB.list('foo', 'thing', {}, {data: -1})).map(d => d.data.message);
     expect(list).to.deep.equal(['two', 'three', 'one', 'four']);
 
-    list = (await user0DB.list('foo', 'thing', {created_before: midpoint})).map(d => d.data.message);
-    expect(list).to.deep.equal(['one', 'two']);
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {created_before: midpoint})
+    list = (await user0DB.list('foo', 'thing', query)).map(d => d.data.message);
+    expect(list).to.deep.equal(['two', 'one']);
 
-    list = (await user0DB.list('foo', 'thing', {created_since: midpoint})).map(d => d.data.message);
-    expect(list).to.deep.equal(['three', 'four']);
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {created_since: midpoint})
+    list = (await user0DB.list('foo', 'thing', query)).map(d => d.data.message);
+    expect(list).to.deep.equal(['four', 'three']);
 
     list = (await user0DB.list('foo', 'thing', {'data.message': 'four'})).map(d => d.data.message);
     expect(list).to.deep.equal(['four']);
 
     await user1DB.create('foo', 'thing', {message: "five"}, 'five');
     let five = await user1DB.get('foo', 'thing', 'five');
-    list = (await user0DB.list('foo', 'thing')).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {}, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'two', 'three', 'four', 'five']);
 
-    list = (await user0DB.list('foo', 'thing', {owner: USERS[1].id})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {'acl.owner': USERS[1].id})).map(d => d.data.message);
     expect(list).to.deep.equal(['five']);
 
-    list = (await user0DB.list('foo', 'thing', {owner: USERS[0].id})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {'acl.owner': USERS[0].id}, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
 
     const beforeModify = new Date().toISOString();
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {updated_since: beforeModify})
     await user0DB.update('foo', 'thing', 'two', {message: "TWO"});
-    list = (await user0DB.list('foo', 'thing', {updated_since: beforeModify})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', query)).map(d => d.data.message);
     expect(list).to.deep.equal(['TWO']);
 
     list = (await user0DB.list('foo', 'thing')).map(d => d.info);
 
-    list = (await user0DB.list('foo', 'thing', {updated_before: beforeModify})).map(d => d.data.message);
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {updated_before: beforeModify})
+    list = (await user0DB.list('foo', 'thing', query, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'three', 'four', 'five']);
   });
 
@@ -411,7 +415,7 @@ describe('Database', () => {
   it('should not allow invalid ACL', async () => {
     const userDB = await database.user(USERS[0].id);
     await userDB.create('foo', 'thing', {message: "Hello"}, 'thing2')
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: {}}}), /ACL is invalid. data.allow.read should be array/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: {}}}), /ACL is invalid. allow.read should be array/);
   });
 
   it('should allow user to update ACL', async () => {
@@ -645,6 +649,51 @@ describe('Database', () => {
     expect(newListBack2.data.things[0].$ref).to.be.a('string');
     expect(newListBack2.data.things[0].$ref).to.not.equal('/data/foo/thing/' + message0ID);
   });
+
+  it('should not disassemble $refs', async () => {
+    const userDB = await database.user(USERS[0].id);
+    const list = {
+      things: [{
+        message: 'hello',
+      }]
+    }
+
+    const listID = (await userDB.create('foo', 'list', list)).id;
+    let listBack = await userDB.get('foo', 'list', listID);
+    expect(listBack.data.things[0].$ref).to.be.a('string');
+    expect(Object.keys(listBack.data.things[0]).length).to.equal(1);
+
+    await userDB.update('foo', 'list', listID, listBack.data);
+    listBack = await userDB.get('foo', 'list', listID);
+    expect(listBack.data.things[0].$ref).to.be.a('string');
+    expect(Object.keys(listBack.data.things[0]).length).to.equal(1);
+  });
+
+  it('should support pagination', async () => {
+    const userDB = await database.user(USERS[0].id);
+    for (let i = 0; i < 20; ++i) {
+      let thing = {message: i.toString()};
+      await userDB.create('foo', 'thing', thing);
+    }
+
+    let page0 = await userDB.list('foo', 'thing', {}, {created: 1}, 2);
+    expect(page0.length).to.equal(2);
+    expect(page0[0].data.message).to.equal('0');
+    expect(page0[1].data.message).to.equal('1');
+
+    let page1 = await userDB.list('foo', 'thing', {}, {created: 1}, 2, 2);
+    expect(page1.length).to.equal(2);
+    expect(page1[0].data.message).to.equal('2');
+    expect(page1[1].data.message).to.equal('3');
+
+    let lastPage = await userDB.list('foo', 'thing', {}, {created: 1}, 2, 18);
+    expect(lastPage.length).to.equal(2);
+    expect(lastPage[0].data.message).to.equal('18');
+    expect(lastPage[1].data.message).to.equal('19');
+
+    let emptyPage = await userDB.list('foo', 'thing', {}, {created: 1}, 2, 100);
+    expect(emptyPage.length).to.equal(0);
+  })
 
   it('should not allow keys with special characters', async() => {
     const userDB = await database.user(USERS[0].id);

@@ -7,8 +7,10 @@ module.exports = function(opts) {
 
 ;(async () => {
   if (require.main === module) {
+    let opts = require('yargs').argv;
     try {
-      await module.exports(require('yargs').argv);
+      await module.exports(opts);
+      console.log('FreeDB listening on port ' + opts.port);
     } catch (e) {
       console.log(e.message);
       console.log(e.stack);

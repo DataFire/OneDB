@@ -8,6 +8,7 @@ const DEFAULT_CORE = 'https://alpha.baasket.org';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
 const HOST_REGEX = /(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?/;
+const DEFAULT_PAGE_SIZE = 20;
 
 function replaceProtocol(str) {
   return str.replace(/^\w+:\/\/(www\.)?/, '');
@@ -103,10 +104,11 @@ class Client {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = host.location + path;
     } else {
-      host = this.getHost(url) || {location: hostLocation};
+      host = this.getHost(url) || {};
     }
     let headers = {
       'Content-Type': 'application/json',
+      'X-FreeDB-Client': packageInfo.version,
     }
     let requestOpts = {method, url, headers, params: query, timeout: TIMEOUT};
     requestOpts.validateStatus = () => true;
@@ -125,7 +127,9 @@ class Client {
     if (response.status >= 300) {
       let message = (response.data && response.data.message)
       message = message || `Error code ${response.status} for ${method.toUpperCase()} ${path}`;
-      return Promise.reject(Error(message));
+      const err = new Error(message);
+      err.statusCode = response.status;
+      return Promise.reject(err);
     }
     return response.data;
   }
@@ -153,25 +157,30 @@ class Client {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
-      const resolved = [];
-      for (let item of obj) {
-        resolved.push(await this.resolveRefs(item, defaultHost))
-      }
+      const resolved = await Promise.all(obj.map(item => {
+        return this.resolveRefs(item, defaultHost);
+      }));
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
-      obj = await this.request(defaultHost, 'get', obj.$ref);
+      try {
+        return await this.request(defaultHost, 'get', obj.$ref);
+      } catch (e) {
+        if (e.statusCode !== 404) throw e;
+      }
       return obj;
     } else {
-      for (let key in obj) {
-        obj[key] = await this.resolveRefs(obj[key], defaultHost);
-      }
+      await Promise.all(Object.keys(obj).map(key => {
+        return this.resolveRefs(obj[key], defaultHost).then(resolved => {
+          return obj[key] = resolved;
+        })
+      }))
       return obj;
     }
   }
 
   async get(namespace, type, id, noValidate=false) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let item = await this.request(host, 'get', '/data/' + namespace + '/' + type + '/' + id);
+    let item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
     await this.resolveRefs(item, host);
     if (!noValidate) {
       await this.validateItem(namespace, type, item);
@@ -179,13 +188,29 @@ class Client {
     return item;
   }
 
-  async list(namespace, type, params, sort) {
+  async getACL(namespace, type, id) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let items = await this.request(host, 'get', '/data/' + namespace + '/' + type, params);
-    for (let item of items) {
+    let acl = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/acl`);
+    // TODO: validate
+    return acl;
+  }
+
+  async getInfo(namespace, type, id) {
+    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    let info = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/info`);
+    // TODO: validate
+    return info;
+  }
+
+  async list(namespace, type, params={}) {
+    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    params.skip = params.skip || 0;
+    params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
+    let page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
+    for (let item of page.items) {
       await this.validateItem(namespace, type, item);
     }
-    return items;
+    return page;
   }
 
   async create(namespace, type, data, id='') {
@@ -196,11 +221,15 @@ class Client {
   }
 
   async update(namespace, type, id, data) {
-    await this.request(this.hosts.primary, 'put', '/data/' + namespace + '/' + type + '/' + id, {}, data);
+    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}`, {}, data);
   }
 
   async destroy(namespace, type, id) {
-    await this.request(this.hosts.primary, 'delete', '/data/' + namespace + '/' + type + '/' + id);
+    await this.request(this.hosts.primary, 'delete', `/data/${namespace}/${type}/${id}`);
+  }
+
+  async updateACL(namespace, type, id, acl) {
+    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/acl`, {}, acl);
   }
 }
 

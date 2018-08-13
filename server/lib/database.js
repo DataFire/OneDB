@@ -1,14 +1,17 @@
 const mongodb = require('mongodb');
 const randomstring = require("randomstring");
 const validate = require('./validate');
-const util = require('./db-util');
+const dbUtil = require('./db-util');
+const util = require('./util');
 const fail = require('./fail');
 const config = require('./config');
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
-const STAGING_KEY = 'staging';
-const DEFAULT_SORT = {'info.created': 1};
+
+const DEFAULT_SORT = {'info.updated': -1};
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 10;
 
 class Database {
   constructor(opts={}) {
@@ -22,13 +25,17 @@ class Database {
     if (this.client) return fail("Database already initialized");
     this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
-    let coreObjects = JSON.parse(JSON.stringify(util.CORE_OBJECTS));
-    for (let obj of coreObjects) {
+    for (let obj of dbUtil.CORE_OBJECTS) {
       let coll = this.db.collection(obj.namespace + '-' + obj.type);
       let existing = await coll.find({id: obj.document.id}).toArray();
       if (!existing[0]) {
-        let encoded = util.encodeDocument(obj.document);
-        await coll.insert(encoded);
+        let doc = {
+          id: obj.document.id,
+          info: obj.document.info,
+          acl: JSON.parse(JSON.stringify(obj.document.acl)),
+          data: dbUtil.encodeDocument(JSON.parse(JSON.stringify(obj.document.data))),
+        }
+        await coll.insert(doc);
       }
     }
   }
@@ -40,15 +47,22 @@ class Database {
     return db;
   }
 
-  async createUser(email, password) {
+  async getAvailableUsername(username) {
+    if (!username) username = util.randomName();
+    const coll = this.db.collection('core-user');
+    const existing = await coll.find({id: username}).toArray();
+    return existing.length ? this.getAvailableUsername() : username;
+  }
+
+  async createUser(email, password, username=undefined) {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
-    const user = await db.create('core', 'user', {publicKey: ''});
-    const creds = await util.computeCredentials(password);
+    const user = await db.create('core', 'user', {publicKey: ''}, username);
+    const creds = await dbUtil.computeCredentials(password);
     creds.email = email;
     creds.id = user.id;
     const userPrivate = await db.create('core', 'user_private', creds);
@@ -60,7 +74,7 @@ class Database {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email);
     if (err) return fail(err, 400);
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length !== 1) return fail(`User ${email} not found`, 401);
     await db.append('core', 'user_private', existing[0].id, {tokens: [token]});
@@ -70,17 +84,17 @@ class Database {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (!existing.length) return fail(`User ${email} not found`, 401);
     const user = existing[0].data;
-    const isValid = await util.checkPassword(password, user.hash, user.salt);
+    const isValid = await dbUtil.checkPassword(password, user.hash, user.salt);
     if (!isValid) return fail(`Invalid password for ${email}`);
     return user.id;
   }
 
   async signInWithToken(token) {
-    const db = await this.user(util.USER_KEYS.system);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     const col = db.getCollection('core', 'user_private');
     const user = await col.find({'data.tokens': {$in: [token]}}).toArray();
     if (user.length !== 1) return fail(`The provided token is invalid`, 401);
@@ -114,7 +128,7 @@ class DatabaseForUser {
     if (schema) {
       if (!namespace || !type) throw new Error("Need a namespace and type to validate schema");
       if (namespace !== 'core') {
-        schema = util.schemaRefsToDBRefs(namespace, schema);
+        schema = dbUtil.schemaRefsToDBRefs(namespace, schema);
       }
       schema = {
         definitions: schema.definitions,
@@ -127,11 +141,7 @@ class DatabaseForUser {
     }
     if (obj.acl) {
       let err = validate.validators.acl(obj.acl);
-      if (err) return fail(`Invalid ACL: ${err}`);
-    }
-    if (obj.info) {
-      let err = validate.validators.info(obj.info);
-      if (err) return fail(`Invalid info: ${err}`);
+      if (err) return fail(err);
     }
   }
 
@@ -156,45 +166,38 @@ class DatabaseForUser {
       let allowKey = ['acl', accessType, access].join('.');
       let disallowKey = ['acl', 'disallow', access].join('.');
       const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
-      ownerQuery.$and[1][allowKey] = {$in: [util.USER_KEYS.owner]};
-      ownerQuery.$and[2][disallowKey] = {$nin: [util.USER_KEYS.owner]};
+      ownerQuery.$and[1][allowKey] = {$in: [dbUtil.USER_KEYS.owner]};
+      ownerQuery.$and[2][disallowKey] = {$nin: [dbUtil.USER_KEYS.owner]};
       const accessQuery = {$and: [{}, {}]};
-      accessQuery.$and[0][allowKey] = {$in: [this.user.id, util.USER_KEYS.all]};
-      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, util.USER_KEYS.all]};
+      accessQuery.$and[0][allowKey] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
+      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
       query.$and.push({$or: [ownerQuery, accessQuery]});
     });
     return query;
   }
 
-  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT) {
-    const col = this.getCollection(namespace, type);
-    query = this.buildQuery(query, access);
-    let arr = await col.find(query).sort(sort).toArray();
-    let decoded = util.decodeDocument(arr);
-    return util.decodeDocument(JSON.parse(JSON.stringify(arr)));
-  }
-
-  async get(namespace, type, id, access='read') {
-    const arr = await this.getAll(namespace, type, {id}, access);
-    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
-    if (!arr.length) return;
-    return arr[0];
-  }
-
-  async list(namespace, type, params={}, sort=DEFAULT_SORT) {
+  async buildListQuery(namespace, type, params) {
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     const query = {};
+    const sort = {}
+    const skip = params.skip || 0;
+    const pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
+    if (params.sort) {
+      const parts = params.sort.split(':');
+      if (parts.length === 1) parts.push('ascending');
+      sort[parts[0]] = parts[1] === 'ascending' ? 1 : -1;
+    }
     if (params.created_since) {
-      query['info.created'] = {$gte: params.created_since}
+      query['info.created'] = {$gte: new Date(params.created_since)}
     }
     if (params.created_before) {
-      query['info.created'] = {$lte: params.created_before}
+      query['info.created'] = {$lte: new Date(params.created_before)}
     }
     if (params.updated_since) {
-      query['info.updated'] = {$gte: params.updated_since}
+      query['info.updated'] = {$gte: new Date(params.updated_since)}
     }
     if (params.updated_before) {
-      query['info.updated'] = {$lte: params.updated_before}
+      query['info.updated'] = {$lte: new Date(params.updated_before)}
     }
     if (params.owner) {
       query['acl.owner'] = {$eq: params.owner}
@@ -224,7 +227,36 @@ class DatabaseForUser {
         query[key] = params[key];
       }
     }
-    return this.getAll(namespace, type, query, 'read', sort);
+    return {query, sort, pageSize, skip}
+  }
+
+  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0) {
+    if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
+    const col = this.getCollection(namespace, type);
+    query = this.buildQuery(query, access);
+    let arr = await col.find(query).sort(sort).skip(skip).limit(limit).toArray();
+    arr.forEach(item => {
+      item.data = dbUtil.decodeDocument(item.data);
+    })
+    return JSON.parse(JSON.stringify(arr));
+  }
+
+  async count(namespace, type, query) {
+    const col = this.getCollection(namespace, type);
+    query = this.buildQuery(query, 'read');
+    let count = await col.find(query).count();
+    return count;
+  }
+
+  async get(namespace, type, id, access='read') {
+    const arr = await this.getAll(namespace, type, {id}, access);
+    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
+    if (!arr.length) return;
+    return arr[0];
+  }
+
+  async list(namespace, type, query={}, sort=DEFAULT_SORT, pageSize, skip) {
+    return this.getAll(namespace, type, query, 'read', sort, pageSize, skip);
   }
 
   async disassemble(namespace, data, schema) {
@@ -238,6 +270,7 @@ class DatabaseForUser {
       return newData;
     }
     if (schema.$ref) {
+      if (data.$ref) return data;
       let match = schema.$ref.match(/#\/definitions\/(\w+)/);
       if (!match) return data;
       let id = null;
@@ -287,7 +320,7 @@ class DatabaseForUser {
     if (err) return fail(err);
     const existing = await this.get(namespace, type, id, 'force');
     if (existing) return fail(`Item ${namespace}/${type}/${id} already exists`);
-    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || util.OWNER_ACL_SET)));
+    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || dbUtil.OWNER_ACL_SET)));
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (type === 'schema' && id !== 'schema') {
@@ -302,7 +335,7 @@ class DatabaseForUser {
       }
     }
 
-    const time = new Date().toISOString();
+    const time = new Date(Date.now());
     const info = {
       created: time,
       updated: time,
@@ -318,7 +351,12 @@ class DatabaseForUser {
       data.properties._id = {type: 'string'};
     }
     const col = this.getCollection(namespace, type);
-    const result = await col.insert(util.encodeDocument([obj]));
+    const result = await col.insert({
+      id: obj.id,
+      info: obj.info,
+      acl: obj.acl,
+      data: dbUtil.encodeDocument(obj.data),
+    });
 
     const userUpdate = {
       $inc: {'data.items': 1},
@@ -339,8 +377,8 @@ class DatabaseForUser {
     const col = this.getCollection(namespace, type);
     const result = await col.update(query, {
       $set: {
-        data: util.encodeDocument(data),
-        'info.updated': new Date().toISOString(),
+        data: dbUtil.encodeDocument(data),
+        'info.updated': new Date(Date.now()),
       },
     });
     if (result.result.n === 0) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
@@ -369,7 +407,7 @@ class DatabaseForUser {
         await this.validate({data: item}, schema, namespace, subtype);
       }
       existing[key] = (existing[key] || []).concat(data[key]);
-      doc.$push['data.' + key] = {$each: util.encodeDocument(data[key])};
+      doc.$push['data.' + key] = {$each: dbUtil.encodeDocument(data[key])};
     }
 
     const newDoc = JSON.stringify(existing.data);

@@ -1,25 +1,27 @@
-import {Component} from '@angular/core';
+import {Component, ViewChild} from '@angular/core';
 import {Router} from '@angular/router';
 import {FreeDBService} from '../services/freedb.service';
 
 declare let window:any;
 declare let require:any;
-const settings = require('../../../../../.server-config.json');
 
 @Component({
     selector: 'home',
     templateUrl: './home.pug',
+    styles: [`
+      ul {
+        padding-left: 0px;
+        list-style: none;
+      }
+    `]
 })
 export class HomeComponent {
-  host:string = settings.host || 'https://alpha.freedb.io';
+  @ViewChild('logInModal') logInModal;
   user:any;
-  constructor(private freedb:FreeDBService) {}
-
-  signIn() {
-    this.freedb.initialize(this.host);
-    this.freedb.client.authorize(user => {
-      console.log(user);
-      this.user = user;
-    })
+  error:string;
+  constructor(public freedb:FreeDBService) {
+    this.freedb.onUser.subscribe(user => {
+      this.user = user.user;
+    });
   }
 }
