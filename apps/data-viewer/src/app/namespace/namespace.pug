@@ -1,4 +1,6 @@
-h1(*ngIf="namespace") Viewing data in the {{ namespace._id }} Space
+div(*ngIf="namespace")
+  h1 {{ namespace._id }}
+  p Below is all your data in the {{ namespace._id }} space
 .space(*ngFor="let datum of data")
   h2 {{ datum.type }}
   .item(*ngFor="let item of datum.dataset")

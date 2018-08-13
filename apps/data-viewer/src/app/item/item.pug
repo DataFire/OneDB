@@ -1,9 +1,56 @@
-h1 {{ namespace }}/{{ type }}/{{item_id}}
+h1
+  a([routerLink]="['/data', namespace]") {{ namespace }}
+  span /{{ type }}/{{item_id}}
 div(*ngIf="item")
-  ul
-    li Created: {{ info.created }}
-    li Updated: {{ info.updated }}
-    li Created: {{ info.created }}
-  pre
-    code
-      span {{ stringify(item) }}
+  ul.info(*ngIf="info")
+    li
+      span.info-label Owned by
+      span.info-data {{ acl.owner }}
+    li
+      span.info-label Created by
+      span.info-data {{ info.created_by }}
+    li
+      span.info-label Created on
+      span.info-data {{ datestr(info.created) }}
+    li
+      span.info-label Last updated
+      span.info-data {{ datestr(info.updated) }}
+  .form-group
+    h2(*ngIf="loading")
+      i.fa.fa-spin.fa-refresh
+    .btn-toolbar(*ngIf="!loading")
+      button.btn.btn-success.mr-3((click)="wrapAsync('save')")
+        span Save
+        i.fa.fa-right.fa-cloud-upload
+      button.btn.btn-danger((click)="confirmDestroy = true")
+        span Destroy
+        i.fa.fa-right.fa-trash
+  .alert.alert-danger(*ngIf="error")
+    p {{error}}
+  .alert.alert-warning(*ngIf="confirmDestroy")
+    p Are you sure? This action cannot be undone.
+    .btn-toolbar
+      a.btn.btn-link((click)="wrapAsync('destroy')") Destroy this item
+      a.btn.btn-link((click)="confirmDestroy = false") Cancel
+  .form-group(*ngIf="acl")
+    a((click)="expandACL = !expandACL" href="javascript:void(0)")
+      i.fa.fa-left([class.fa-plus-square-o]="!expandACL", [class.fa-minus-square-o]="expandACL")
+      span {{ expandACL ? 'Hide' : 'Show' }} Access Control
+  div(*ngIf="expandACL")
+    p Use these fields to control who has access to read, write, append to, and destroy your data.
+    ul
+      li The <b>allow</b> field is a whitelist of users who can perform the given action.
+      li The <b>disallow</b> field is a blacklist of users who cannot perform the given action.
+      li The <b>modify</b> field is a whitelist of users who can change the allow and disallow fields.
+      li The user <b>_owner</b> refers to the owner of this item.
+      li The user <b>_all</b> refers to everyone.
+    .form-group(*ngFor="let accessType of ACCESS_TYPES")
+      h4.text-capitalize {{ accessType }}
+      .row
+        .col(*ngFor="let aclType of ACL_TYPES")
+          label.text-capitalize {{ aclType }}
+          input.form-control(
+            [value]="(acl[aclType][accessType] || []).join(', ')",
+            (input)="setACLString($event.target.value, aclType, accessType)")
+  textarea.form-control(rows="20", [(ngModel)]="itemString")
+

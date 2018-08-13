@@ -45,6 +45,8 @@ export class FreeDBService {
     if (!existing) return;
     existing = JSON.parse(existing);
     if (!existing || !existing.hosts) return;
+    existing.hosts.core = existing.hosts.core || {};
+    existing.hosts.core.location = CORE_HOST;
     await this.client.setHosts(existing.hosts);
   }
 }
