@@ -155,10 +155,9 @@ class Client {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
-      const resolved = [];
-      for (let item of obj) {
-        resolved.push(await this.resolveRefs(item, defaultHost))
-      }
+      const resolved = await Promise.all(obj.map(item => {
+        return this.resolveRefs(item, defaultHost);
+      }));
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
       try {
@@ -168,9 +167,11 @@ class Client {
       }
       return obj;
     } else {
-      for (let key in obj) {
-        obj[key] = await this.resolveRefs(obj[key], defaultHost);
-      }
+      await Promise.all(Object.keys(obj).map(key => {
+        return this.resolveRefs(obj[key], defaultHost).then(resolved => {
+          return obj[key] = resolved;
+        })
+      }))
       return obj;
     }
   }
