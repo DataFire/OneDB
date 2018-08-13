@@ -13,9 +13,20 @@ const REGEX = {
   namespace: WORDY_REGEX,
 }
 
+const LIST_QUERY_SCHEMA = {
+  type: 'object',
+  additionalProperties: true,
+  properties: {
+    pageSize: {type: 'integer', minimum: 1, maximum: 100, default: 20},
+    skip: {type: 'integer', minimum: 0, default: 0},
+    sort: {type: 'string', pattern: "[\\w\\.]+(:(ascending|descending))"}
+  }
+}
+
 let ajvCore = new Ajv(AJV_OPTIONS);
 let validateACL = ajvCore.compile(require('../namespaces/core/acl'));
 let validateInfo = ajvCore.compile(require('../namespaces/core/info'));
+let validateListQuery = ajvCore.compile(LIST_QUERY_SCHEMA);
 
 let sendError = module.exports.sendError = (res, message="Unknown error", details=undefined, statusCode=400) => {
   res.status(statusCode).json({error: message, details});
@@ -105,6 +116,12 @@ let validators = module.exports.validators = {
       }
     });
     return err;
+  },
+  listQuery: query => {
+    if (query.pageSize !== undefined) query.pageSize = +query.pageSize;
+    if (query.skip !== undefined) query.skip = +query.skip;
+    let isValid = validateListQuery(query);
+    if (!isValid) return errorsText(validateListQuery.errors);
   }
 }
 

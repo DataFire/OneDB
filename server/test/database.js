@@ -354,10 +354,12 @@ describe('Database', () => {
     list = (await user0DB.list('foo', 'thing', {}, {data: -1})).map(d => d.data.message);
     expect(list).to.deep.equal(['two', 'three', 'one', 'four']);
 
-    list = (await user0DB.list('foo', 'thing', {created_before: midpoint})).map(d => d.data.message);
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {created_before: midpoint})
+    list = (await user0DB.list('foo', 'thing', query)).map(d => d.data.message);
     expect(list).to.deep.equal(['two', 'one']);
 
-    list = (await user0DB.list('foo', 'thing', {created_since: midpoint})).map(d => d.data.message);
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {created_since: midpoint})
+    list = (await user0DB.list('foo', 'thing', query)).map(d => d.data.message);
     expect(list).to.deep.equal(['four', 'three']);
 
     list = (await user0DB.list('foo', 'thing', {'data.message': 'four'})).map(d => d.data.message);
@@ -368,20 +370,22 @@ describe('Database', () => {
     list = (await user0DB.list('foo', 'thing', {}, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'two', 'three', 'four', 'five']);
 
-    list = (await user0DB.list('foo', 'thing', {owner: USERS[1].id})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {'acl.owner': USERS[1].id})).map(d => d.data.message);
     expect(list).to.deep.equal(['five']);
 
-    list = (await user0DB.list('foo', 'thing', {owner: USERS[0].id}, {'info.created': 1})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {'acl.owner': USERS[0].id}, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
 
     const beforeModify = new Date().toISOString();
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {updated_since: beforeModify})
     await user0DB.update('foo', 'thing', 'two', {message: "TWO"});
-    list = (await user0DB.list('foo', 'thing', {updated_since: beforeModify})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', query)).map(d => d.data.message);
     expect(list).to.deep.equal(['TWO']);
 
     list = (await user0DB.list('foo', 'thing')).map(d => d.info);
 
-    list = (await user0DB.list('foo', 'thing', {updated_before: beforeModify}, {'info.created': 1})).map(d => d.data.message);
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {updated_before: beforeModify})
+    list = (await user0DB.list('foo', 'thing', query, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'three', 'four', 'five']);
   });
 
@@ -672,17 +676,22 @@ describe('Database', () => {
       await userDB.create('foo', 'thing', thing);
     }
 
-    let page0 = await userDB.list('foo', 'thing', {pageSize: 2}, {created: 1});
+    let page0 = await userDB.list('foo', 'thing', {}, {created: 1}, 2);
     expect(page0.length).to.equal(2);
     expect(page0[0].data.message).to.equal('0');
     expect(page0[1].data.message).to.equal('1');
 
-    let page1 = await userDB.list('foo', 'thing', {pageSize: 2, skip: 2}, {created: 1});
+    let page1 = await userDB.list('foo', 'thing', {}, {created: 1}, 2, 2);
     expect(page1.length).to.equal(2);
     expect(page1[0].data.message).to.equal('2');
     expect(page1[1].data.message).to.equal('3');
 
-    let emptyPage = await userDB.list('foo', 'thing', {pageSize: 2, skip: 100}, {created: 1});
+    let lastPage = await userDB.list('foo', 'thing', {}, {created: 1}, 2, 18);
+    expect(lastPage.length).to.equal(2);
+    expect(lastPage[0].data.message).to.equal('18');
+    expect(lastPage[1].data.message).to.equal('19');
+
+    let emptyPage = await userDB.list('foo', 'thing', {}, {created: 1}, 2, 100);
     expect(emptyPage.length).to.equal(0);
   })
 

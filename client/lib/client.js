@@ -108,6 +108,7 @@ class Client {
     }
     let headers = {
       'Content-Type': 'application/json',
+      'X-FreeDB-Client': packageInfo.version,
     }
     let requestOpts = {method, url, headers, params: query, timeout: TIMEOUT};
     requestOpts.validateStatus = () => true;
@@ -201,20 +202,15 @@ class Client {
     return info;
   }
 
-  async list(namespace, type, params) {
+  async list(namespace, type, params={}) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
     params.skip = params.skip || 0;
     params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
-    let items = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
-    for (let item of items) {
+    let page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
+    for (let item of page.items) {
       await this.validateItem(namespace, type, item);
     }
-    if (items.length === params.pageSize) {
-      items.next = async () => {
-        return this.list(namespace, type, Object.assign({}, params, {skip: params.skip + params.pageSize}));
-      }
-    }
-    return items;
+    return page;
   }
 
   async create(namespace, type, data, id='') {

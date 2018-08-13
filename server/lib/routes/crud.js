@@ -83,18 +83,18 @@ module.exports = function(database) {
    *  List
    */
   router.get(TYPE_PATH, errorGuard(async (req, res) => {
-    // TODO: validate search params
-    const sort = {};
-    if (req.query.sort) {
-      const parts = req.query.sort.split(':');
-      if (parts.length === 1) parts.push('ascending');
-      sort[parts[0]] = parts[1] === 'ascending' ? 1 : -1;
+    const err = validate.validators.listQuery(req.query);
+    if (err) return fail(err, 400);
+    const {query, sort, pageSize, skip} = await req.db.buildListQuery(req.params.namespace, req.params.typeID, req.query);
+    const items = await req.db.list(req.params.namespace, req.params.typeID, query, sort, pageSize, skip);
+    const page = {
+      items: items.map(getData),
+      total: await req.db.count(req.params.namespace, req.params.typeID, query),
+      pageSize: req.query.pageSize,
+      skip: req.query.skip,
     }
-    if (req.query.pageSize !== undefined) req.query.pageSize = parseInt(req.query.pageSize);
-    if (req.query.skip !== undefined) req.query.skip = parseInt(req.query.skip);
-    let items = await req.db.list(req.params.namespace, req.params.typeID, req.query, sort);
-    items = items.map(getData);
-    res.json(items);
+    page.hasNext = page.items.length + page.skip < page.total;
+    res.json(page);
   }));
 
   router.use(requireLogin);

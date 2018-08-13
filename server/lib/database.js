@@ -176,29 +176,17 @@ class DatabaseForUser {
     return query;
   }
 
-  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0) {
-    if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
-    const col = this.getCollection(namespace, type);
-    query = this.buildQuery(query, access);
-    let arr = await col.find(query).sort(sort).skip(skip).limit(limit).toArray();
-    arr.forEach(item => {
-      item.data = dbUtil.decodeDocument(item.data);
-    })
-    return JSON.parse(JSON.stringify(arr));
-  }
-
-  async get(namespace, type, id, access='read') {
-    const arr = await this.getAll(namespace, type, {id}, access);
-    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
-    if (!arr.length) return;
-    return arr[0];
-  }
-
-  async list(namespace, type, params={}, sort=DEFAULT_SORT) {
+  async buildListQuery(namespace, type, params) {
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
-    params.pageSize = Math.min(MAX_PAGE_SIZE, params.pageSize || DEFAULT_PAGE_SIZE);
-    params.skip = params.skip || 0;
     const query = {};
+    const sort = {}
+    const skip = params.skip || 0;
+    const pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
+    if (params.sort) {
+      const parts = params.sort.split(':');
+      if (parts.length === 1) parts.push('ascending');
+      sort[parts[0]] = parts[1] === 'ascending' ? 1 : -1;
+    }
     if (params.created_since) {
       query['info.created'] = {$gte: new Date(params.created_since)}
     }
@@ -239,7 +227,36 @@ class DatabaseForUser {
         query[key] = params[key];
       }
     }
-    return this.getAll(namespace, type, query, 'read', sort, params.pageSize, params.skip);
+    return {query, sort, pageSize, skip}
+  }
+
+  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0) {
+    if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
+    const col = this.getCollection(namespace, type);
+    query = this.buildQuery(query, access);
+    let arr = await col.find(query).sort(sort).skip(skip).limit(limit).toArray();
+    arr.forEach(item => {
+      item.data = dbUtil.decodeDocument(item.data);
+    })
+    return JSON.parse(JSON.stringify(arr));
+  }
+
+  async count(namespace, type, query) {
+    const col = this.getCollection(namespace, type);
+    query = this.buildQuery(query, 'read');
+    let count = await col.find(query).count();
+    return count;
+  }
+
+  async get(namespace, type, id, access='read') {
+    const arr = await this.getAll(namespace, type, {id}, access);
+    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
+    if (!arr.length) return;
+    return arr[0];
+  }
+
+  async list(namespace, type, query={}, sort=DEFAULT_SORT, pageSize, skip) {
+    return this.getAll(namespace, type, query, 'read', sort, pageSize, skip);
   }
 
   async disassemble(namespace, data, schema) {

@@ -77,6 +77,22 @@ describe("Server", () => {
   it('should GET for info', async () => {
     const resp = await axios.get(HOST + '/data/core/schema/user/info');
     expect(resp.data.created).to.be.a('string');
+  });
+
+  it('should list schemas', async () => {
+    let resp = await axios.get(HOST + '/data/core/schema', {validateStatus: () => true});
+    expect(resp.data.total).to.equal(4);
+    expect(resp.data.items.length).to.equal(4);
+
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=3', {validateStatus: () => true});
+    expect(resp.data.total).to.equal(4);
+    expect(resp.data.items.length).to.equal(3);
+    expect(resp.data.hasNext).to.equal(true);
+
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=3&skip=3', {validateStatus: () => true});
+    expect(resp.data.total).to.equal(4);
+    expect(resp.data.items.length).to.equal(1);
+    expect(resp.data.hasNext).to.equal(false);
   })
 
   it('should give 404 for missing item', async () => {
