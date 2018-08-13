@@ -64,7 +64,6 @@ let validators = module.exports.validators = {
       return "Error compiling JSON schema: " + e.message;
     }
     let isValid = validate(data);
-    if (validate.errors) require('fs').writeFileSync('./errors.json', JSON.stringify(validate.errors, null, 2))
     if (!isValid) return "Data does not match schema. " + errorsText(validate.errors);
   },
   acl: acl => {
