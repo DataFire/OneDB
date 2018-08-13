@@ -78,7 +78,7 @@
 /*! exports provided: jwtSecret, mongodb, host, default */
 /***/ (function(module) {
 
-module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://localhost:27000","host":"http://54.201.41.40:4000"};
+module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://localhost:27000","host":"https://alpha.baasket.org"};
 
 /***/ }),
 
