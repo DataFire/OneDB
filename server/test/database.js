@@ -646,6 +646,25 @@ describe('Database', () => {
     expect(newListBack2.data.things[0].$ref).to.not.equal('/data/foo/thing/' + message0ID);
   });
 
+  it('should not disassemble $refs', async () => {
+    const userDB = await database.user(USERS[0].id);
+    const list = {
+      things: [{
+        message: 'hello',
+      }]
+    }
+
+    const listID = (await userDB.create('foo', 'list', list)).id;
+    let listBack = await userDB.get('foo', 'list', listID);
+    expect(listBack.data.things[0].$ref).to.be.a('string');
+    expect(Object.keys(listBack.data.things[0]).length).to.equal(1);
+
+    await userDB.update('foo', 'list', listID, listBack.data);
+    listBack = await userDB.get('foo', 'list', listID);
+    expect(listBack.data.things[0].$ref).to.be.a('string');
+    expect(Object.keys(listBack.data.things[0]).length).to.equal(1);
+  })
+
   it('should not allow keys with special characters', async() => {
     const userDB = await database.user(USERS[0].id);
 

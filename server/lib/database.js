@@ -246,6 +246,7 @@ class DatabaseForUser {
       return newData;
     }
     if (schema.$ref) {
+      if (data.$ref) return data;
       let match = schema.$ref.match(/#\/definitions\/(\w+)/);
       if (!match) return data;
       let id = null;
