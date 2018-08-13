@@ -22,6 +22,12 @@ import { Router, ActivatedRoute } from '@angular/router';
         border-right: none;
         border-top: none;
       }
+      input.missing {
+        font-style: italic;
+      }
+      input.done {
+        text-decoration: line-through;
+      }
     `]
 })
 export class ListComponent {
@@ -89,9 +95,7 @@ export class ListComponent {
       }
     }
     this.list.items = this.list.items.filter(i => i !== item);
-    if (item._id) {
-      await this.save();
-    }
+    await this.save();
   }
 
   async destroy() {

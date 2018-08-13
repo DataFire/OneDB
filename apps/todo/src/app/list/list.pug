@@ -4,13 +4,17 @@ div(*ngIf="!list && !error")
 div(*ngIf="list")
   h1 Editing {{ list.title }}
   .form-group
-    input.form-control.form-control-lg([(ngModel)]="list.title" autofocus)
+    input.form-control.form-control-lg(type="text", [(ngModel)]="list.title" autofocus)
   .item(*ngFor="let item of list.items")
-    a.checkbox((click)="item.done = !item.done")
+    a.checkbox((click)="item.done = !item.$ref && !item.done")
       i.fa.fa-2x.fa-left([class.fa-square-o]="!item.done", [class.fa-check-square]="item.done")
     .item-title
       .input-group
-        input.form-control([(ngModel)]="item.title" autofocus)
+        input.form-control(
+              type="text",
+              [(ngModel)]="item.$ref ? 'Item ' + item.$ref + ' not found' : item.title",
+              [class.missing]="item.$ref", [class.done]="item.done",
+              [disabled]="item.$ref", autofocus)
         .input-group-append
           button.btn.btn-danger(type="button", (click)="destroyItem(item)")
             i.fa.fa-times
