@@ -329,8 +329,8 @@ describe('Database', () => {
     await user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
     let items = await user0DB.getAll('foo', 'thing');
     expect(items.length).to.equal(2);
-    expect(items[0].data).to.deep.equal({message: "Hello"});
-    expect(items[1].data).to.deep.equal({message: "Goodbye"});
+    expect(items[0].data).to.deep.equal({message: "Goodbye"});
+    expect(items[1].data).to.deep.equal({message: "Hello"});
   });
 
   it('should allow filtering and sorting', async () => {
@@ -343,10 +343,10 @@ describe('Database', () => {
     await user0DB.create('foo', 'thing', {message: "four"}, "four");
 
     let list = (await user0DB.list('foo', 'thing')).map(d => d.data.message);
-    expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
-
-    list = (await user0DB.list('foo', 'thing', {}, {'info.created': -1})).map(d => d.data.message);
     expect(list).to.deep.equal(['four', 'three', 'two', 'one']);
+
+    list = (await user0DB.list('foo', 'thing', {}, {'info.created': 1})).map(d => d.data.message);
+    expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
 
     list = (await user0DB.list('foo', 'thing', {}, {data: 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['four', 'one', 'three', 'two']);
@@ -355,23 +355,23 @@ describe('Database', () => {
     expect(list).to.deep.equal(['two', 'three', 'one', 'four']);
 
     list = (await user0DB.list('foo', 'thing', {created_before: midpoint})).map(d => d.data.message);
-    expect(list).to.deep.equal(['one', 'two']);
+    expect(list).to.deep.equal(['two', 'one']);
 
     list = (await user0DB.list('foo', 'thing', {created_since: midpoint})).map(d => d.data.message);
-    expect(list).to.deep.equal(['three', 'four']);
+    expect(list).to.deep.equal(['four', 'three']);
 
     list = (await user0DB.list('foo', 'thing', {'data.message': 'four'})).map(d => d.data.message);
     expect(list).to.deep.equal(['four']);
 
     await user1DB.create('foo', 'thing', {message: "five"}, 'five');
     let five = await user1DB.get('foo', 'thing', 'five');
-    list = (await user0DB.list('foo', 'thing')).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {}, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'two', 'three', 'four', 'five']);
 
     list = (await user0DB.list('foo', 'thing', {owner: USERS[1].id})).map(d => d.data.message);
     expect(list).to.deep.equal(['five']);
 
-    list = (await user0DB.list('foo', 'thing', {owner: USERS[0].id})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {owner: USERS[0].id}, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'two', 'three', 'four']);
 
     const beforeModify = new Date().toISOString();
@@ -381,7 +381,7 @@ describe('Database', () => {
 
     list = (await user0DB.list('foo', 'thing')).map(d => d.info);
 
-    list = (await user0DB.list('foo', 'thing', {updated_before: beforeModify})).map(d => d.data.message);
+    list = (await user0DB.list('foo', 'thing', {updated_before: beforeModify}, {'info.created': 1})).map(d => d.data.message);
     expect(list).to.deep.equal(['one', 'three', 'four', 'five']);
   });
 
@@ -663,6 +663,27 @@ describe('Database', () => {
     listBack = await userDB.get('foo', 'list', listID);
     expect(listBack.data.things[0].$ref).to.be.a('string');
     expect(Object.keys(listBack.data.things[0]).length).to.equal(1);
+  });
+
+  it('should support pagination', async () => {
+    const userDB = await database.user(USERS[0].id);
+    for (let i = 0; i < 20; ++i) {
+      let thing = {message: i.toString()};
+      await userDB.create('foo', 'thing', thing);
+    }
+
+    let page0 = await userDB.list('foo', 'thing', {pageSize: 2}, {created: 1});
+    expect(page0.length).to.equal(2);
+    expect(page0[0].data.message).to.equal('0');
+    expect(page0[1].data.message).to.equal('1');
+
+    let page1 = await userDB.list('foo', 'thing', {pageSize: 2, skip: 2}, {created: 1});
+    expect(page1.length).to.equal(2);
+    expect(page1[0].data.message).to.equal('2');
+    expect(page1[1].data.message).to.equal('3');
+
+    let emptyPage = await userDB.list('foo', 'thing', {pageSize: 2, skip: 100}, {created: 1});
+    expect(emptyPage.length).to.equal(0);
   })
 
   it('should not allow keys with special characters', async() => {

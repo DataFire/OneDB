@@ -115,5 +115,33 @@ describe("FreeDB Client", () => {
     expect(msg.message).to.equal("Hello world");
     await client.destroy('messages', 'message', id);
     await expectError(client.get('messages', 'message', id), /Item messages\/message\/.* not found/);
+  });
+
+  it('should allow pagination', async function() {
+    this.timeout(5000);
+    let timeStart = new Date().toISOString();
+    for (let i = 0; i < 10; ++i) {
+      await client.create('messages', 'message', {message: i.toString()});
+    }
+    let params = {pageSize: 4, sort: 'info.created:ascending', created_since: timeStart};
+    let messages = await client.list('messages', 'message', params);
+    expect(messages.length).to.equal(4);
+    expect(messages[0].message).to.equal('0');
+    expect(messages[1].message).to.equal('1');
+    expect(messages[2].message).to.equal('2');
+    expect(messages[3].message).to.equal('3');
+
+    messages = await messages.next();
+    expect(messages.length).to.equal(4);
+    expect(messages[0].message).to.equal('4');
+    expect(messages[1].message).to.equal('5');
+    expect(messages[2].message).to.equal('6');
+    expect(messages[3].message).to.equal('7');
+
+    messages = await messages.next();
+    expect(messages.length).to.equal(2);
+    expect(messages[0].message).to.equal('8');
+    expect(messages[1].message).to.equal('9');
+    expect(messages.next).to.equal(undefined);
   })
 })

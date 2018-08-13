@@ -8,8 +8,10 @@ const config = require('./config');
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
-const STAGING_KEY = 'staging';
-const DEFAULT_SORT = {'info.created': 1};
+
+const DEFAULT_SORT = {'info.updated': -1};
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 10;
 
 class Database {
   constructor(opts={}) {
@@ -174,10 +176,11 @@ class DatabaseForUser {
     return query;
   }
 
-  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT) {
+  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0) {
+    if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(query, access);
-    let arr = await col.find(query).sort(sort).toArray();
+    let arr = await col.find(query).sort(sort).skip(skip).limit(limit).toArray();
     let decoded = dbUtil.decodeDocument(arr);
     return dbUtil.decodeDocument(JSON.parse(JSON.stringify(arr)));
   }
@@ -191,6 +194,8 @@ class DatabaseForUser {
 
   async list(namespace, type, params={}, sort=DEFAULT_SORT) {
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    params.pageSize = Math.min(MAX_PAGE_SIZE, params.pageSize || DEFAULT_PAGE_SIZE);
+    params.skip = params.skip || 0;
     const query = {};
     if (params.created_since) {
       query['info.created'] = {$gte: params.created_since}
@@ -232,7 +237,7 @@ class DatabaseForUser {
         query[key] = params[key];
       }
     }
-    return this.getAll(namespace, type, query, 'read', sort);
+    return this.getAll(namespace, type, query, 'read', sort, params.pageSize, params.skip);
   }
 
   async disassemble(namespace, data, schema) {

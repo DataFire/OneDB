@@ -8,6 +8,7 @@ const DEFAULT_CORE = 'https://alpha.baasket.org';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
 const HOST_REGEX = /(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?/;
+const DEFAULT_PAGE_SIZE = 20;
 
 function replaceProtocol(str) {
   return str.replace(/^\w+:\/\/(www\.)?/, '');
@@ -200,11 +201,18 @@ class Client {
     return info;
   }
 
-  async list(namespace, type, params, sort) {
+  async list(namespace, type, params) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    params.skip = params.skip || 0;
+    params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
     let items = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
     for (let item of items) {
       await this.validateItem(namespace, type, item);
+    }
+    if (items.length === params.pageSize) {
+      items.next = async () => {
+        return this.list(namespace, type, Object.assign({}, params, {skip: params.skip + params.pageSize}));
+      }
     }
     return items;
   }

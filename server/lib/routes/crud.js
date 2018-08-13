@@ -90,6 +90,8 @@ module.exports = function(database) {
       if (parts.length === 1) parts.push('ascending');
       sort[parts[0]] = parts[1] === 'ascending' ? 1 : -1;
     }
+    if (req.query.pageSize !== undefined) req.query.pageSize = parseInt(req.query.pageSize);
+    if (req.query.skip !== undefined) req.query.skip = parseInt(req.query.skip);
     let items = await req.db.list(req.params.namespace, req.params.typeID, req.query, sort);
     items = items.map(getData);
     res.json(items);
