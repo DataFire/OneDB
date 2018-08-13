@@ -26,7 +26,7 @@ export class HomeComponent {
   async loadTodoLists() {
     this.error = null;
     try {
-      this.lists = await this.freedb.client.list('alpha_todo', 'list');
+      this.lists = (await this.freedb.client.list('alpha_todo', 'list')).items;
     } catch (e) {
       this.error = e.message;
     }

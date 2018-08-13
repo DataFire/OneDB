@@ -29,13 +29,46 @@ export class NamespaceComponent {
   async setNamespace(ns) {
     this.namespace = ns;
     this.data = [];
-    console.log(ns);
     this.version = ns.versions[ns.versions.length - 1];
-    let types = Object.keys(this.version.types);
+    const types = Object.keys(this.version.types);
     for (let type of types) {
-      let query = {owner: this.freedb.client.hosts.primary.user._id}
-      let dataset = await this.freedb.client.list(ns._id, type, query);
+      let dataset = await this.getDataset(type);
       this.data.push({type, dataset});
     }
+  }
+
+  async getDataset(type, skip=0) {
+    const query = {skip, owner: this.freedb.client.hosts.primary.user._id}
+    const dataset = await this.freedb.client.list(this.namespace._id, type, query);
+    if (dataset.total > dataset.items.length) {
+      dataset.pages = [];
+      const numPages = Math.ceil(dataset.total / dataset.pageSize);
+      const curPage = Math.floor(dataset.skip / dataset.pageSize);
+      if (curPage !== 0) {
+        dataset.pages.push({
+          label: 'Previous',
+          skip: Math.max(0, dataset.skip - dataset.pageSize)
+        });
+      }
+      for (let i = 0; i < numPages; ++i) {
+        dataset.pages.push({
+          label: (i + 1).toString(),
+          skip: i * dataset.pageSize,
+          active: i === curPage,
+        });
+      }
+      if (curPage !== numPages - 1) {
+        dataset.pages.push({
+          label: 'Next',
+          skip: dataset.skip + dataset.pageSize}
+        );
+      }
+    }
+    return dataset;
+  }
+
+  async goToPage(idx, skip) {
+    const datum = this.data[idx];
+    datum.dataset = await this.getDataset(datum.type, skip);
   }
 }
