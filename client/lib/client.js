@@ -178,7 +178,7 @@ class Client {
 
   async get(namespace, type, id, noValidate=false) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let item = await this.request(host, 'get', '/data/' + namespace + '/' + type + '/' + id);
+    let item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
     await this.resolveRefs(item, host);
     if (!noValidate) {
       await this.validateItem(namespace, type, item);
@@ -188,21 +188,21 @@ class Client {
 
   async getACL(namespace, type, id) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let acl = await this.request(host, 'get', '/data/' + namespace + '/' + type + '/' + id + '/acl');
+    let acl = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/acl`);
     // TODO: validate
     return acl;
   }
 
   async getInfo(namespace, type, id) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let info = await this.request(host, 'get', '/data/' + namespace + '/' + type + '/' + id + '/info');
+    let info = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/info`);
     // TODO: validate
     return info;
   }
 
   async list(namespace, type, params, sort) {
     let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let items = await this.request(host, 'get', '/data/' + namespace + '/' + type, params);
+    let items = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
     for (let item of items) {
       await this.validateItem(namespace, type, item);
     }
@@ -217,11 +217,15 @@ class Client {
   }
 
   async update(namespace, type, id, data) {
-    await this.request(this.hosts.primary, 'put', '/data/' + namespace + '/' + type + '/' + id, {}, data);
+    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}`, {}, data);
   }
 
   async destroy(namespace, type, id) {
-    await this.request(this.hosts.primary, 'delete', '/data/' + namespace + '/' + type + '/' + id);
+    await this.request(this.hosts.primary, 'delete', `/data/${namespace}/${type}/${id}`);
+  }
+
+  async updateACL(namespace, type, id, acl) {
+    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/acl`, {}, acl);
   }
 }
 
