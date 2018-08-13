@@ -5,6 +5,7 @@ const util = require('./util');
 
 const MIN_PASSWORD_LENGTH = 8;
 const WORDY_REGEX = /^[a-zA-Z0-9]\w{1,29}$/; // starts with a letter, 2-30 characters
+const AJV_OPTIONS = {useDefaults: true, allErrors: true, jsonPointers: true};
 
 const REGEX = {
   typeID: WORDY_REGEX,
@@ -12,12 +13,31 @@ const REGEX = {
   namespace: WORDY_REGEX,
 }
 
-let ajvCore = new Ajv({useDefaults: true});
+let ajvCore = new Ajv(AJV_OPTIONS);
 let validateACL = ajvCore.compile(require('../namespaces/core/acl'));
 let validateInfo = ajvCore.compile(require('../namespaces/core/info'));
 
 let sendError = module.exports.sendError = (res, message="Unknown error", details=undefined, statusCode=400) => {
   res.status(statusCode).json({error: message, details});
+}
+
+let errorsText = function(ajvErrors) {
+  let messages = [];
+  for (let err of ajvErrors) {
+    if (err.schemaPath.startsWith('#/anyOf/1')) continue;
+    if (err.keyword === 'anyOf') continue;
+    let message = '';
+    if (err.dataPath) {
+      message = err.dataPath.replace(/^\//, '').replace(/\//g, '.') + ' ';
+    }
+    if (err.keyword === 'additionalProperties') {
+      message += 'should not have extra property ' + err.params.additionalProperty;
+    } else {
+      message += err.message;
+    }
+    messages.push(message);
+  }
+  return messages.join('; ');
 }
 
 let validators = module.exports.validators = {
@@ -36,7 +56,7 @@ let validators = module.exports.validators = {
   data: (data, schema) => {
     if (data === undefined)        return "No data specified";
     if (!schema)                   return "No JSON schema specified";
-    let ajv = new Ajv({useDefaults: true}) // TODO: a single ajv instance will cache schemas, but the cache could grow unbounded...
+    let ajv = new Ajv(AJV_OPTIONS) // TODO: a single ajv instance will cache schemas, but the cache could grow unbounded...
     let validate = null;
     try {
       validate = ajv.compile(schema);
@@ -44,15 +64,16 @@ let validators = module.exports.validators = {
       return "Error compiling JSON schema: " + e.message;
     }
     let isValid = validate(data);
-    if (!isValid) return "Data does not match schema. " + ajv.errorsText(validate.errors);
+    if (validate.errors) require('fs').writeFileSync('./errors.json', JSON.stringify(validate.errors, null, 2))
+    if (!isValid) return "Data does not match schema. " + errorsText(validate.errors);
   },
   acl: acl => {
     let isValid = validateACL(acl);
-    if (!isValid) return "ACL is invalid. " + ajvCore.errorsText(validateACL.errors);
+    if (!isValid) return "ACL is invalid. " + errorsText(validateACL.errors);
   },
   info: info => {
     let isValid = validateInfo(info);
-    if (!isValid) return "Info is invalid. " + ajvCore.errorsText(validateInfo.errors);
+    if (!isValid) return "Info is invalid. " + errorsText(validateInfo.errors);
   },
   url: url => {
     const opts = {require_protocol: true, protocols: ['http', 'https']};

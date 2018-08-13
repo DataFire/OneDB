@@ -184,7 +184,7 @@ describe('Database', () => {
         }
       }]
     }
-    await expectError(userDB.create('core', 'namespace', ns, 'foo2'), /Data does not match schema. data.versions\[0\] should NOT have additional properties/);
+    await expectError(userDB.create('core', 'namespace', ns, 'foo2'), /Data does not match schema. versions.0 should not have extra property foo/);
   })
 
   it('should allow creating schema', async () => {
@@ -411,7 +411,7 @@ describe('Database', () => {
   it('should not allow invalid ACL', async () => {
     const userDB = await database.user(USERS[0].id);
     await userDB.create('foo', 'thing', {message: "Hello"}, 'thing2')
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: {}}}), /ACL is invalid. data.allow.read should be array/);
+    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: {}}}), /ACL is invalid. allow.read should be array/);
   });
 
   it('should allow user to update ACL', async () => {

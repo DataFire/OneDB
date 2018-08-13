@@ -135,11 +135,11 @@ class DatabaseForUser {
     }
     if (obj.acl) {
       let err = validate.validators.acl(obj.acl);
-      if (err) return fail(`Invalid ACL: ${err}`);
+      if (err) return fail(err);
     }
     if (obj.info) {
       let err = validate.validators.info(obj.info);
-      if (err) return fail(`Invalid info: ${err}`);
+      if (err) return fail(err);
     }
   }
 
