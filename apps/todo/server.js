@@ -9,4 +9,4 @@ app.get('*', (req, res) => {
   res.end(INDEX);
 })
 
-app.listen(4010);
+app.listen(process.env.PORT || 4010);
