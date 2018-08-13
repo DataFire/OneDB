@@ -125,7 +125,9 @@ class Client {
     if (response.status >= 300) {
       let message = (response.data && response.data.message)
       message = message || `Error code ${response.status} for ${method.toUpperCase()} ${path}`;
-      return Promise.reject(Error(message));
+      const err = new Error(message);
+      err.statusCode = response.status;
+      return Promise.reject(err);
     }
     return response.data;
   }
@@ -159,7 +161,11 @@ class Client {
       }
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
-      obj = await this.request(defaultHost, 'get', obj.$ref);
+      try {
+        return await this.request(defaultHost, 'get', obj.$ref);
+      } catch (e) {
+        if (e.statusCode !== 404) throw e;
+      }
       return obj;
     } else {
       for (let key in obj) {
