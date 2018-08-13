@@ -74,6 +74,11 @@ describe("Server", () => {
     expect(resp.data.owner).to.be.a('string');
   })
 
+  it('should GET for info', async () => {
+    const resp = await axios.get(HOST + '/data/core/schema/user/info');
+    expect(resp.data.created).to.be.a('string');
+  })
+
   it('should give 404 for missing item', async () => {
     const resp = await axios.get(HOST + '/data/core/schema/foo', {validateStatus: () => true});
     expect(resp.status).to.equal(404);

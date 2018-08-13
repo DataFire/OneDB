@@ -15,7 +15,7 @@ const KEY_REPLACEMENTS = {
 
 const KEY_REGEX = /^(_id|\$ref|\$id|\$comment|\$schema|[A-Za-z]\w*)$/;
 
-const START_TIME = (new Date()).toISOString();
+const START_TIME = new Date(Date.now());
 
 const USER_KEYS = module.exports.USER_KEYS = {
   all: '_all',
@@ -172,33 +172,33 @@ module.exports.CORE_OBJECTS = module.exports.CORE_OBJECTS.concat([{
   }
 }]);
 
-module.exports.encodeDocument = function(schema) {
-  if (typeof schema !== 'object' || schema === null) return schema;
-  if (Array.isArray(schema)) return schema.map(module.exports.encodeDocument);
+module.exports.encodeDocument = function(doc) {
+  if (typeof doc !== 'object' || doc === null) return doc;
+  if (Array.isArray(doc)) return doc.map(module.exports.encodeDocument);
   let obj = {};
-  for (let key in schema) {
+  for (let key in doc) {
     if (!KEY_REGEX.test(key)) throw new Error(`Object key ${key} is invalid`);
     let newKey = key;
     for (let replaceKey in KEY_REPLACEMENTS) {
       let replacement = KEY_REPLACEMENTS[replaceKey];
       newKey = newKey.replace(replacement.encode, replacement.encoded);
     }
-    obj[newKey] = module.exports.encodeDocument(schema[key]);
+    obj[newKey] = module.exports.encodeDocument(doc[key]);
   }
   return obj;
 }
 
-module.exports.decodeDocument = function(schema) {
-  if (typeof schema !== 'object' || schema === null) return schema;
-  if (Array.isArray(schema)) return schema.map(module.exports.decodeDocument);
+module.exports.decodeDocument = function(doc) {
+  if (typeof doc !== 'object' || doc === null) return doc;
+  if (Array.isArray(doc)) return doc.map(module.exports.decodeDocument);
   let obj = {};
-  for (let key in schema) {
+  for (let key in doc) {
     let newKey = key;
     for (let replaceKey in KEY_REPLACEMENTS) {
       let replacement = KEY_REPLACEMENTS[replaceKey];
       newKey = newKey.replace(replacement.decode, replacement.decoded);
     }
-    obj[newKey] = module.exports.decodeDocument(schema[key]);
+    obj[newKey] = module.exports.decodeDocument(doc[key]);
   }
   return obj;
 }

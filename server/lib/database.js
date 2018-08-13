@@ -25,13 +25,17 @@ class Database {
     if (this.client) return fail("Database already initialized");
     this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
-    let coreObjects = JSON.parse(JSON.stringify(dbUtil.CORE_OBJECTS));
-    for (let obj of coreObjects) {
+    for (let obj of dbUtil.CORE_OBJECTS) {
       let coll = this.db.collection(obj.namespace + '-' + obj.type);
       let existing = await coll.find({id: obj.document.id}).toArray();
       if (!existing[0]) {
-        let encoded = dbUtil.encodeDocument(obj.document);
-        await coll.insert(encoded);
+        let doc = {
+          id: obj.document.id,
+          info: obj.document.info,
+          acl: JSON.parse(JSON.stringify(obj.document.acl)),
+          data: dbUtil.encodeDocument(JSON.parse(JSON.stringify(obj.document.data))),
+        }
+        await coll.insert(doc);
       }
     }
   }
@@ -139,10 +143,6 @@ class DatabaseForUser {
       let err = validate.validators.acl(obj.acl);
       if (err) return fail(err);
     }
-    if (obj.info) {
-      let err = validate.validators.info(obj.info);
-      if (err) return fail(err);
-    }
   }
 
   async getSchema(namespace, type) {
@@ -181,8 +181,10 @@ class DatabaseForUser {
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(query, access);
     let arr = await col.find(query).sort(sort).skip(skip).limit(limit).toArray();
-    let decoded = dbUtil.decodeDocument(arr);
-    return dbUtil.decodeDocument(JSON.parse(JSON.stringify(arr)));
+    arr.forEach(item => {
+      item.data = dbUtil.decodeDocument(item.data);
+    })
+    return JSON.parse(JSON.stringify(arr));
   }
 
   async get(namespace, type, id, access='read') {
@@ -198,16 +200,16 @@ class DatabaseForUser {
     params.skip = params.skip || 0;
     const query = {};
     if (params.created_since) {
-      query['info.created'] = {$gte: params.created_since}
+      query['info.created'] = {$gte: new Date(params.created_since)}
     }
     if (params.created_before) {
-      query['info.created'] = {$lte: params.created_before}
+      query['info.created'] = {$lte: new Date(params.created_before)}
     }
     if (params.updated_since) {
-      query['info.updated'] = {$gte: params.updated_since}
+      query['info.updated'] = {$gte: new Date(params.updated_since)}
     }
     if (params.updated_before) {
-      query['info.updated'] = {$lte: params.updated_before}
+      query['info.updated'] = {$lte: new Date(params.updated_before)}
     }
     if (params.owner) {
       query['acl.owner'] = {$eq: params.owner}
@@ -316,7 +318,7 @@ class DatabaseForUser {
       }
     }
 
-    const time = new Date().toISOString();
+    const time = new Date(Date.now());
     const info = {
       created: time,
       updated: time,
@@ -332,7 +334,12 @@ class DatabaseForUser {
       data.properties._id = {type: 'string'};
     }
     const col = this.getCollection(namespace, type);
-    const result = await col.insert(dbUtil.encodeDocument([obj]));
+    const result = await col.insert({
+      id: obj.id,
+      info: obj.info,
+      acl: obj.acl,
+      data: dbUtil.encodeDocument(obj.data),
+    });
 
     const userUpdate = {
       $inc: {'data.items': 1},
@@ -354,7 +361,7 @@ class DatabaseForUser {
     const result = await col.update(query, {
       $set: {
         data: dbUtil.encodeDocument(data),
-        'info.updated': new Date().toISOString(),
+        'info.updated': new Date(Date.now()),
       },
     });
     if (result.result.n === 0) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
