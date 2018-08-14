@@ -1,4 +1,5 @@
-module.exports.crud = require('./crud');
-module.exports.users = require('./users');
-module.exports.info = require('./info');
-
+const fs = require('fs');
+fs.readdirSync(__dirname).forEach(file => {
+  if (file === 'index.js') return;
+  module.exports[file.replace('.js', '')] = require('./' + file);
+})

@@ -1,3 +1,5 @@
-module.exports.iterateSchema = require('./iterate-schema');
-module.exports.randomName = require('./random-name');
-
+const fs = require('fs');
+fs.readdirSync(__dirname).forEach(file => {
+  if (file === 'index.js') return;
+  module.exports[file.replace('.js', '')] = require('./' + file);
+})

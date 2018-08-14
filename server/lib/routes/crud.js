@@ -14,6 +14,7 @@ const GET_ONLY_PATHS = [
 ];
 const RESTRICTED_PATHS = [
   '/core/user_private',
+  '/core/authorization_token',
 ];
 
 const requireLogin = errorGuard(async function(req, res, next) {
@@ -115,7 +116,7 @@ router.put(ITEM_PATH, errorGuard(async (req, res) => {
  * Update ACL
  */
 router.put(ACL_PATH, errorGuard(async (req, res) => {
-  await req.db.setACL(req.params.namespace, req.params.typeID, req.params.itemID, req.body);
+  await req.db.modifyACL(req.params.namespace, req.params.typeID, req.params.itemID, req.body);
   res.json("Success");
 }));
 

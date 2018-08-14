@@ -11,6 +11,7 @@ const REGEX = {
   typeID: WORDY_REGEX,
   itemID: WORDY_REGEX,
   namespace: WORDY_REGEX,
+  scope: /^(\w+:(read|write|append|destroy|create|modify_acl))( \w+:(read|write|append|destroy|create|modify_acl))*$/,
 }
 
 const LIST_QUERY_SCHEMA = {
@@ -122,6 +123,10 @@ let validators = module.exports.validators = {
     if (query.skip !== undefined) query.skip = +query.skip;
     let isValid = validateListQuery(query);
     if (!isValid) return errorsText(validateListQuery.errors);
+  },
+  scope: scope => {
+    if (typeof scope !== 'string') return "Scope not specified"
+    if (!REGEX.scope.test(scope)) return "Requested scope is invalid"
   }
 }
 

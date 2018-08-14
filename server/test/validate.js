@@ -124,5 +124,25 @@ describe('Validation', () => {
     expect(regex.test('/data/foo/bar/^%$')).to.equal(false);
     expect(regex.test('http://example.com/foo')).to.equal(false);
     expect(regex.test('abc')).to.equal(false);
+  });
+
+  it('should validate scopes', () => {
+    expect(validate.validators.scope()).to.be.a('string');
+    expect(validate.validators.scope('')).to.be.a('string');
+    expect(validate.validators.scope('foo')).to.be.a('string');
+    expect(validate.validators.scope('foo:bar')).to.be.a('string');
+    expect(validate.validators.scope('foo:bar:baz')).to.be.a('string');
+    expect(validate.validators.scope('foo bar')).to.be.a('string');
+    expect(validate.validators.scope('foo:bar baz:quux')).to.be.a('string');
+
+    expect(validate.validators.scope('foo:read')).to.equal(undefined);
+    expect(validate.validators.scope('foo:write')).to.equal(undefined);
+    expect(validate.validators.scope('foo:create')).to.equal(undefined);
+    expect(validate.validators.scope('foo:append')).to.equal(undefined);
+    expect(validate.validators.scope('foo:modify_acl')).to.equal(undefined);
+    expect(validate.validators.scope('foo:destroy')).to.equal(undefined);
+    expect(validate.validators.scope('foo:write foo:read')).to.equal(undefined);
+    expect(validate.validators.scope('foo:write bar:destroy')).to.equal(undefined);
+    expect(validate.validators.scope('foo:write bar:write baz:write')).to.equal(undefined);
   })
 })

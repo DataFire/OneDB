@@ -25,8 +25,9 @@ module.exports = errorGuard(async (req, res, next) => {
     } catch (e) {
       return fail("Invalid Bearer token", 401);
     }
-    req.user = await req.systemDB.signInWithToken(token);
-    req.db = await req.systemDB.user(req.user.id);
+    const {id, permissions} = await req.systemDB.signInWithToken(token);
+    req.user = id;
+    req.db = await req.systemDB.user(id, permissions);
     next();
   } else {
     return fail("Invalid authorization header", 401);

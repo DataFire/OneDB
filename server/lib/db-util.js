@@ -70,6 +70,7 @@ const CORE_SCHEMAS = module.exports.CORE_SCHEMAS = {
   user: require('../namespaces/core/user'),
   user_private: require('../namespaces/core/user_private'),
   schema: require('../namespaces/core/schema'),
+  authorization_token: require('../namespaces/core/authorization_token'),
 }
 for (let key in CORE_SCHEMAS) {
   let schema = CORE_SCHEMAS[key];
@@ -152,7 +153,11 @@ module.exports.CORE_OBJECTS = module.exports.CORE_OBJECTS.concat([{
           user_private: {
             schema: {$ref: '/data/core/schema/user_private'},
             initial_acl: PRIVATE_ACL_SET,
-          }
+          },
+          authorization_token: {
+            schema: {$ref: '/data/core/schema/authorization_token'},
+            initial_acl: PRIVATE_ACL_SET,
+          },
         },
       }],
     }

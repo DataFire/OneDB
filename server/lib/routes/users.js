@@ -10,6 +10,7 @@ const aws = require('aws-sdk');
 const middleware = require('../middleware');
 const validate = require('../validate');
 const errorGuard = require('../error-guard');
+const util = require('../util');
 const fail = require('../fail');
 const config = require('../config');
 
@@ -54,10 +55,11 @@ router.get('/me', cors(), middleware.authenticate, (req, res) => {
 });
 
 router.get('/authorize', errorGuard((req, res) => {
-  let error = validate.validators.url(req.query.origin || '');
+  const error = validate.validators.url(req.query.origin || '') || validate.validators.scope(req.query.scope);
   if (error) return res.status(400).send(error);
   req.query.originNoProtocol = replaceProtocol(req.query.origin);
-  res.render('authorize', {query: req.query, config: config});
+  const scopes = util.scopes(req.query.scope);
+  res.render('authorize', {query: req.query, config: config, scopes: util.scopes(req.query.scope)});
 }));
 router.post('/authorize', middleware.authorize);
 

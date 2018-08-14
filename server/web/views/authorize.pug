@@ -1,7 +1,13 @@
 extends layout.pug
 block head
+    style.
+      ul.scope-access-list {
+        list-style: disc outside none;
+      }
+
     script.
       var ORIGIN = !{JSON.stringify(query.origin)};
+      var SCOPE_STRING = !{JSON.stringify(query.scope)}
 
       function showError(msg) {
         $('.alert.alert-danger').text(msg).css('opacity', 1);
@@ -113,7 +119,7 @@ block head
       }
 
       function authorize() {
-        sendRequest('POST', '/users/authorize', function(data) {
+        sendRequest('POST', '/users/authorize?scope=' + SCOPE_STRING, function(data) {
           sendToken(data);
         });
         return false;
@@ -157,12 +163,14 @@ block body
           span &nbsp;
         #AuthorizationCard.card(style="display: none")
           .card-body
-            h2.card-title #{query.originNoProtocol} would like your permission to:
+            h4.card-title #{query.originNoProtocol} would like your permission to access the following spaces:
           ul.list-group.list-group-flush
-            li.list-group-item Read your data
-            li.list-group-item Create new data
-            li.list-group-item Modify your data
-            li.list-group-item Delete your data
+            each scopeSet, namespace in scopes
+              li.list-group-item
+                h5 #{namespace}
+                ul.scope-access-list
+                  each scope in scopeSet
+                    li #{scope}
           .card-body
             .btn-toolbar
               a.btn.btn-lg.btn-success.mr-2(href="#" onclick="authorize()") Allow

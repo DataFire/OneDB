@@ -1,4 +1,5 @@
 const MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
+const randomstring = require('randomstring');
 const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
@@ -91,7 +92,7 @@ describe('Database', () => {
 
     expect(ns.data.versions.length).to.equal(1);
     let types = ns.data.versions[0].types;
-    expect(Object.keys(types)).to.have.members(['user_private', 'user', 'schema', 'namespace']);
+    expect(Object.keys(types)).to.have.members(['user_private', 'user', 'schema', 'namespace', 'authorization_token']);
     expect(types.user_private).to.deep.equal({
       schema: {$ref: '/data/core/schema/user_private'},
       initial_acl: dbUtil.PRIVATE_ACL_SET,
@@ -301,7 +302,7 @@ describe('Database', () => {
     const user0DB = await database.user(USERS[0].id);
     const user1DB = await database.user(USERS[1].id);
     const item1 = await user0DB.create('foo', 'thing', {message: "hello"}, "unique");
-    await user0DB.setACL('foo', 'thing', 'unique', {disallow: {read: [USERS[1].id]}});
+    await user0DB.modifyACL('foo', 'thing', 'unique', {disallow: {read: [USERS[1].id]}});
 
     const item1ForUser1 = await user1DB.get('foo', 'thing', 'unique');
     expect(item1ForUser1).to.equal(undefined);
@@ -313,11 +314,11 @@ describe('Database', () => {
     const user0DB = await database.user(USERS[0].id);
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', {message: "Hello!"}, 'thing2');
-    await user0DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_owner']}});
+    await user0DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_owner']}});
     let thing = await user1DB.get('foo', 'thing', 'thing2');
     expect(thing).to.equal(undefined);
     await expectError(user1DB.update('foo', 'thing', 'thing2', {message: "This is a new string"}), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
+    await expectError(user1DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(user1DB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
@@ -326,7 +327,7 @@ describe('Database', () => {
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', {message: "Hello"});
     await user1DB.create('foo', 'thing', {message: "Goodbye"}, 'thing2');
-    await user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
+    await user1DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
     let items = await user0DB.getAll('foo', 'thing');
     expect(items.length).to.equal(2);
     expect(items[0].data).to.deep.equal({message: "Goodbye"});
@@ -415,14 +416,14 @@ describe('Database', () => {
   it('should not allow invalid ACL', async () => {
     const userDB = await database.user(USERS[0].id);
     await userDB.create('foo', 'thing', {message: "Hello"}, 'thing2')
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: {}}}), /ACL is invalid. allow.read should be array/);
+    await expectError(userDB.modifyACL('foo', 'thing', 'thing2', {allow: {read: {}}}), /ACL is invalid. allow.read should be array/);
   });
 
   it('should allow user to update ACL', async () => {
     const user0DB = await database.user(USERS[0].id);
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', {message: "Hello"}, 'thing2')
-    await user0DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all'], write: ['_all']}});
+    await user0DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all'], write: ['_all']}});
     await user1DB.update('foo', 'thing', 'thing2', {message: "Goodbye"});
     let thing = await user0DB.get('foo', 'thing', 'thing2');
     expect(thing.data.message).to.equal("Goodbye");
@@ -432,16 +433,16 @@ describe('Database', () => {
     const user0DB = await database.user(USERS[0].id);
     const user1DB = await database.user(USERS[1].id);
     await user0DB.create('foo', 'thing', {message: "Hello"}, 'thing2')
-    await user0DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
+    await user0DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
     await expectError(user1DB.update('foo', 'thing', 'thing2', {message: "This is a new string"}), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(user1DB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
+    await expectError(user1DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(user1DB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
   it('should allow blacklisting access to thing2', async () => {
     const user1DB = await database.user(USERS[1].id);
     await user1DB.create('foo', 'thing', {message: "Hello"}, 'thing2');
-    await user1DB.setACL('foo', 'thing', 'thing2', {
+    await user1DB.modifyACL('foo', 'thing', 'thing2', {
       allow: {read: ['_all']},
       disallow: {read: [USERS[2].id]}
     });
@@ -460,7 +461,7 @@ describe('Database', () => {
   it('should allow transfer of ownership', async () => {
     const userDB = await database.user(USERS[1].id);
     await userDB.create('foo', 'thing', {message: "Hello"}, 'thing2');
-    await userDB.setACL('foo', 'thing', 'thing2', {owner: USERS[0].id, allow: {read: ['_all']}});
+    await userDB.modifyACL('foo', 'thing', 'thing2', {owner: USERS[0].id, allow: {read: ['_all']}});
     const item = await userDB.get('foo', 'thing', 'thing2');
     expect(item.acl.owner).to.equal(USERS[0].id);
   });
@@ -468,21 +469,69 @@ describe('Database', () => {
   it('should not allow updates from original owner after owner transfer', async () => {
     const userDB = await database.user(USERS[1].id);
     await userDB.create('foo', 'thing', {message: "Hello"}, 'thing2');
-    await userDB.setACL('foo', 'thing', 'thing2', {owner: USERS[0].id});
+    await userDB.modifyACL('foo', 'thing', 'thing2', {owner: USERS[0].id});
     await expectError(userDB.update('foo', 'thing', 'thing2', {message: "This is a new string"}), /User .* cannot update foo\/thing\/thing2/);
-    await expectError(userDB.setACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
+    await expectError(userDB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
     await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
   });
 
   it('should allow updates from new owner after owner transfer', async () => {
     const user1DB = await database.user(USERS[1].id);
     await user1DB.create('foo', 'thing', {message: "Hello"}, 'thing2');
-    await user1DB.setACL('foo', 'thing', 'thing2', {owner: USERS[0].id});
+    await user1DB.modifyACL('foo', 'thing', 'thing2', {owner: USERS[0].id});
     const user0DB = await database.user(USERS[0].id);
     await user0DB.update('foo', 'thing', 'thing2', {message: "This is a new string"});
     const item = await user0DB.get('foo', 'thing', 'thing2');
     expect(item.data.message).to.equal("This is a new string");
   });
+
+  it('should support token based auth', async () => {
+    const token = randomstring.generate(64);
+    await database.addToken('user1@example.com', token, {});
+
+    const user = await database.signInWithToken(token)
+    expect(user.id).to.equal(USERS[0].id);
+    expect(user.permissions).to.deep.equal({});
+
+    await expectError(database.signInWithToken('foob'), /The provided token is invalid/);
+  });
+
+  it('should respect permissions', async () => {
+    let permissions = {};
+    let userDB = await database.user(USERS[1].id, permissions)
+    const schema = await userDB.get('core', 'schema', 'user');
+    expect(schema.data.type).to.equal('object');
+    await expectError(userDB.create('foo', 'thing', {message: 'hello'}), /This app does not have permission to create items in foo\/thing/);
+
+    permissions = {foo: ['create']}
+    userDB = await database.user(USERS[1].id, permissions);
+    await userDB.create('foo', 'thing', {message: 'hello'}, 'mything');
+    let thing = await userDB.get('foo', 'thing', 'mything');
+    expect(thing.data.message).to.equal('hello');
+
+    await expectError(userDB.create('core', 'schema', {type: 'object'}), /This app does not have permission to create items in core\/schema/);
+    await expectError(userDB.modifyACL('foo', 'thing', 'mything', {allow: {read: ['_owner']}}), /This app does not have permission to modify ACL for foo\/thing/)
+
+    permissions = {foo: ['modify_acl']}
+    userDB = await database.user(USERS[1].id, permissions);
+    thing = await userDB.get('foo', 'thing', 'mything');
+    expect(thing.data.message).to.equal('hello');
+    await userDB.modifyACL('foo', 'thing', 'mything', {allow: {read: ['_owner']}});
+    thing = await userDB.get('foo', 'thing', 'mything');
+    expect(thing).to.equal(undefined);
+
+    permissions = {foo: ['read']};
+    userDB = await database.user(USERS[1].id, permissions);
+    thing = await userDB.get('foo', 'thing', 'mything');
+    expect(thing.data.message).to.equal('hello');
+    await expectError(userDB.destroy('foo', 'thing', 'mything'), /This app does not have permission to destroy foo\/thing/);
+
+    permissions = {foo: ['destroy', 'read']}
+    userDB = await database.user(USERS[1].id, permissions);
+    await userDB.destroy('foo', 'thing', 'mything');
+    thing = await userDB.get('foo', 'thing', 'mything');
+    expect(thing).to.equal(undefined);
+  })
 
   it('should allow namespace with initial_acl', async () => {
     const userDB = await database.user(USERS[0].id);

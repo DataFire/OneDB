@@ -14,6 +14,8 @@ const DEFAULT_SORT = {'info.updated': -1};
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
 
+const AUTH_TOKEN_EXPIRATION_DAYS = 1;
+
 class Database {
   constructor(opts={}) {
     if (typeof opts == 'string') {
@@ -44,9 +46,9 @@ class Database {
     }
   }
 
-  async user(user) {
+  async user(user, permissions) {
     if (!this.db) return fail("Database not initialized");
-    const db = new DatabaseForUser({db: this.db, user});
+    const db = new DatabaseForUser({db: this.db, user, permissions});
     await db.initialize();
     return db;
   }
@@ -89,15 +91,21 @@ class Database {
     if (updated.result.nModified !== 1) return fail("User not found", 404);
   }
 
-  async addToken(email, token) {
+  async addToken(email, token, permissions={}) {
     // TODO: remove old tokens
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
-    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
-    if (existing.length !== 1) return fail(`User ${email} not found`, 401);
-    await db.append('core', 'user_private', existing[0].id, {tokens: [token]});
+    const userCol = db.getCollection('core', 'user_private');
+    const existing = await userCol.findOne({'data.email': email});
+    if (!existing) return fail(`User ${email} not found`, 401);
+    await db.create('core', 'authorization_token', {
+      username: existing.data.id,
+      token,
+      permissions,
+      expires: moment().add(AUTH_TOKEN_EXPIRATION_DAYS, 'days').toISOString(),
+    });
   }
 
   async signIn(email, password) {
@@ -115,10 +123,14 @@ class Database {
 
   async signInWithToken(token) {
     const db = await this.user(dbUtil.USER_KEYS.system);
-    const col = db.getCollection('core', 'user_private');
-    const user = await col.find({'data.tokens': {$in: [token]}}).toArray();
-    if (user.length !== 1) return fail(`The provided token is invalid`, 401);
-    return user[0].data;
+    const tokenCol = db.getCollection('core', 'authorization_token');
+    const tokenQuery = {'data.token': token, 'data.expires': {$gt: moment().toISOString()}}
+    const tokenObj = await tokenCol.findOne(tokenQuery);
+    if (!tokenObj) return fail("The provided token is invalid", 401);
+    const userCol = db.getCollection('core', 'user_private');
+    const userObj = await userCol.findOne({'data.id': tokenObj.data.username});
+    if (!userObj) return fail("The provided token is invalid", 401);
+    return {id: userObj.data.id, permissions: tokenObj.data.permissions};
   }
 }
 
@@ -126,6 +138,7 @@ class DatabaseForUser {
   constructor(opts) {
     this.db = opts.db;
     this.userID = opts.user;
+    this.permissions = opts.permissions;
   }
 
   async initialize() {
@@ -142,6 +155,12 @@ class DatabaseForUser {
   getCollection(namespace, type) {
     const collectionName = namespace + '-' + type;
     return this.db.collection(collectionName);
+  }
+
+  checkPermission(namespace, type, access) {
+    if (!this.permissions) return true;
+    const allowed = this.permissions[namespace];
+    return allowed && allowed.includes(access);
   }
 
   async validate(obj, schema=null, namespace='', type='') {
@@ -177,21 +196,46 @@ class DatabaseForUser {
     return {schemaInfo, namespaceInfo: nsVersion};
   }
 
-  buildQuery(query={}, accesses='read', modifyACL=false) {
+  buildQuery(namespace, type, query={}, accesses='read', modifyACL=false) {
     if (accesses === 'force') return query;
     let accessType = modifyACL ? 'modify' : 'allow';
     query.$and = query.$and || [];
     if (typeof accesses === 'string') accesses = [accesses];
+
+    let ownerOK = true;
+    if (modifyACL) {
+      if (!this.checkPermission(namespace, type, 'modify_acl')) {
+        return fail(`This app does not have permission to modify ACL for ${namespace}/${type}`, 401);
+      }
+    } else {
+      for (let access of accesses) {
+        if (!this.checkPermission(namespace, type, access)) {
+          if (access === 'read') {
+            ownerOK = false;
+          } else {
+            return fail(`This app does not have permission to ${access} ${namespace}/${type}`, 401);
+          }
+        }
+      }
+    }
+
     accesses.forEach(access => {
       let allowKey = ['acl', accessType, access].join('.');
       let disallowKey = ['acl', 'disallow', access].join('.');
-      const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
-      ownerQuery.$and[1][allowKey] = {$in: [dbUtil.USER_KEYS.owner]};
-      ownerQuery.$and[2][disallowKey] = {$nin: [dbUtil.USER_KEYS.owner]};
-      const accessQuery = {$and: [{}, {}]};
-      accessQuery.$and[0][allowKey] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
-      accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
-      query.$and.push({$or: [ownerQuery, accessQuery]});
+      if (ownerOK) {
+        const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
+        ownerQuery.$and[1][allowKey] = {$in: [dbUtil.USER_KEYS.owner]};
+        ownerQuery.$and[2][disallowKey] = {$nin: [dbUtil.USER_KEYS.owner]};
+        const accessQuery = {$and: [{}, {}]};
+        accessQuery.$and[0][allowKey] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
+        accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
+        query.$and.push({$or: [ownerQuery, accessQuery]});
+      } else {
+        const accessQuery = {$and: [{}, {}]}
+        accessQuery.$and[0][allowKey] = {$in: [dbUtil.USER_KEYS.all]};
+        accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
+        query.$and.push(accessQuery);
+      }
     });
     return query;
   }
@@ -253,7 +297,7 @@ class DatabaseForUser {
   async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0) {
     if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
     const col = this.getCollection(namespace, type);
-    query = this.buildQuery(query, access);
+    query = this.buildQuery(namespace, type, query, access);
     let arr = await col.find(query).sort(sort).skip(skip).limit(limit).toArray();
     arr.forEach(item => {
       item.data = dbUtil.decodeDocument(item.data);
@@ -263,7 +307,7 @@ class DatabaseForUser {
 
   async count(namespace, type, query) {
     const col = this.getCollection(namespace, type);
-    query = this.buildQuery(query, 'read');
+    query = this.buildQuery(namespace, type, query, 'read');
     let count = await col.find(query).count();
     return count;
   }
@@ -334,6 +378,9 @@ class DatabaseForUser {
     if (this.user.data.items >= config.maxItemsPerUser) {
       return fail(`You have hit your maximum of ${config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
     }
+    if (!this.checkPermission(namespace, type, 'create')) {
+      return fail(`This app does not have permission to create items in ${namespace}/${type}`, 401);
+    }
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
     let err = validate.validators.itemID(id);
@@ -390,7 +437,7 @@ class DatabaseForUser {
   }
 
   async update(namespace, type, id, data) {
-    const query = this.buildQuery({id}, 'write');
+    const query = this.buildQuery(namespace, type, {id}, 'write');
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
     data = await this.disassemble(namespace, data, schemaInfo.data)
     await this.validate({data}, schemaInfo.data, namespace, type);
@@ -406,7 +453,7 @@ class DatabaseForUser {
   }
 
   async append(namespace, type, id, data) {
-    const query = this.buildQuery({id}, 'append');
+    const query = this.buildQuery(namespace, type, {id}, 'append');
     const col = this.getCollection(namespace, type);
     const existing = await this.get(namespace, type, id, 'force');
     if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
@@ -444,7 +491,7 @@ class DatabaseForUser {
     }
   }
 
-  async setACL(namespace, type, id, acl) {
+  async modifyACL(namespace, type, id, acl) {
     const copyACL = JSON.parse(JSON.stringify(acl)); // Make a copy where defaults are set
     await this.validate({acl: Object.assign({owner: 'dummy'}, copyACL)});
     const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
@@ -462,7 +509,7 @@ class DatabaseForUser {
         }
       }
     }
-    query = this.buildQuery(query, necessaryPermissions, true);
+    query = this.buildQuery(namespace, type, query, necessaryPermissions, true);
     const col = this.getCollection(namespace, type);
     const result = await col.update(query, update);
     if (result.result.n === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
@@ -471,7 +518,7 @@ class DatabaseForUser {
 
   async destroy(namespace, type, id) {
     let query = {id};
-    query = this.buildQuery(query, 'destroy');
+    query = this.buildQuery(namespace, type, query, 'destroy');
     const col = this.getCollection(namespace, type);
     const result = await col.remove(query, {justOne: true});
     if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);

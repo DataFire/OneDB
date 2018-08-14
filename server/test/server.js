@@ -93,18 +93,18 @@ describe("Server", () => {
   });
 
   it('should list schemas', async () => {
-    let resp = await axios.get(HOST + '/data/core/schema', {validateStatus: () => true});
-    expect(resp.data.total).to.equal(4);
-    expect(resp.data.items.length).to.equal(4);
+    let resp = await axios.get(HOST + '/data/core/schema');
+    expect(resp.data.total).to.equal(5);
+    expect(resp.data.items.length).to.equal(5);
 
-    resp = await axios.get(HOST + '/data/core/schema?pageSize=3', {validateStatus: () => true});
-    expect(resp.data.total).to.equal(4);
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=3');
+    expect(resp.data.total).to.equal(5);
     expect(resp.data.items.length).to.equal(3);
     expect(resp.data.hasNext).to.equal(true);
 
-    resp = await axios.get(HOST + '/data/core/schema?pageSize=3&skip=3', {validateStatus: () => true});
-    expect(resp.data.total).to.equal(4);
-    expect(resp.data.items.length).to.equal(1);
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=3&skip=3');
+    expect(resp.data.total).to.equal(5);
+    expect(resp.data.items.length).to.equal(2);
     expect(resp.data.hasNext).to.equal(false);
   })
 
@@ -192,6 +192,16 @@ describe("Server", () => {
     expect(resp.data.message).to.equal('That operation is restricted');
   });
 
+  it('should not allow directly adding token', async () => {
+    const token = {
+      token: 'abcd',
+      permissions: {},
+    }
+    const resp = await axios.post(HOST + '/data/core/authorization_token', token, {auth: USER_1, validateStatus: () => true});
+    expect(resp.status).to.equal(401);
+    expect(resp.data.message).to.equal('That operation is restricted');
+  })
+
   it('should allow POST with auth', async () => {
     const data = {type: 'object'};
     let resp = await axios.post(HOST + '/data/core/schema/foo', data, {auth: USER_1, validateStatus: () => true});
@@ -233,7 +243,7 @@ describe("Server", () => {
   });
 
   it('should allow authorization', async () => {
-    let resp = await axios.post(HOST + '/users/authorize', {}, {auth: USER_1, validateStatus: () => true});
+    let resp = await axios.post(HOST + '/users/authorize?scope=core:create', {}, {auth: USER_1});
     expect(resp.data).to.be.a('string');
     let data = {type: 'object'};
     resp = await axios.post(HOST + '/data/core/schema/bar', data, {headers: {Authorization: 'Bearer ' + resp.data}});

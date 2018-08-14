@@ -2,23 +2,30 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const fail = require('../fail');
 const errorGuard = require('../error-guard');
+const validate = require('../validate');
+const util = require('../util');
 
 module.exports = errorGuard(async (req, res, next) => {
-  let auth = req.get('authorization');
+  const auth = req.get('authorization');
   if (!auth) {
     return fail("No authorization header", 401)
   }
-  let parts = auth.split(' ');
+  const parts = auth.split(' ');
   if (parts[0] === 'Basic') {
-    let creds = (new Buffer(parts[1], 'base64')).toString().split(':');
+    const creds = (new Buffer(parts[1], 'base64')).toString().split(':');
     if (creds.length !== 2) return fail("Invalid authorization header", 401);
-    email = creds[0];
-    password = creds[1];
+    const email = creds[0];
+    const password = creds[1];
+    const err = validate.validators.scope(req.query.scope);
+    if (err) {
+      return res.status(400).send(err);
+    }
+    const permissions = util.scopes(req.query.scope);
     req.user = await req.systemDB.signIn(email, password);
-    let data = {email};
-    let opts = {expiresIn: '1d'};
-    let token = jwt.sign(data, config.jwtSecret, opts);
-    await req.systemDB.addToken(email, token);
+    const data = {email, permissions};
+    const opts = {expiresIn: '1d'};
+    const token = jwt.sign(data, config.jwtSecret, opts);
+    await req.systemDB.addToken(email, token, permissions);
     res.json(token);
   } else {
     return fail("Invalid authorization header", 401);

@@ -23,6 +23,5 @@ module.exports = {
         expires: {type: 'string', format: 'date-time'},
       }
     },
-    tokens: {type: 'array', items: {type:'string'}},
   }
 }
