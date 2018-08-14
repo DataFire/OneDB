@@ -1,6 +1,8 @@
 const expect = require('chai').expect;
 const Client = require('../lib/client');
 const Server = require('../../server').Server;
+const config = require('../../server/lib/config');
+config.email = {file: '/dev/null'}
 const MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
 
 const PORT = 3333;

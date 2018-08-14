@@ -1,5 +1,6 @@
 const mongodb = require('mongodb');
 const randomstring = require("randomstring");
+const moment = require('moment');
 const validate = require('./validate');
 const dbUtil = require('./db-util');
 const util = require('./util');
@@ -57,19 +58,35 @@ class Database {
     return existing.length ? this.getAvailableUsername() : username;
   }
 
-  async createUser(email, password, username=undefined) {
+  async createUser(email, password, username=undefined, confirmation_code=undefined) {
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
-    const user = await db.create('core', 'user', {publicKey: ''}, username);
+    const user = await db.create('core', 'user', {}, username);
     const creds = await dbUtil.computeCredentials(password);
     creds.email = email;
     creds.id = user.id;
+    creds.email_confirmation = {
+      code: confirmation_code,
+      expires: moment().add(1, 'days').toISOString()
+    };
     const userPrivate = await db.create('core', 'user_private', creds);
     return user;
+  }
+
+  async setPassword(id, password) {
+    const err = validate.validators.password(password);
+    if (err) return fail(err, 400);
+    const creds = await dbUtil.computeCredentials(password);
+    const update = {}
+    for (let key in creds) {
+      update['data.' + key] = creds[key];
+    }
+    const updated = await this.db.collection('core-user_private').update({'data.id': id}, {$set: update});
+    if (updated.result.nModified !== 1) return fail("User not found", 404);
   }
 
   async addToken(email, token) {
@@ -92,7 +109,7 @@ class Database {
     if (!existing.length) return fail(`User ${email} not found`, 401);
     const user = existing[0].data;
     const isValid = await dbUtil.checkPassword(password, user.hash, user.salt);
-    if (!isValid) return fail(`Invalid password for ${email}`);
+    if (!isValid) return fail(`Invalid password for ${email}`, 401);
     return user.id;
   }
 

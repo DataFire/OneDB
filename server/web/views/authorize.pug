@@ -1,24 +1,5 @@
-doctype html
-html
-  head
-    link(rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css")
-    link(rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css")
-    style.
-      body {
-        background-color: #eee;
-        padding-top: 25px;
-      }
-      .btn {
-        min-width: 150px;
-      }
-      .form {
-        background-color: #fff;
-      }
-    script(
-      src="https://code.jquery.com/jquery-3.3.1.min.js"
-      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-      crossorigin="anonymous")
-    script(src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js")
+extends layout.pug
+block head
     script.
       var ORIGIN = !{JSON.stringify(query.origin)};
 
@@ -147,7 +128,7 @@ html
         })
       });
 
-  body
+block body
     mixin user-form(signUp=false)
       form(onsubmit= signUp ? 'return signUp()' : 'return signIn()')
         .form-group
@@ -170,44 +151,43 @@ html
           button.btn.btn-success(type="submit")
             i.fa.fa-spin.fa-refresh(style="display: none")
             span #{signUp ? 'Sign up' : 'Sign in'}
-    .container
-      .row
-        .col-12.col-md-6.offset-md-3
-          .alert.alert-danger(style="opacity: 0")
-            span &nbsp;
-          #AuthorizationCard.card(style="display: none")
-            .card-body
-              h2.card-title #{query.originNoProtocol} would like your permission to:
-            ul.list-group.list-group-flush
-              li.list-group-item Read your data
-              li.list-group-item Create new data
-              li.list-group-item Modify your data
-              li.list-group-item Delete your data
-            .card-body
-              .btn-toolbar
-                a.btn.btn-lg.btn-success.mr-2(href="#" onclick="authorize()") Allow
-                a.btn.btn-lg.btn-light(href="#" onclick="deny()") Deny
-            .card-body
-              p Signed in as <span class="username"></span>. 
-                a(onclick="showLogIn()" href="#") Switch accounts
-          #LogInCard.card
-            .card-body
-              h1.text-center Sign in with FreeDB
-              p.
-                <b>Lucky you!</b>  #{query.originNoProtocol} uses FreeDB,
-                which means you will always own your data.
-                Your data will be stored here at #{config.hostWithoutProtocol} - 
-                you can come back here anytime to modify or delete your data.
-              p
-                a(href="FreeDB" target="_blank") Learn more
-                span  about how FreeDB gives usesrs more control over their data.
-              #SignIn
-                h3 Sign in 
-                  small
-                    a(onclick="showSignUp()" href="#") or create a new account
-                +user-form()
-              #SignUp(style="display: none")
-                h3 Sign up 
-                  small
-                    a(onclick="showSignIn()" href="#") or use an existing account
-                +user-form(true)
+    .row
+      .col-12.col-md-6.offset-md-3
+        .alert.alert-danger(style="opacity: 0")
+          span &nbsp;
+        #AuthorizationCard.card(style="display: none")
+          .card-body
+            h2.card-title #{query.originNoProtocol} would like your permission to:
+          ul.list-group.list-group-flush
+            li.list-group-item Read your data
+            li.list-group-item Create new data
+            li.list-group-item Modify your data
+            li.list-group-item Delete your data
+          .card-body
+            .btn-toolbar
+              a.btn.btn-lg.btn-success.mr-2(href="#" onclick="authorize()") Allow
+              a.btn.btn-lg.btn-light(href="#" onclick="deny()") Deny
+          .card-body
+            p Signed in as <span class="username"></span>. 
+              a(onclick="showLogIn()" href="#") Switch accounts
+        #LogInCard.card
+          .card-body
+            h1.text-center Sign in with FreeDB
+            p.
+              <b>Lucky you!</b>  #{query.originNoProtocol} uses FreeDB,
+              which means you will always own your data.
+              Your data will be stored here at #{config.hostWithoutProtocol} - 
+              you can come back here anytime to modify or delete your data.
+            p
+              a(href="FreeDB" target="_blank") Learn more
+              span  about how FreeDB gives usesrs more control over their data.
+            #SignIn
+              h3 Sign in 
+                small
+                  a(onclick="showSignUp()" href="#") or create a new account
+              +user-form()
+            #SignUp(style="display: none")
+              h3 Sign up 
+                small
+                  a(onclick="showSignIn()" href="#") or use an existing account
+              +user-form(true)

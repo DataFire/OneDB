@@ -35,11 +35,11 @@ class Server {
   }
 
   async listen(port=DEFAULT_PORT) {
-    const database = new Database({
+    this.database = new Database({
       mongodb: this.config.mongodb,
       host: this.config.host,
     });
-    await database.initialize();
+    await this.database.initialize();
     this.app = express();
     this.app.set('view engine', 'pug');
     this.app.set('views', npath.join(__dirname, '../web/views'));
@@ -47,7 +47,7 @@ class Server {
     this.app.use(new RateLimit(this.config.rateLimit.all));
 
     this.app.use((req, res, next) => {
-      req.systemDB = database;
+      req.systemDB = this.database;
       next();
     })
     this.app.use(cors());

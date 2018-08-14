@@ -1,4 +1,5 @@
 const MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
+const fs = require('fs');
 const expect = require('chai').expect;
 const axios = require('axios');
 const config = require('../lib/config');
@@ -6,23 +7,34 @@ const Server = require('../lib/server');
 const dbUtil = require('../lib/db-util');
 config.jwtSecret = 'thisisasecret';
 
+
+axios.interceptors.response.use(
+    (response) => response,
+	function (error) {
+		return Promise.reject(error.response.data);
+	});
+
 const mongod = new MongoMemoryServer();
 
 const PORT = 3333;
 const HOST = 'http://localhost:' + PORT;
 const MAX_BYTES = 10000;
-
+const EMAIL_FILE = __dirname + '/email.txt';
 const USER_1 = {
   username: 'me@example.com',
   password: 'thisisasecret',
 }
 
+let server = null;
+
 describe("Server", () => {
-  let oldMaxBytes = config.maxBytesPerItem;
+  const oldMaxBytes = config.maxBytesPerItem;
 
   before(async () => {
     config.maxBytesPerItem = MAX_BYTES;
-    const server = new Server({
+    config.email = {file: EMAIL_FILE};
+    config.host = HOST;
+    server = new Server({
       host: HOST,
       mongodb: await mongod.getConnectionString(),
       rateLimit: {
@@ -38,6 +50,7 @@ describe("Server", () => {
 
   after(() => {
     config.maxBytesPerItem = oldMaxBytes;
+    fs.unlinkSync(EMAIL_FILE);
   })
 
   it('should respond with info', async () => {
@@ -116,6 +129,36 @@ describe("Server", () => {
     USER_1.id = resp.data;
   });
 
+  it('should confirm email', async () => {
+    const userQuery = {'data.email': USER_1.username}
+    let user = await server.database.db.collection('core-user_private').findOne(userQuery);
+    expect(user.data.email_confirmation.confirmed).to.not.equal(true);
+    expect(user.data.email_confirmation.code).to.be.a('string');
+    const email = fs.readFileSync(EMAIL_FILE, 'utf8');
+    const link = email.match(/href="(http.*)"/)[1];
+    let resp = await axios.get(link);
+    user = await server.database.db.collection('core-user_private').findOne(userQuery);
+    expect(user.data.email_confirmation.confirmed).to.equal(true);
+    expect(user.data.email_confirmation.code).to.equal(null);
+  });
+
+  it('should allow password reset', async () => {
+    let resp = await axios.post(HOST + '/users/start_reset_password?email=' + USER_1.username);
+    const email = fs.readFileSync(EMAIL_FILE, 'utf8');
+    const code = email.match(/code=(\w+)/)[1];
+
+    const newPassword = 'thisisadifferentsecret';
+    resp = await axios.post(HOST + '/users/reset_password', {code, newPassword});
+
+    resp = await axios.get(HOST + '/users/me', {auth: USER_1, validateStatus: () => true});
+    expect(resp.status).to.equal(401);
+
+    USER_1.password = newPassword;
+    resp = await axios.get(HOST + '/users/me', {auth: USER_1});
+    expect(resp.status).to.equal(200);
+    expect(resp.data._id).to.equal(USER_1.id);
+  })
+
   it('should suggest usernames', async () => {
     let resp = await axios.get(HOST + '/users/register');
     expect(resp.data).to.be.a('string');
@@ -137,7 +180,7 @@ describe("Server", () => {
 
     resp = await axios.get(HOST + '/users/me', {auth: USER_1});
     expect(resp.status).to.equal(200);
-    expect(resp.data).to.deep.equal({publicKey: "", _id: USER_1.id});
+    expect(resp.data).to.deep.equal({_id: USER_1.id});
   })
 
   it('should not allow directly adding user', async () => {

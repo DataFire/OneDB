@@ -105,9 +105,7 @@ module.exports.CORE_OBJECTS = module.exports.CORE_OBJECTS.concat([{
     id: USER_KEYS.system,
     info: SYSTEM_INFO,
     acl: Object.assign({owner: USER_KEYS.system}, READ_ONLY_ACL_SET),
-    data: {
-      publicKey: '',
-    }
+    data: {}
   }
 }, {
   namespace: 'core',
@@ -116,9 +114,7 @@ module.exports.CORE_OBJECTS = module.exports.CORE_OBJECTS.concat([{
     id: USER_KEYS.all,
     info: SYSTEM_INFO,
     acl: Object.assign({owner: USER_KEYS.system}, READ_ONLY_ACL_SET),
-    data: {
-      publicKey: '',
-    }
+    data: {}
   }
 }, {
   namespace: 'core',
@@ -215,14 +211,10 @@ module.exports.computeCredentials = (password) => {
     crypto.randomBytes(SALT_LENGTH, (err, buf) => {
       if (err) return reject(err);
       result.salt = buf.toString('hex');
-      crypto.randomBytes(VERIFICATION_ID_LENGTH, (err, buf) => {
+      crypto.pbkdf2(password, result.salt, ITERATIONS, KEY_LENGTH, DIGEST_ALGO, (err, hashRaw) => {
         if (err) return reject(err);
-        result.verificationID = buf.toString('hex');
-        crypto.pbkdf2(password, result.salt, ITERATIONS, KEY_LENGTH, DIGEST_ALGO, (err, hashRaw) => {
-          if (err) return reject(err);
-          result.hash = new Buffer(hashRaw, 'binary').toString('hex');
-          resolve(result);
-        });
+        result.hash = new Buffer(hashRaw, 'binary').toString('hex');
+        resolve(result);
       });
     });
   });

@@ -144,7 +144,7 @@ describe('Database', () => {
 
   it('should allow creating users', async () => {
     let user = await database.createUser('me@example.com', 'abcdabcd');
-    expect(user.data).to.deep.equal({publicKey: ''});
+    expect(user.data).to.deep.equal({});
   });
 
   it('should not allow duplicate email', async () => {
