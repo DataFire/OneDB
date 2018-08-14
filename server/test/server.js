@@ -200,8 +200,8 @@ describe("Server", () => {
   });
 
   it('should respect max bytes per item', async () => {
-    let data = '';
-    for (let i = 0; i < MAX_BYTES; ++i) data += 'z';
+    let data = {message: ''};
+    for (let i = 0; i < MAX_BYTES; ++i) data.message += 'z';
     const headers = {'Content-Type': 'application/json'};
     const resp = await axios.post(HOST + '/data/foo/foo', JSON.stringify(data), {headers, auth: USER_1, validateStatus: () => true});
     expect(resp.status).to.equal(413);

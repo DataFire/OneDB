@@ -1,13 +1,23 @@
 const npath = require('path');
+const fs = require('fs');
 const express = require('express');
 const RateLimit = require('express-rate-limit');
 const cors = require('cors');
+const bodyParser = require('body-parser');
 const validate = require('./validate');
 const routes = require('./routes');
 const middleware = require('./middleware');
 const defaultConfig = require('./config');
 const errorGuard = require('./error-guard');
 const Database = require('./database');
+
+const plugins = [];
+const PLUGIN_DIR = __dirname + '/plugins';
+if (fs.existsSync(PLUGIN_DIR)) {
+  fs.readdirSync(PLUGIN_DIR).forEach(plugin => {
+    plugins.push(require(npath.join(PLUGIN_DIR, plugin)));
+  });
+}
 
 const DEFAULT_PORT = 3000;
 
@@ -36,11 +46,19 @@ class Server {
     this.app.enable('trust proxy');
     this.app.use(new RateLimit(this.config.rateLimit.all));
 
+    this.app.use((req, res, next) => {
+      req.systemDB = database;
+      next();
+    })
     this.app.use(cors());
-    this.app.use(routes.info());
-    this.app.use('/users', new RateLimit(this.config.rateLimit.users), routes.users(database));
+    this.app.use(routes.info);
 
-    this.app.use(middleware.authenticate(database));
+    for (let plugin of plugins) {
+      this.app.use(plugin);
+    }
+
+    this.app.use('/users', new RateLimit(this.config.rateLimit.users), routes.users);
+    this.app.use(middleware.authenticate);
 
     let getRateLimit = new RateLimit(this.config.rateLimit.getData);
     let mutateRateLimit = new RateLimit(this.config.rateLimit.mutateData);
@@ -51,7 +69,8 @@ class Server {
         mutateRateLimit(req, res, next);
       }
     });
-    this.app.use('/data', routes.crud(database));
+    this.app.use('/data', bodyParser.json({strict: false, limit: this.config.maxBytesPerItem}));
+    this.app.use('/data', routes.crud);
 
     this.app.use((err, req, res, next) => {
       res.status(err.statusCode || 500).json({message: err.message || "Unknown error"});
