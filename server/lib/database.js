@@ -26,15 +26,18 @@ class Database {
     this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
     for (let obj of dbUtil.CORE_OBJECTS) {
-      let coll = this.db.collection(obj.namespace + '-' + obj.type);
-      let existing = await coll.find({id: obj.document.id}).toArray();
-      if (!existing[0]) {
-        let doc = {
-          id: obj.document.id,
-          info: obj.document.info,
-          acl: JSON.parse(JSON.stringify(obj.document.acl)),
-          data: dbUtil.encodeDocument(JSON.parse(JSON.stringify(obj.document.data))),
-        }
+      const coll = this.db.collection(obj.namespace + '-' + obj.type);
+      const query = {id: obj.document.id};
+      const existing = await coll.find(query).toArray();
+      const doc = {
+        id: obj.document.id,
+        info: obj.document.info,
+        acl: JSON.parse(JSON.stringify(obj.document.acl)),
+        data: dbUtil.encodeDocument(JSON.parse(JSON.stringify(obj.document.data))),
+      }
+      if (existing[0]) {
+        await coll.update(query, {$set: doc});
+      } else {
         await coll.insert(doc);
       }
     }
