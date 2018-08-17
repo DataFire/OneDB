@@ -372,6 +372,7 @@ module.exports = function() {
   }
 
   window._freeDBHelpers = {
+    showAdvanced: false,
     addHost: function() {
       var newHost = {location: DEFAULT_SECONDARY_LOCATION};
       self.hosts.secondary.push(newHost);
@@ -397,7 +398,8 @@ module.exports = function() {
     },
     toggleAdvancedOptions: function() {
       var el = document.getElementById('_FreeDBAdvancedOptions');
-      if (el.style.display === 'none') {
+      _freeDBHelpers.showAdvanced = !_freeDBHelpers.showAdvanced;
+      if (_freeDBHelpers.showAdvanced) {
         el.setAttribute('style', '');
       } else {
         el.setAttribute('style', 'display: none');
@@ -410,11 +412,11 @@ module.exports = function() {
 <p>This is where your data will be stored.</p>
 ${hostTemplate(this.hosts.primary, -1)}
 <a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
-<div id="_FreeDBAdvancedOptions" style="display: none">
+<div id="_FreeDBAdvancedOptions" style="#{ _freeDBHelpers.showAdvanced ? '' : 'display: none'">
   <hr>
   <h4>Broadcast</h4>
   <p>
-    Changes to your data will be broadcast to this host.
+    Changes to your data will be broadcast to these hosts.
     They won't store your data - they'll
     just get a link to the data on your primary host.
   </p>
@@ -422,6 +424,8 @@ ${hostTemplate(this.hosts.primary, -1)}
     Note: removing hosts may prevent you from continuing interactions with other users.
     ${this.hosts.secondary.map(hostTemplate).join('\n')}
     -${this.hosts.secondary.map(hostTemplate).join('\n')}
+  </p>
+  <p>
     <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</a>
   </p>
   <h4>Core</h4>
