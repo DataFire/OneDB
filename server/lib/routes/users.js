@@ -55,11 +55,13 @@ router.get('/me', cors(), middleware.authenticate, (req, res) => {
 });
 
 router.get('/authorize', errorGuard((req, res) => {
+  req.query.scope = req.query.scope || '';
   const error = validate.validators.url(req.query.origin || '') || validate.validators.scope(req.query.scope);
   if (error) return res.status(400).send(error);
   req.query.originNoProtocol = replaceProtocol(req.query.origin);
-  const scopes = util.scopes(req.query.scope);
-  res.render('authorize', {query: req.query, config: config, scopes: util.scopes(req.query.scope)});
+  const scopes = req.query.scope ? util.scopes(req.query.scope) : null;
+  console.log('scope', scopes);
+  res.render('authorize', {query: req.query, config, scopes});
 }));
 router.post('/authorize', middleware.authorize);
 

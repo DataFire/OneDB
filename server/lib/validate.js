@@ -126,6 +126,7 @@ let validators = module.exports.validators = {
   },
   scope: scope => {
     if (typeof scope !== 'string') return "Scope not specified"
+    if (scope === '') return; // TODO: disallow empty scope
     if (!REGEX.scope.test(scope)) return "Requested scope is invalid"
   }
 }

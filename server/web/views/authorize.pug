@@ -119,7 +119,11 @@ block head
       }
 
       function authorize() {
-        sendRequest('POST', '/users/authorize?scope=' + SCOPE_STRING, function(data) {
+        var url = '/users/authorize'
+        if (SCOPE_STRING) {
+          url += '?scope=' + SCOPE_STRING;
+        }
+        sendRequest('POST', url, function(data) {
           sendToken(data);
         });
         return false;
@@ -164,13 +168,18 @@ block body
         #AuthorizationCard.card(style="display: none")
           .card-body
             h4.card-title #{query.originNoProtocol} would like your permission to access the following spaces:
-          ul.list-group.list-group-flush
-            each scopeSet, namespace in scopes
+          if scopes
+            ul.list-group.list-group-flush.with-scope
+              each scopeSet, namespace in scopes
+                li.list-group-item
+                  h5 #{namespace}
+                  ul.scope-access-list
+                    each scope in scopeSet
+                      li #{scope}
+          else
+            ul.list-group.list-group-flush.non-scope
               li.list-group-item
-                h5 #{namespace}
-                ul.scope-access-list
-                  each scope in scopeSet
-                    li #{scope}
+                span Read, Write, Create, and Destroy ALL your data in FreeDB
           .card-body
             .btn-toolbar
               a.btn.btn-lg.btn-success.mr-2(href="#" onclick="authorize()") Allow

@@ -16,11 +16,13 @@ module.exports = errorGuard(async (req, res, next) => {
     if (creds.length !== 2) return fail("Invalid authorization header", 401);
     const email = creds[0];
     const password = creds[1];
+    req.query.scope = req.query.scope || '';
     const err = validate.validators.scope(req.query.scope);
     if (err) {
       return res.status(400).send(err);
     }
-    const permissions = util.scopes(req.query.scope);
+    // TODO: disallow empty scope
+    const permissions = req.query.scope ? util.scopes(req.query.scope) : null;
     req.user = await req.systemDB.signIn(email, password);
     const data = {email, permissions};
     const opts = {expiresIn: '1d'};

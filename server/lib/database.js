@@ -103,7 +103,7 @@ class Database {
     await db.create('core', 'authorization_token', {
       username: existing.data.id,
       token,
-      permissions,
+      permissions: permissions || undefined,
       expires: moment().add(AUTH_TOKEN_EXPIRATION_DAYS, 'days').toISOString(),
     });
   }
