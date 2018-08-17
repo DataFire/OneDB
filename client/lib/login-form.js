@@ -16,7 +16,7 @@ module.exports = function() {
     return idx === -1 ? self.hosts.primary : self.hosts.secondary[idx];
   }
 
-  window._freeDBHelpers = {
+  window._freeDBHelpers = window._freeDBHelpers || {
     showAdvanced: false,
     addHost: function() {
       var newHost = {location: DEFAULT_SECONDARY_LOCATION};
