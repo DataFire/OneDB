@@ -75,10 +75,10 @@
 /*!***************************************************!*\
   !*** /home/ubuntu/git/freedb/.server-config.json ***!
   \***************************************************/
-/*! exports provided: jwtSecret, mongodb, host, default */
+/*! exports provided: jwtSecret, mongodb, host, email, default */
 /***/ (function(module) {
 
-module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://localhost:27000","host":"https://alpha.baasket.org"};
+module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://localhost:27000","host":"https://alpha.baasket.org","email":{"_SES":{"region":"us-west-2","secretAccessKey":"CVoVbvO1w4UBa0fHjrd/gCRtlPrNI7T+2lRBHTfw","accessKeyId":"AKIAI4PMHIQJG4FF2HDQ"},"from":"no-reply@baasket.org","file":"email.txt"}};
 
 /***/ }),
 
@@ -199,6 +199,9 @@ class Client {
 
     let origin = window.location.protocol + '//' + window.location.host;
     let path = '/users/authorize?origin=' + encodeURIComponent(origin);
+    if (this.options.scope) {
+      path += '&scope=' + this.options.scope.join('+');
+    }
     window.open(this.hosts.authorizing.location + path, '_blank');
   }
 
@@ -370,7 +373,7 @@ module.exports = function() {
 
   window._freeDBHelpers = {
     addHost: function() {
-      let newHost = {location: DEFAULT_SECONDARY_LOCATION};
+      var newHost = {location: DEFAULT_SECONDARY_LOCATION};
       self.hosts.secondary.push(newHost);
       self.getUser(newHost);
     },
@@ -388,24 +391,46 @@ module.exports = function() {
       self.authorize(host);
     },
     logout: function(idx) {
-      let host = getHost(idx);
+      var host = getHost(idx);
       host.username = host.password = host.token = null;
       self.getUser(host);
+    },
+    toggleAdvancedOptions: function() {
+      var el = document.getElementById('_FreeDBAdvancedOptions');
+      if (el.style.display === 'none') {
+        el.setAttribute('style', '');
+      } else {
+        el.setAttribute('style', 'display: none');
+      }
     }
   }
 
   return `
-<h4>Primary</h4>
+<h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
 ${hostTemplate(this.hosts.primary, -1)}
-<hr>
-<h4>Secondary</h4>
-<p>
-  You can optionally broadcast changes to other hosts. They won't store your data - they'll
-  just get a link to the data on your primary host.
-</p>
-${this.hosts.secondary.map(hostTemplate).join('\n')}
-<a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a secondary host</a>
+<a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
+<div id="_FreeDBAdvancedOptions" style="display: none">
+  <hr>
+  <h4>Broadcast</h4>
+  <p>
+    Changes to your data will be broadcast to this host.
+    They won't store your data - they'll
+    just get a link to the data on your primary host.
+  </p>
+  <p>
+    Note: removing hosts may prevent you from continuing interactions with other users.
+    ${this.hosts.secondary.map(hostTemplate).join('\n')}
+    -${this.hosts.secondary.map(hostTemplate).join('\n')}
+    <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</a>
+  </p>
+  <h4>Core</h4>
+  <p>
+    The Core host contains data schemas and other information.
+    Only change this if you know what you're doing.
+    ${hostTemplate(this.hosts.core, -1)}
+  </p>
+</div>
 `
 }
 
@@ -6966,7 +6991,8 @@ var FreeDBService = /** @class */ (function () {
             },
             onUser: function (user) {
                 _this.zone.run(function (_) { return _this.onUser.next(user); });
-            }
+            },
+            scope: ['alpha_todo:read', 'alpha_todo:create', 'alpha_todo:write', 'alpha_todo:destroy', 'alpha_todo:modify_acl', 'alpha_todo:append'],
         });
         this.maybeRestore();
         this.onUser.subscribe(function (user) {
