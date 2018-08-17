@@ -57,7 +57,7 @@ module.exports = function() {
 <p>This is where your data will be stored.</p>
 ${hostTemplate(this.hosts.primary, -1)}
 <a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
-<div id="_FreeDBAdvancedOptions" style="#{ _freeDBHelpers.showAdvanced ? '' : 'display: none'">
+<div id="_FreeDBAdvancedOptions" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
   <h4>Broadcast</h4>
   <p>
@@ -68,7 +68,6 @@ ${hostTemplate(this.hosts.primary, -1)}
   <p>
     Note: removing hosts may prevent you from continuing interactions with other users.
     ${this.hosts.secondary.map(hostTemplate).join('\n')}
-    -${this.hosts.secondary.map(hostTemplate).join('\n')}
   </p>
   <p>
     <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</a>
