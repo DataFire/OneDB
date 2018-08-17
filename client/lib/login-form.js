@@ -18,7 +18,7 @@ module.exports = function() {
 
   window._freeDBHelpers = {
     addHost: function() {
-      let newHost = {location: DEFAULT_SECONDARY_LOCATION};
+      var newHost = {location: DEFAULT_SECONDARY_LOCATION};
       self.hosts.secondary.push(newHost);
       self.getUser(newHost);
     },
@@ -36,24 +36,46 @@ module.exports = function() {
       self.authorize(host);
     },
     logout: function(idx) {
-      let host = getHost(idx);
+      var host = getHost(idx);
       host.username = host.password = host.token = null;
       self.getUser(host);
+    },
+    toggleAdvancedOptions: function() {
+      var el = document.getElementById('_FreeDBAdvancedOptions');
+      if (el.style.display === 'none') {
+        el.setAttribute('style', '');
+      } else {
+        el.setAttribute('style', 'display: none');
+      }
     }
   }
 
   return `
-<h4>Primary</h4>
+<h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
 ${hostTemplate(this.hosts.primary, -1)}
-<hr>
-<h4>Secondary</h4>
-<p>
-  You can optionally broadcast changes to other hosts. They won't store your data - they'll
-  just get a link to the data on your primary host.
-</p>
-${this.hosts.secondary.map(hostTemplate).join('\n')}
-<a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a secondary host</a>
+<a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
+<div id="_FreeDBAdvancedOptions" style="display: none">
+  <hr>
+  <h4>Broadcast</h4>
+  <p>
+    Changes to your data will be broadcast to this host.
+    They won't store your data - they'll
+    just get a link to the data on your primary host.
+  </p>
+  <p>
+    Note: removing hosts may prevent you from continuing interactions with other users.
+    ${this.hosts.secondary.map(hostTemplate).join('\n')}
+    -${this.hosts.secondary.map(hostTemplate).join('\n')}
+    <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</a>
+  </p>
+  <h4>Core</h4>
+  <p>
+    The Core host contains data schemas and other information.
+    Only change this if you know what you're doing.
+    ${hostTemplate(this.hosts.core, -1)}
+  </p>
+</div>
 `
 }
 

@@ -96,6 +96,9 @@ class Client {
 
     let origin = window.location.protocol + '//' + window.location.host;
     let path = '/users/authorize?origin=' + encodeURIComponent(origin);
+    if (this.options.scope) {
+      path += '&scope=' + this.options.scope.join('+');
+    }
     window.open(this.hosts.authorizing.location + path, '_blank');
   }
 
