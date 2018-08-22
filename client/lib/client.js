@@ -7,7 +7,8 @@ const TIMEOUT = 10000;
 const DEFAULT_CORE = 'https://alpha.baasket.org';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
-const HOST_REGEX = /(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?/;
+const HOST_REGEX = /^(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?$/;
+const REF_REGEX =  /^(.*)\/data\/(\w+)\/(\w+)\/(\w+)$/;
 const DEFAULT_PAGE_SIZE = 20;
 
 function replaceProtocol(str) {
@@ -77,8 +78,8 @@ class Client {
         host.displayName = host.user._id + '@' + replaceProtocol(host.location);
       }
     }
-    if (this.options.onUser) {
-      this.options.onUser(host);
+    if (this.options.onLogin) {
+      this.options.onLogin(host);
     }
   }
 
@@ -139,13 +140,12 @@ class Client {
 
   async loadNamespace(namespace) {
     let nsInfo = null;
-    nsInfo = await this.get('core', 'namespace', namespace, namespace === 'core');
+    nsInfo = await this.get('core', 'namespace', namespace);
     let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
     for (let type in version.types) {
       let typeInfo = version.types[type];
       typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
     }
-    // TODO: validate core namespace
   }
 
   async validateItem(namespace, type, item) {
@@ -156,24 +156,36 @@ class Client {
     }
   }
 
-  async resolveRefs(obj, defaultHost) {
+  async resolveRefs(obj, defaultHost, cache={}) {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
       const resolved = await Promise.all(obj.map(item => {
-        return this.resolveRefs(item, defaultHost);
+        return this.resolveRefs(item, defaultHost, cache);
       }));
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
+      const match = obj.$ref.match(REF_REGEX);
+      if (!match) throw new Error("Bad $ref:" + obj.$ref);
+      const [full, hostname, ns, type, id] = match;
+      let host = hostname ? this.getHost(hostname) : defaultHost;
+      const noValidate = !!host;
+      host = host || {location: hostname};
+      cache[host.location] = cache[host.location] || {};
+      cache[host.location][ns] = cache[host.location][ns] || {};
+      const typeCache = cache[host.location][ns][type] = cache[host.location][ns][type] || {}
+      if (typeCache[id] !== undefined) {
+        return typeCache[id];
+      }
       try {
-        return await this.request(defaultHost, 'get', obj.$ref);
+        return typeCache[id] = await this.get(ns, type, id, host);
       } catch (e) {
         if (e.statusCode !== 404) throw e;
       }
       return obj;
     } else {
       await Promise.all(Object.keys(obj).map(key => {
-        return this.resolveRefs(obj[key], defaultHost).then(resolved => {
+        return this.resolveRefs(obj[key], defaultHost, cache).then(resolved => {
           return obj[key] = resolved;
         })
       }))
@@ -181,11 +193,15 @@ class Client {
     }
   }
 
-  async get(namespace, type, id, noValidate=false) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
-    await this.resolveRefs(item, host);
-    if (!noValidate) {
+  async get(namespace, type, id, host=null) {
+    host = host || namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const isTrusted = this.getHost(host.location);
+    const item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
+    const cache = {}
+    cache[host.location] = item.$cache;
+    delete item.$cache;
+    await this.resolveRefs(item, host, cache);
+    if (!isTrusted) {
       await this.validateItem(namespace, type, item);
     }
     return item;
@@ -206,12 +222,15 @@ class Client {
   }
 
   async list(namespace, type, params={}) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const isTrusted = false; // If using another host, set to false
     params.skip = params.skip || 0;
     params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
-    let page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
-    for (let item of page.items) {
-      await this.validateItem(namespace, type, item);
+    const page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
+    if (!isTrusted) {
+      for (let item of page.items) {
+        await this.validateItem(namespace, type, item);
+      }
     }
     return page;
   }

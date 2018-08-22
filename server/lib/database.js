@@ -9,6 +9,7 @@ const config = require('./config');
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
+const REF_REGEX = /^\/data\/(\w+)\/(\w+)\/(\w+)$/;
 
 const DEFAULT_SORT = {'info.updated': -1};
 const MAX_PAGE_SIZE = 100;
@@ -528,6 +529,35 @@ class DatabaseForUser {
     const userCol = this.getCollection('core', 'user');
     await userCol.update({id: this.user.id}, userUpdate);
     await this.refreshUser();
+  }
+
+  async cacheRefs(data, cache={}) {
+    if (typeof data !== 'object') {
+      return cache
+    }
+    if (Array.isArray(data)) {
+      await Promise.all(data.map(datum => {
+        return this.cacheRefs(datum, cache);
+      }));
+      return cache;
+    }
+    for (let key in data) {
+      if (key === '$ref') {
+        const match = data[key].match(REF_REGEX);
+        if (!match) continue;
+        const [full, ns, type, id] = match;
+        cache[ns] = cache[ns] || {};
+        cache[ns][type] = cache[ns][type] || {}
+        if (cache[ns][type][id]) continue;
+        const toCache = await this.get(ns, type, id);
+        if (toCache) {
+          cache[ns][type][id] = toCache.data;
+        }
+      } else {
+        await this.cacheRefs(data[key], cache)
+      }
+    }
+    return cache;
   }
 }
 

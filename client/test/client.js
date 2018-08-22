@@ -88,6 +88,17 @@ describe("FreeDB Client", () => {
                 message: {type: 'string'},
               }
             }
+          },
+          conversation: {
+            schema: {
+              type: 'object',
+              properties: {
+                message: {
+                  type: 'array',
+                  items: {$ref: '#/definitions/message'},
+                }
+              }
+            }
           }
         }
       }]
@@ -120,6 +131,15 @@ describe("FreeDB Client", () => {
     await client.destroy('messages', 'message', id);
     await expectError(client.get('messages', 'message', id), /Item messages\/message\/.* not found/);
   });
+
+  it('should resolve refs', async () => {
+    const message = {message: 'hello world'};
+    const messageID = await client.create('messages', 'message', message);
+    const conversation = {messages: [{$ref: '/data/messages/message/' + messageID}]};
+    const convoID = await client.create('messages', 'conversation', conversation);
+    const conversationBack = await client.get('messages', 'conversation', convoID);
+    expect(conversationBack).to.deep.equal({_id: convoID, messages: [message]});
+  })
 
   it('should allow pagination', async function() {
     this.timeout(5000);

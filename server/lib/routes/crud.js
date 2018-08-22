@@ -58,8 +58,10 @@ router.get([ITEM_PATH, ACL_PATH, INFO_PATH], errorGuard(async (req, res, next) =
 /**
  * Retrieve Data
  */
-router.get(ITEM_PATH, (req, res) => {
-  res.json(getData(req.item));
+router.get(ITEM_PATH, async (req, res) => {
+  let data = getData(req.item);
+  data.$cache = await req.db.cacheRefs(data)
+  res.json(data);
 });
 
 /**

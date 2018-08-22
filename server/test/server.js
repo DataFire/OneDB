@@ -208,7 +208,11 @@ describe("Server", () => {
     expect(resp.data).to.equal('foo');
 
     resp = await axios.get(HOST + '/data/core/schema/foo');
-    expect(resp.data).to.deep.equal(Object.assign({_id: 'foo', properties: {_id: {type: 'string'}}}, data));
+    expect(resp.data).to.deep.equal(Object.assign({
+      $cache: {},
+      _id: 'foo',
+      properties: {_id: {type: 'string'}}
+    }, data));
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
       owner: USER_1.id,
@@ -222,6 +226,17 @@ describe("Server", () => {
         types: {
           foo: {
             schema: {$ref: '/data/core/schema/foo'},
+          },
+          foo_set: {
+            schema: {
+              type: 'object',
+              properties: {
+                foos: {
+                  type: 'array',
+                  items: {$ref: '#/definitions/foo'},
+                }
+              }
+            }
           }
         }
       }]
@@ -259,5 +274,23 @@ describe("Server", () => {
     const resp = await axios.post(HOST + '/data/foo/foo', JSON.stringify(data), {headers, auth: USER_1, validateStatus: () => true});
     expect(resp.status).to.equal(413);
     expect(resp.data.message).to.equal('request entity too large');
+  });
+
+  it('should pre-cache refs', async () => {
+    const foo = {message: 'hi'};
+    const set = {foos: [foo]};
+    const headers = {'Content-Type': 'application/json'};
+    let resp = await axios.post(HOST + '/data/foo/foo_set', JSON.stringify(set), {headers, auth: USER_1});
+    expect(resp.data).to.be.a('string');
+
+    resp = await axios.get(HOST + '/data/foo/foo_set/' + resp.data, {auth: USER_1});
+    expect(resp.data.foos).to.be.an('array');
+    expect(resp.data.foos.length).to.equal(1);
+    expect(resp.data.foos[0].$ref).to.be.a('string');
+    const fooID = resp.data.foos[0].$ref.replace(/.*\/(\w+)$/, '\$1');
+    expect(resp.data.$cache).to.be.an('object');
+    expect(resp.data.$cache.foo).to.be.an('object');
+    expect(resp.data.$cache.foo.foo).to.be.an('object');
+    expect(resp.data.$cache.foo.foo[fooID]).to.deep.equal(foo);
   })
 });
