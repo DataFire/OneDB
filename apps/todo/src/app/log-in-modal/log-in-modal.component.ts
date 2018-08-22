@@ -16,7 +16,7 @@ export class LogInModalComponent {
       private modals: NgbModal,
       private sanitizer:DomSanitizer) {
     this.refreshForm();
-    this.freedb.onUser.subscribe(user => this.refreshForm())
+    this.freedb.onLogin.subscribe(host => this.refreshForm())
   }
 
   open() {

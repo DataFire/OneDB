@@ -14,8 +14,14 @@ export class HomeComponent {
   lists:any[];
   error:string;
   constructor(public freedb:FreeDBService) {
-    this.freedb.onUser.subscribe(user => {
-      if (user) this.loadTodoLists();
+    this.freedb.onLogin.subscribe(host => {
+      if (host === this.freedb.client.hosts.primary) {
+        if (host.user) {
+          this.loadTodoLists();
+        } else {
+          this.lists = [];
+        }
+      }
     });
   }
 
