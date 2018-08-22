@@ -20,7 +20,7 @@ export class HomeComponent {
   user:any;
   error:string;
   constructor(public freedb:FreeDBService) {
-    this.freedb.onUser.subscribe(user => {
+    this.freedb.onLogin.subscribe(user => {
       this.user = user.user;
     });
   }

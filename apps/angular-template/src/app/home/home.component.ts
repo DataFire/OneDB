@@ -13,7 +13,7 @@ export class HomeComponent {
   @ViewChild('logInModal') logInModal;
   error:string;
   constructor(public freedb:FreeDBService) {
-    this.freedb.onUser.subscribe(user => {
+    this.freedb.onLogin.subscribe(user => {
       console.log(user);
     });
   }

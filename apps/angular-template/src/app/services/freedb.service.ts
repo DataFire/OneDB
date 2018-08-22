@@ -14,7 +14,7 @@ export class FreeDBService {
   client:any;
   user:any;
 
-  onUser = new BehaviorSubject(null);
+  onLogin = new BehaviorSubject(null);
 
   constructor(private zone:NgZone) {
     window.freedbService = this;
@@ -24,12 +24,12 @@ export class FreeDBService {
           location: CORE_HOST,
         }
       },
-      onUser: user => {
-        this.zone.run(_ => this.onUser.next(user));
-      }
+      onLogin: user => {
+        this.zone.run(_ => this.onLogin.next(user));
+      },
     });
     this.maybeRestore();
-    this.onUser.subscribe(user => {
+    this.onLogin.subscribe(user => {
       this.user = user;
       if (!window.localStorage) return
       const toStore = {
