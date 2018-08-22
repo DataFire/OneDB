@@ -6,14 +6,17 @@ module.exports = function() {
     throw new Error("Tried to get form in non-browser context");
   }
 
-  function getInput(idx) {
-    var inputID = 'FreeDBHost';
-    if (idx >= 0) inputID += idx;
+  function getInput(type, idx) {
+    var inputID = '_FreeDBHostInput_' + type;
+    if (type === 'secondary') inputID += idx;
+    console.log('input', inputID);
     return document.getElementById(inputID).value;
   }
 
-  function getHost(idx) {
-    return idx === -1 ? self.hosts.primary : self.hosts.secondary[idx];
+  function getHost(type, idx) {
+    let host = self.hosts[type];
+    if (type === 'secondary') host = host[idx];
+    return host;
   }
 
   window._freeDBHelpers = window._freeDBHelpers || {
@@ -27,17 +30,17 @@ module.exports = function() {
       self.hosts.secondary = self.hosts.secondary.filter((h, i) => i !== idx);
       self.getUser(null);
     },
-    updateHost: function(idx) {
-      var host = getHost(idx);
-      host.location = getInput(idx);
+    updateHost: function(type, idx) {
+      var host = getHost(type, idx);
+      host.location = getInput(type, idx);
     },
-    login: function(idx) {
-      window._freeDBHelpers.updateHost(idx);
-      var host = getHost(idx);
+    login: function(type, idx) {
+      window._freeDBHelpers.updateHost(type, idx);
+      var host = getHost(type, idx);
       self.authorize(host);
     },
-    logout: function(idx) {
-      var host = getHost(idx);
+    logout: function(type, idx) {
+      var host = getHost(type, idx);
       host.username = host.password = host.token = null;
       self.getUser(host);
     },
@@ -55,7 +58,7 @@ module.exports = function() {
   return `
 <h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
-${hostTemplate(this.hosts.primary, -1)}
+${hostTemplate(this.hosts.primary, 'primary')}
 <a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
 <div id="_FreeDBAdvancedOptions" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
@@ -67,27 +70,27 @@ ${hostTemplate(this.hosts.primary, -1)}
   </p>
   <p>
     Note: removing hosts may prevent you from continuing interactions with other users.
-    ${this.hosts.secondary.map(hostTemplate).join('\n')}
+    ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
   </p>
   <p>
-    <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</a>
+    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</button>
   </p>
   <h4>Core</h4>
   <p>
     The Core host contains data schemas and other information.
     Only change this if you know what you're doing.
-    ${hostTemplate(this.hosts.core, -1)}
+    ${hostTemplate(this.hosts.core, 'core')}
   </p>
 </div>
 `
 }
 
-function hostTemplate(host, idx) {
+function hostTemplate(host, type, idx) {
   return `
-<form onsubmit="_freeDBHelpers.login(${idx}); return false">
+<form onsubmit="_freeDBHelpers.login('${type}', ${idx}); return false">
   <div class="form-group">
     <div class="input-group">
-      ${idx === -1 ? '' : `
+      ${type !== 'secondary' ? '' : `
         <div class="input-group-prepend">
           <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost(${idx})">
             &times;
@@ -102,11 +105,12 @@ function hostTemplate(host, idx) {
       <input
           class="form-control"
           value="${host.location}"
-          id="FreeDBHost${idx >= 0 ? idx : ''}"
-          onchange="_freeDBHelpers.updateHost(${idx})">
+          id="_FreeDBHostInput_${type}${type === 'secondary' ? idx : ''}"
+          onchange="_freeDBHelpers.updateHost('${type}', ${idx})">
       ${host.user ? `
         <div class="input-group-append">
-          <button class="btn btn-outline-secondary" type="button" onclick="_freeDBHelpers.logout(${idx})">
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="_freeDBHelpers.logout('${type}', ${idx})">
             Log Out
           </button>
         </div>
