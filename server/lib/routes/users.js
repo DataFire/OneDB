@@ -60,10 +60,9 @@ router.get('/authorize', errorGuard((req, res) => {
   if (error) return res.status(400).send(error);
   req.query.originNoProtocol = replaceProtocol(req.query.origin);
   const scopes = req.query.scope ? util.scopes(req.query.scope) : null;
-  console.log('scope', scopes);
   res.render('authorize', {query: req.query, config, scopes});
 }));
-router.post('/authorize', middleware.authorize);
+router.post('/authorize', new RateLimit(config.rateLimit.createUser), middleware.authorize);
 
 router.get(['/register', '/register/:username'], middleware.checkUsername);
 router.post(['/register', '/register/:username'],

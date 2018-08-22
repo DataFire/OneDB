@@ -15,8 +15,8 @@ module.exports = {
       delayMs: 0,
     },
     users: {
-      windowMs: FIVE_MIN,
-      max: 20,
+      windowMs: FIFTEEN_MIN,
+      max: 900,
       delayMs: 0,
     },
     createUser: {
