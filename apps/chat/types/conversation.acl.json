@@ -1,0 +1,6 @@
+{
+  "allow": {
+    "read": ["_all"],
+    "write": ["_owner"]
+  }
+}

@@ -1,0 +1,10 @@
+.alert.alert-danger(*ngIf="error") {{ error }}
+div(*ngIf="chat")
+  div([ngSwitch]="acl?.owner === freedb.client.hosts.primary.user?._id")
+    .form-group(*ngSwitchCase="true")
+      input.input-lg.form-control(placehoder="Name this conversation" [(ngModel)]="chat.title")
+    h1(*ngSwitchCase="false") {{ chat.title || chat._id }}
+  .message(*ngFor="let message of messages")
+    div([innerHtml]="marked(message.message)")
+  textarea.form-control(placeholder="Write a new message", [(ngModel)]="message", (keydown)="onKey($event)")
+  button.btn.btn-success((click)="sendMessage()") Send

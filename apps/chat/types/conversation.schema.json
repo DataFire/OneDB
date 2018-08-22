@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "title": {"type": "string", "maxLength": 500},
+    "description": {"type": "string", "maxLength": 10000},
+    "banned": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

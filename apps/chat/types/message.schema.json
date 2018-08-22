@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conversationID", "message"],
+  "properties": {
+    "conversationID": {"type": "string"},
+    "message": {"type": "string", "maxLength": 10000}
+  }
+}
