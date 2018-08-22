@@ -59,6 +59,8 @@ describe("FreeDB Client", () => {
 
   it('should allow creating user', async () => {
     await client.createUser(client.hosts.primary, 'user1@example.com', 'password');
+    let token = await client.request(client.hosts.primary, 'post', '/users/authorize')
+    client.hosts.primary.token = token;
   })
 
   it('should allow creating type after login', async () => {
