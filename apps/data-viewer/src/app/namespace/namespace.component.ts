@@ -9,6 +9,12 @@ import { Router, ActivatedRoute } from '@angular/router';
       .space {
         margin-top: 20px;
       }
+      table {
+        margin-bottom: 15px;
+      }
+      table td {
+        padding: 4px;
+      }
     `]
 })
 export class NamespaceComponent {
@@ -44,12 +50,11 @@ export class NamespaceComponent {
       dataset.pages = [];
       const numPages = Math.ceil(dataset.total / dataset.pageSize);
       const curPage = Math.floor(dataset.skip / dataset.pageSize);
-      if (curPage !== 0) {
-        dataset.pages.push({
-          label: 'Previous',
-          skip: Math.max(0, dataset.skip - dataset.pageSize)
-        });
-      }
+      dataset.pages.push({
+        label: 'Previous',
+        skip: Math.max(0, dataset.skip - dataset.pageSize),
+        disabled: curPage === 0,
+      });
       for (let i = 0; i < numPages; ++i) {
         dataset.pages.push({
           label: (i + 1).toString(),
@@ -57,12 +62,11 @@ export class NamespaceComponent {
           active: i === curPage,
         });
       }
-      if (curPage !== numPages - 1) {
-        dataset.pages.push({
-          label: 'Next',
-          skip: dataset.skip + dataset.pageSize}
-        );
-      }
+      dataset.pages.push({
+        label: 'Next',
+        skip: dataset.skip + dataset.pageSize,
+        disabled: curPage === numPages - 1,
+      })
     }
     return dataset;
   }

@@ -1,12 +1,16 @@
 div(*ngIf="namespace")
   h1 {{ namespace._id }}
   p Below is all your data in the {{ namespace._id }} space
-.space(*ngFor="let datum of data; let idx = index;")
-  h2 {{ datum.type }}
-  .item(*ngFor="let item of datum.dataset.items")
-    a([routerLink]="['/data', namespace._id, datum.type, item._id]")
-      span {{ item._id }}
-    span(*ngIf="item.title")  - {{ item.title }}
-  ul.pagination(*ngIf="datum.dataset.pages")
-    li.page-item(*ngFor="let page of datum.dataset.pages", [class.active]="page.active")
-      a.page-link(href="javascript:void(0)", (click)="goToPage(idx, page.skip)") {{ page.label }}
+.row
+  .col.space(*ngFor="let datum of data; let idx = index;")
+    h2 {{ datum.type }}
+    table
+      tr.item(*ngFor="let item of datum.dataset.items")
+        td
+          a([routerLink]="['/data', namespace._id, datum.type, item._id]")
+            span {{ item._id }}
+        td
+          span(*ngIf="item.title")  {{ item.title }}
+    ul.pagination(*ngIf="datum.dataset.pages")
+      li.page-item(*ngFor="let page of datum.dataset.pages", [class.active]="page.active")
+        button.page-link((click)="goToPage(idx, page.skip)", [disabled]="page.disabled") {{ page.label }}
