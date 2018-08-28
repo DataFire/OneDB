@@ -24,5 +24,5 @@ div(*ngIf="freedb.client.hosts.primary.user")
     div(*ngIf="lists.length")
       .list(*ngFor="let list of lists")
         h4
-          a([routerLink]="['/list', list._id]") {{ list.title }}
+          a([routerLink]="['/list', list.$.id]") {{ list.title }}
       a.btn.btn-min-width.btn-success(routerLink="/new-list") Create a new to-do list

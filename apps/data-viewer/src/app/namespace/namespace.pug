@@ -1,14 +1,14 @@
 div(*ngIf="namespace")
-  h1 {{ namespace._id }}
-  p Below is all your data in the {{ namespace._id }} space
+  h1 {{ namespace.$.id }}
+  p Below is all your data in the {{ namespace.$.id }} space
 .row
   .col.space(*ngFor="let datum of data; let idx = index;")
     h2 {{ datum.type }}
     table
       tr.item(*ngFor="let item of datum.dataset.items")
         td
-          a([routerLink]="['/data', namespace._id, datum.type, item._id]")
-            span {{ item._id }}
+          a([routerLink]="['/data', namespace.$.id, datum.type, item.$.id]")
+            span {{ item.$.id }}
         td
           span(*ngIf="item.title")  {{ item.title }}
     ul.pagination(*ngIf="datum.dataset.pages")

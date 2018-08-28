@@ -1,4 +1,4 @@
 log-in-modal(#logInModal)
 h1 Welcome to FreeDB!
 div(*ngIf="freedb.client.hosts.primary.user")
-  p You're logged in as {{ freedb.client.hosts.primary.user._id }}
+  p You're logged in as {{ freedb.client.hosts.primary.user.$.id }}

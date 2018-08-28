@@ -69,11 +69,11 @@ export class ListComponent {
     this.error = null;
     this.saving = true;
     try {
-      if (!this.list._id) {
+      if (!this.list.$) {
         id = await this.freedb.client.create('alpha_todo', 'list', this.list);
       } else {
-        id = this.list._id;
-        await this.freedb.client.update('alpha_todo', 'list', this.list._id, this.list);
+        id = this.list.$.id;
+        await this.freedb.client.update('alpha_todo', 'list', this.list.$.id, this.list);
       }
     } catch (e) {
       this.error = e.message;
@@ -86,9 +86,9 @@ export class ListComponent {
 
   async destroyItem(item) {
     this.error = null;
-    if (item._id) {
+    if (item.$) {
       try {
-        await this.freedb.client.destroy('alpha_todo', 'item', item._id);
+        await this.freedb.client.destroy('alpha_todo', 'item', item.$.id);
       } catch (e) {
         this.error = e.message;
         return;
@@ -100,11 +100,13 @@ export class ListComponent {
 
   async destroy() {
     this.error = null;
-    try {
-      await this.freedb.client.destroy('alpha_todo', 'list', this.list._id);
-    } catch (e) {
-      this.error = e.message;
-      return;
+    if (this.list.$) {
+      try {
+        await this.freedb.client.destroy('alpha_todo', 'list', this.list.$.id);
+      } catch (e) {
+        this.error = e.message;
+        return;
+      }
     }
     await this.router.navigate(['/home']);
   }

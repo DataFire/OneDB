@@ -44,8 +44,8 @@ export class NamespaceComponent {
   }
 
   async getDataset(type, skip=0) {
-    const query = {skip, owner: this.freedb.client.hosts.primary.user._id}
-    const dataset = await this.freedb.client.list(this.namespace._id, type, query);
+    const query = {skip, owner: this.freedb.client.hosts.primary.user.$.id}
+    const dataset = await this.freedb.client.list(this.namespace.$.id, type, query);
     if (dataset.total > dataset.items.length) {
       dataset.pages = [];
       const numPages = Math.ceil(dataset.total / dataset.pageSize);

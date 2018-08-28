@@ -5,7 +5,7 @@ p.
 p(*ngIf="!user")
   a((click)="logInModal.open()" href="javascript:void(0)") Sign in to get started
 div(*ngIf="user")
-  p You're logged in as {{ user._id }}
+  p You're logged in as {{ user.$.id }}
   .form-group
     label Choose a Space:
     .input-group

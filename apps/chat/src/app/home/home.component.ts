@@ -21,10 +21,11 @@ export class HomeComponent {
 
   async startChat() {
     this.error = null;
-    let chatID = this.chatRoomName;
+    let chatID = this.chatRoomName.replace(/\W+/g, '_');
+    console.log('creating', chatID);
     try {
       const chat = {title: this.chatRoomName || ''};
-      chatID = await this.freedb.client.create('alpha_chat', 'conversation', chat, this.chatRoomName);
+      chatID = await this.freedb.client.create('alpha_chat', 'conversation', chat, chatID);
     } catch (e) {
       this.error = e.message;
       return;

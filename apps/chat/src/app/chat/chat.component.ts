@@ -1,20 +1,37 @@
-import {Component} from '@angular/core';
+import {Component, ViewChild} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
 import {FreeDBService} from '../services/freedb.service';
 
-const RELOAD_INTERVAL = 2000;
+const RELOAD_INTERVAL = 5000;
 
 declare const require:any;
+declare const window:any;
 const marked = require('marked');
+const moment = require('moment');
 
 @Component({
     selector: 'chat',
     templateUrl: './chat.pug',
+    styles: [`
+      .info {
+        color: #999;
+        font-size: 75%;
+      }
+      .message-list {
+        overflow: scroll;
+      }
+    `]
 })
 export class ChatComponent {
+  @ViewChild('messageList') messageList;
+
   public marked = marked;
 
   public error:string;
+  public saving:boolean = false;
+  public loadingMessages:boolean = false;
+  public hasEarlierMessages:boolean = false;
+
   public chatID:string;
   public chat:any;
   public acl:any;
@@ -22,6 +39,7 @@ export class ChatComponent {
   public message:string;
 
   private interval:any;
+  public maxChatHeight = 1000;
 
   constructor(private route:ActivatedRoute, private freedb:FreeDBService) {
     this.route.params.subscribe(params => {
@@ -29,6 +47,33 @@ export class ChatComponent {
         this.load(params['chat_id'])
       }
     })
+    this.maxChatHeight = window.innerHeight * 2 / 3;
+  }
+
+  ngOnDestroy() {
+    console.log('destroy');
+    clearInterval(this.interval);
+  }
+
+  prettyDate(date) {
+    return moment(date).fromNow();
+  }
+
+  scrollDown() {
+    if (!this.messageList) return;
+    const el = this.messageList.nativeElement;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async save() {
+    this.error = null;
+    this.saving = true;
+    try {
+      await this.freedb.client.update('alpha_chat', 'conversation', this.chatID, this.chat);
+    } catch (e) {
+      this.error = e;
+    }
+    this.saving = false;
   }
 
   async load(id) {
@@ -41,7 +86,7 @@ export class ChatComponent {
     try {
       this.chat = await this.freedb.client.get('alpha_chat', 'conversation', id);
       this.acl = await this.freedb.client.getACL('alpha_chat', 'conversation', id);
-      this.loadMessages();
+      this.loadMessages(true);
     } catch (e) {
       this.error = e.message;
       return;
@@ -49,13 +94,34 @@ export class ChatComponent {
     this.interval = setInterval(() => this.loadMessages(), RELOAD_INTERVAL);
   }
 
-  async loadMessages() {
-    const query = {'data.conversationID': this.chatID};
-    let newMessages = (await this.freedb.client.list('alpha_chat', 'message', query)).items;
+  async loadEarlierMessages() {
+    let firstMessage = this.messages[0];
+    if (!firstMessage) return;
+    const query:any = {
+      'data.conversationID': this.chatID,
+      sort: 'info.created:descending',
+      created_before: firstMessage.$.info.created,
+    };
+    let newMessages = await this.freedb.client.list('alpha_chat', 'message', query);
+    this.hasEarlierMessages = newMessages.hasNext;
+    this.messages = newMessages.items.reverse().concat(this.messages);
+  }
+
+  async loadMessages(doScroll=false) {
+    if (this.loadingMessages) return setTimeout(() => this.loadMessages(doScroll), 100);
+    this.loadingMessages = true;
+    const query:any = {'data.conversationID': this.chatID, sort: 'info.created:descending'};
     let lastMessage = this.messages[this.messages.length - 1];
-    if (!lastMessage || (newMessages.length && lastMessage._id !== newMessages[0]._id)) {
-      this.messages = newMessages.reverse();
+    if (lastMessage) {
+      query.created_since = lastMessage.$.info.created;
     }
+    let newMessages = await this.freedb.client.list('alpha_chat', 'message', query);
+    if (!lastMessage) {
+      this.hasEarlierMessages = newMessages.hasNext;
+    }
+    this.messages = this.messages.concat(newMessages.items.reverse());
+    if (doScroll) setTimeout(() => this.scrollDown(), 100);
+    this.loadingMessages = false;
   }
 
   onKey(evt) {
@@ -71,7 +137,7 @@ export class ChatComponent {
     try {
       const message = {message: this.message, conversationID: this.chatID};
       await this.freedb.client.create('alpha_chat', 'message', message);
-      await this.loadMessages();
+      await this.loadMessages(true);
     } catch (e) {
       this.error = e.message;
       return;
