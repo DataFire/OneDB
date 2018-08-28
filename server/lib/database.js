@@ -255,16 +255,16 @@ class DatabaseForUser {
       sort[parts[0]] = parts[1] === 'ascending' ? 1 : -1;
     }
     if (params.created_since) {
-      query['info.created'] = {$gte: new Date(params.created_since)}
+      query['info.created'] = {$gt: new Date(params.created_since)}
     }
     if (params.created_before) {
-      query['info.created'] = {$lte: new Date(params.created_before)}
+      query['info.created'] = {$lt: new Date(params.created_before)}
     }
     if (params.updated_since) {
-      query['info.updated'] = {$gte: new Date(params.updated_since)}
+      query['info.updated'] = {$gt: new Date(params.updated_since)}
     }
     if (params.updated_before) {
-      query['info.updated'] = {$lte: new Date(params.updated_before)}
+      query['info.updated'] = {$lt: new Date(params.updated_before)}
     }
     if (params.owner) {
       query['acl.owner'] = {$eq: params.owner}
@@ -405,7 +405,6 @@ class DatabaseForUser {
     const existing = await this.get(namespace, type, id, 'force');
     if (existing) return fail(`Item ${namespace}/${type}/${id} already exists`);
     const acl = namespaceVersion.types[type].initial_acl || JSON.parse(JSON.stringify(dbUtil.OWNER_ACL_SET));
-    delete data.$;
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (type === 'schema' && id !== 'schema') {
@@ -427,6 +426,7 @@ class DatabaseForUser {
       created_by: this.user.id,
     }
 
+    delete data.$;
     const obj = {id, data, info, acl};
     data = await this.disassemble(namespace, data, schema);
     await this.validate(obj, schema, namespace, type);
@@ -451,6 +451,7 @@ class DatabaseForUser {
   async update(namespace, type, id, data) {
     const query = this.buildQuery(namespace, type, {id}, 'write');
     const {schema, namespaceVersion} = await this.getSchema(namespace, type);
+    delete data.$;
     data = await this.disassemble(namespace, data, schema)
     await this.validate({data}, schema, namespace, type);
     const col = this.getCollection(namespace, type);
