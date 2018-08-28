@@ -156,7 +156,7 @@ describe("Server", () => {
     USER_1.password = newPassword;
     resp = await axios.get(HOST + '/users/me', {auth: USER_1});
     expect(resp.status).to.equal(200);
-    expect(resp.data._id).to.equal(USER_1.id);
+    expect(resp.data.$.id).to.equal(USER_1.id);
   })
 
   it('should suggest usernames', async () => {
@@ -180,7 +180,7 @@ describe("Server", () => {
 
     resp = await axios.get(HOST + '/users/me', {auth: USER_1});
     expect(resp.status).to.equal(200);
-    expect(resp.data).to.deep.equal({_id: USER_1.id});
+    expect(resp.data.$.id).to.equal(USER_1.id);
   })
 
   it('should not allow directly adding user', async () => {
@@ -208,11 +208,13 @@ describe("Server", () => {
     expect(resp.data).to.equal('foo');
 
     resp = await axios.get(HOST + '/data/core/schema/foo');
-    expect(resp.data).to.deep.equal(Object.assign({
-      $cache: {},
-      _id: 'foo',
-      properties: {_id: {type: 'string'}}
-    }, data));
+    expect(resp.data.$.cache).to.deep.equal({});
+    expect(resp.data.$.id).to.deep.equal('foo');
+    delete resp.data.$;
+    expect(resp.data).to.deep.equal({
+      type: 'object',
+      properties: {$: {type: 'object'}}
+    });
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
       owner: USER_1.id,
@@ -288,9 +290,9 @@ describe("Server", () => {
     expect(resp.data.foos.length).to.equal(1);
     expect(resp.data.foos[0].$ref).to.be.a('string');
     const fooID = resp.data.foos[0].$ref.replace(/.*\/(\w+)$/, '\$1');
-    expect(resp.data.$cache).to.be.an('object');
-    expect(resp.data.$cache.foo).to.be.an('object');
-    expect(resp.data.$cache.foo.foo).to.be.an('object');
-    expect(resp.data.$cache.foo.foo[fooID]).to.deep.equal(foo);
+    expect(resp.data.$.cache).to.be.an('object');
+    expect(resp.data.$.cache.foo).to.be.an('object');
+    expect(resp.data.$.cache.foo.foo).to.be.an('object');
+    expect(resp.data.$.cache.foo.foo[fooID].message).to.equal(foo.message);
   })
 });

@@ -42,12 +42,13 @@ describe("FreeDB Client", () => {
 
   it('should retrieve core types without login', async () => {
     let item = await client.get('core', 'schema', 'user');
+    expect(item.$.id).to.equal('user');
+    delete item.$;
     expect(item).to.deep.equal({
-      _id: 'user',
       type: 'object',
       additionalProperties: false,
       properties: {
-        _id: {type: 'string'},
+        $: {type: 'object'},
         publicKey: {type: 'string'},
       }
     })
@@ -67,13 +68,15 @@ describe("FreeDB Client", () => {
     let schema = {
       type: 'object',
       properties: {
-        _id: {type: 'string'},
         message: {type: 'string'},
       }
     }
     await client.create('core', 'schema', schema, 'message');
     let item = await client.get('core', 'schema', 'message');
-    expect(item).to.deep.equal(Object.assign({_id: 'message'}, schema));
+    expect(item.$.id).to.equal('message');
+    delete item.$;
+    schema.properties.$ = {type: 'object'};
+    expect(item).to.deep.equal(schema);
   });
 
   it('should allow creating namespace', async () => {
@@ -138,7 +141,10 @@ describe("FreeDB Client", () => {
     const conversation = {messages: [{$ref: '/data/messages/message/' + messageID}]};
     const convoID = await client.create('messages', 'conversation', conversation);
     const conversationBack = await client.get('messages', 'conversation', convoID);
-    expect(conversationBack).to.deep.equal({_id: convoID, messages: [message]});
+    expect(conversationBack.$.id).to.equal(convoID);
+    delete conversationBack.$;
+    delete conversationBack.messages[0].$;
+    expect(conversationBack).to.deep.equal({messages: [message]});
   })
 
   it('should allow pagination', async function() {

@@ -9,7 +9,6 @@ module.exports = function() {
   function getInput(type, idx) {
     var inputID = '_FreeDBHostInput_' + type;
     if (type === 'secondary') inputID += idx;
-    console.log('input', inputID);
     return document.getElementById(inputID).value;
   }
 
@@ -99,7 +98,7 @@ function hostTemplate(host, type, idx) {
       `}
       ${!host.user ? '' : `
         <div class="input-group-prepend">
-          <span class="input-group-text">${host.user._id}@</span>
+          <span class="input-group-text">${host.user.$.id}@</span>
         </div>
       `}
       <input

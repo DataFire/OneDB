@@ -71,7 +71,7 @@ class Database {
     const user = await db.create('core', 'user', {}, username);
     const creds = await dbUtil.computeCredentials(password);
     creds.email = email;
-    creds.id = user.id;
+    creds.id = user.$.id;
     creds.email_confirmation = {
       code: confirmation_code,
       expires: moment().add(1, 'days').toISOString()
@@ -140,6 +140,7 @@ class DatabaseForUser {
     this.db = opts.db;
     this.userID = opts.user;
     this.permissions = opts.permissions;
+    if (!this.userID) throw new Error("Username not specified");
   }
 
   async initialize() {
@@ -148,7 +149,7 @@ class DatabaseForUser {
 
   async refreshUser() {
     let users = await this.getCollection('core', 'user').find({id: this.userID}).toArray();
-    if (!users || !users[0]) return fail(`User ${this.userID} not found`);
+    if (!users[0]) return fail(`User ${this.userID} not found`);
     if (users.length > 1) return fail("Multiple users found for ID " + this.userID);
     this.user = users[0];
   }
@@ -185,16 +186,17 @@ class DatabaseForUser {
     }
   }
 
-  async getSchema(namespace, type) {
-    const namespaceInfo = await this.get('core', 'namespace', namespace);
-    if (!namespaceInfo) return fail(`Namespace ${namespace} not found`);
-    const nsVersion = namespaceInfo.data.versions[namespaceInfo.data.versions.length - 1];
-    if (!nsVersion) return fail(`Namespace ${namespace}@${namespaceInfo.data.versions.length - 1} not found`);
-    const schemaRef = (nsVersion.types[type] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
-    if (!schemaRef) return fail(`Schema ${namespace}/${type} not found`);
-    const schemaInfo = await this.get('core', 'schema', schemaRef);
-    if (!schemaInfo) return fail(`Item core/schema/${schemaRef} not found`);
-    return {schemaInfo, namespaceInfo: nsVersion};
+  async getSchema(namespaceID, typeID) {
+    const namespace = await this.get('core', 'namespace', namespaceID);
+    if (!namespace) return fail(`Namespace ${namespaceID} not found`);
+    const nsVersion = namespace.versions[namespace.versions.length - 1];
+    if (!nsVersion) return fail(`Namespace ${namespaceID}@${namespace.versions.length - 1} not found`);
+    const schemaRef = (nsVersion.types[typeID] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
+    if (!schemaRef) return fail(`Schema ${namespaceID}/${typeID} not found`);
+    const schema = await this.get('core', 'schema', schemaRef);
+    if (!schema) return fail(`Item core/schema/${schemaRef} not found`);
+    delete schema.$;
+    return {schema, namespaceVersion: nsVersion};
   }
 
   buildQuery(namespace, type, query={}, accesses='read', modifyACL=false) {
@@ -242,7 +244,7 @@ class DatabaseForUser {
   }
 
   async buildListQuery(namespace, type, params) {
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    const {schema, namespaceVersion} = await this.getSchema(namespace, type);
     const query = {};
     const sort = {}
     const skip = params.skip || 0;
@@ -271,20 +273,21 @@ class DatabaseForUser {
       if (key !== 'data' && !key.startsWith('data.')) continue;
       let parts = key.split('.');
       parts.shift();
-      let schema = schemaInfo.data;
+      let subschema = schema;
       for (let part of parts) {
-        schema = schema && ((schema.properties && schema.properties[part]) || schema.additionalProperties);
+        subschema = subschema &&
+              ((subschema.properties && subschema.properties[part]) || subschema.additionalProperties);
       }
-      if (!schema) return fail(`No schema found for ${key}`, 400);
-      if (schema.type === 'number') {
+      if (!subschema) return fail(`No subschema found for ${key}`, 400);
+      if (subschema.type === 'number') {
         try {
           query[key] = parseFloat(params[key]);
         } catch(e) {}
-      } else if (schema.type === 'integer') {
+      } else if (subschema.type === 'integer') {
         try {
           query[key] = parseInt(params[key]);
         } catch (e) {}
-      } else if (schema.type === 'boolean') {
+      } else if (subschema.type === 'boolean') {
         try {
           query[key] = parseBoolean(params[key]);
         } catch (e) {}
@@ -295,13 +298,19 @@ class DatabaseForUser {
     return {query, sort, pageSize, skip}
   }
 
-  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0) {
+  async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0, keepACL=false) {
     if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(namespace, type, query, access);
     let arr = await col.find(query).sort(sort).skip(skip).limit(limit).toArray();
-    arr.forEach(item => {
-      item.data = dbUtil.decodeDocument(item.data);
+    arr = arr.map(item => {
+      let data = dbUtil.decodeDocument(item.data);
+      data.$ = {
+        id: item.id,
+        info: item.info,
+      }
+      if (keepACL) data.$.acl = item.acl;
+      return data;
     })
     return JSON.parse(JSON.stringify(arr));
   }
@@ -318,6 +327,13 @@ class DatabaseForUser {
     if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     if (!arr.length) return;
     return arr[0];
+  }
+
+  async getACL(namespace, type, id) {
+    const arr = await this.getAll(namespace, type, {id}, 'read', DEFAULT_SORT, DEFAULT_PAGE_SIZE, 0, true);
+    if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
+    if (!arr.length) return;
+    return arr[0].$.acl;
   }
 
   async list(namespace, type, query={}, sort=DEFAULT_SORT, pageSize, skip) {
@@ -339,13 +355,13 @@ class DatabaseForUser {
       let match = schema.$ref.match(/#\/definitions\/(\w+)/);
       if (!match) return data;
       let id = null;
-      if (data._id) {
-        id = data._id;
-        delete data._id;
+      if (data.$ && data.$.id) {
+        id = data.$.id;
+        delete data.$;
         await this.update(namespace, match[1], id, data);
       } else {
         let item = await this.create(namespace, match[1], data);
-        id = item.id;
+        id = item.$.id;
       }
       return {$ref: '/data/' + namespace + '/' + match[1] + '/' + id};
     }
@@ -369,7 +385,7 @@ class DatabaseForUser {
         let schema = Object.assign({definitions}, version.types[type].schema);
         if (!schema.$ref) {
           let newSchema = await this.create('core', 'schema', schema);
-          version.types[type].schema = {$ref: '/data/core/schema/' + newSchema.id};
+          version.types[type].schema = {$ref: '/data/core/schema/' + newSchema.$.id};
         }
       }
     }
@@ -382,20 +398,21 @@ class DatabaseForUser {
     if (!this.checkPermission(namespace, type, 'create')) {
       return fail(`This app does not have permission to create items in ${namespace}/${type}`, 401);
     }
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    const {schema, namespaceVersion} = await this.getSchema(namespace, type);
     id = id || randomstring.generate(ID_LENGTH); // TODO: make sure random ID is not taken
     let err = validate.validators.itemID(id);
     if (err) return fail(err);
     const existing = await this.get(namespace, type, id, 'force');
     if (existing) return fail(`Item ${namespace}/${type}/${id} already exists`);
-    const acl = JSON.parse(JSON.stringify(Object.assign({}, namespaceInfo.types[type].initial_acl || dbUtil.OWNER_ACL_SET)));
+    const acl = namespaceVersion.types[type].initial_acl || JSON.parse(JSON.stringify(dbUtil.OWNER_ACL_SET));
+    delete data.$;
     acl.owner = this.user.id;
     if (namespace === 'core') {
       if (type === 'schema' && id !== 'schema') {
         let err = validate.validators.schema(data);
         if (err) return fail(err, 400);
         data.properties = data.properties || {}
-        data.properties._id = {type: 'string'};
+        data.properties.$ = {type: 'object'};
       } else if (type === 'user') {
         acl.owner = id;
       } else if (type === 'namespace') {
@@ -411,13 +428,8 @@ class DatabaseForUser {
     }
 
     const obj = {id, data, info, acl};
-    data = await this.disassemble(namespace, data, schemaInfo.data);
-    await this.validate(obj, schemaInfo.data, namespace, type);
-    delete data._id;
-    if (namespace === 'core' && type === 'schema') {
-      data.properties = data.properties || {};
-      data.properties._id = {type: 'string'};
-    }
+    data = await this.disassemble(namespace, data, schema);
+    await this.validate(obj, schema, namespace, type);
     const col = this.getCollection(namespace, type);
     const result = await col.insert({
       id: obj.id,
@@ -433,15 +445,14 @@ class DatabaseForUser {
     const userCol = this.getCollection('core', 'user');
     await userCol.update({id: this.user.id}, userUpdate);
     await this.refreshUser();
-
-    return obj;
+    return Object.assign({$: {id, info, acl}}, obj.data);
   }
 
   async update(namespace, type, id, data) {
     const query = this.buildQuery(namespace, type, {id}, 'write');
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
-    data = await this.disassemble(namespace, data, schemaInfo.data)
-    await this.validate({data}, schemaInfo.data, namespace, type);
+    const {schema, namespaceVersion} = await this.getSchema(namespace, type);
+    data = await this.disassemble(namespace, data, schema)
+    await this.validate({data}, schema, namespace, type);
     const col = this.getCollection(namespace, type);
     const result = await col.update(query, {
       $set: {
@@ -458,27 +469,28 @@ class DatabaseForUser {
     const col = this.getCollection(namespace, type);
     const existing = await this.get(namespace, type, id, 'force');
     if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
-    data = await this.disassemble(namespace, data, schemaInfo.data);
+    delete existing.$;
+    const {schema, namespaceVersion} = await this.getSchema(namespace, type);
+    data = await this.disassemble(namespace, data, schema);
     const doc = {$push: {}}
     for (let key in data) {
       if (!Array.isArray(data[key])) continue;
-      let schema = schemaInfo.data.properties && schemaInfo.data.properties[key];
-      schema = schema && schema.items;
-      if (!schema) return fail(`Schema not found for key ${key}`, 400);
-      schema.definitions = schemaInfo.data.definitions;
+      let subschema = schema.properties && schema.properties[key];
+      subschema = subschema && subschema.items;
+      if (!subschema) return fail(`Schema not found for key ${key}`, 400);
+      subschema.definitions = schema.definitions;
       let subtype = type;
       if (schema.$ref) {
-        subtype = schema.$ref.split('/').pop();
+        subtype = subschema.$ref.split('/').pop();
       }
       for (let item of data[key]) {
-        await this.validate({data: item}, schema, namespace, subtype);
+        await this.validate({data: item}, subschema, namespace, subtype);
       }
       existing[key] = (existing[key] || []).concat(data[key]);
       doc.$push['data.' + key] = {$each: dbUtil.encodeDocument(data[key])};
     }
 
-    const newDoc = JSON.stringify(existing.data);
+    const newDoc = JSON.stringify(existing);
     if (newDoc.length > config.maxBytesPerItem) {
       return fail(`Item ${namespace}/${type}/${id} would exceed the maximum of ${config.maxBytesPerItem} bytes`);
     }
@@ -495,7 +507,7 @@ class DatabaseForUser {
   async modifyACL(namespace, type, id, acl) {
     const copyACL = JSON.parse(JSON.stringify(acl)); // Make a copy where defaults are set
     await this.validate({acl: Object.assign({owner: 'dummy'}, copyACL)});
-    const {schemaInfo, namespaceInfo} = await this.getSchema(namespace, type);
+    const {schema, namespaceVersion} = await this.getSchema(namespace, type);
     const necessaryPermissions = [];
     let query = {$and: [{id}]};
     const update = {$set: {}};
@@ -551,7 +563,7 @@ class DatabaseForUser {
         if (cache[ns][type][id]) continue;
         const toCache = await this.get(ns, type, id);
         if (toCache) {
-          cache[ns][type][id] = toCache.data;
+          cache[ns][type][id] = toCache;
         }
       } else {
         await this.cacheRefs(data[key], cache)

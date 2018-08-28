@@ -13,7 +13,7 @@ const KEY_REPLACEMENTS = {
   },
 }
 
-const KEY_REGEX = /^(_id|\$ref|\$id|\$comment|\$schema|[A-Za-z]\w*)$/;
+const KEY_REGEX = /^(\$|\$ref|\$id|\$comment|\$schema|[A-Za-z]\w*)$/;
 
 const START_TIME = new Date(Date.now());
 
@@ -75,7 +75,7 @@ const CORE_SCHEMAS = module.exports.CORE_SCHEMAS = {
 for (let key in CORE_SCHEMAS) {
   let schema = CORE_SCHEMAS[key];
   if (key === 'schema') schema = schema.oneOf[1];
-  schema.properties._id = {type: 'string'}
+  schema.properties.$ = {type: 'object'};
 }
 
 let schemaSchemaCopy = JSON.parse(JSON.stringify(CORE_SCHEMAS.schema));

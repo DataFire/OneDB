@@ -25,6 +25,7 @@ class Client {
       verbose: true,
       loadSchema: async (uri) => {
         let resp = await axios.get(uri);
+        delete resp.data.$;
         return resp.data;
       }
     });
@@ -75,7 +76,7 @@ class Client {
           host.username = host.password = host.token = null;
           return this.getUser(host);
         }
-        host.displayName = host.user._id + '@' + replaceProtocol(host.location);
+        host.displayName = host.user.$.id + '@' + replaceProtocol(host.location);
       }
     }
     if (this.options.onLogin) {
@@ -144,6 +145,7 @@ class Client {
     let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
     for (let type in version.types) {
       let typeInfo = version.types[type];
+      delete typeInfo.schema.$;
       typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
     }
   }
@@ -184,7 +186,7 @@ class Client {
       }
       return obj;
     } else {
-      await Promise.all(Object.keys(obj).map(key => {
+      await Promise.all(Object.keys(obj).filter(k => k !== '$').map(key => {
         return this.resolveRefs(obj[key], defaultHost, cache).then(resolved => {
           return obj[key] = resolved;
         })
@@ -198,8 +200,7 @@ class Client {
     const isTrusted = this.getHost(host.location);
     const item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
     const cache = {}
-    cache[host.location] = item.$cache;
-    delete item.$cache;
+    cache[host.location] = item.$ && item.$.cache;
     await this.resolveRefs(item, host, cache);
     if (!isTrusted) {
       await this.validateItem(namespace, type, item);

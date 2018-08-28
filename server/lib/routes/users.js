@@ -50,8 +50,8 @@ config.hostWithoutProtocol = replaceProtocol(config.host);
 const router = module.exports = new express.Router();
 router.get('/me', cors(), middleware.authenticate, (req, res) => {
   if (!req.user) return fail("You are not logged in", 401);
-  req.db.user.data._id = req.db.user.id;
-  res.json(req.db.user.data);
+  const user = Object.assign({$: {id: req.db.user.id}}, req.db.user.data);
+  res.json(user);
 });
 
 router.get('/authorize', errorGuard((req, res) => {
@@ -84,7 +84,7 @@ router.post(['/register', '/register/:username'],
           await sendEmail(email, `Welcome to FreeDB! Please confirm your email address`, `
             <a href="${link}">Click here</a> to confirm your email address for FreeDB
           `)
-          res.json(user.id);
+          res.json(user.$.id);
         } else {
           res.status(400).send("Invalid authorization header");
         }
