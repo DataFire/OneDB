@@ -68,7 +68,7 @@ let validators = module.exports.validators = {
   data: (data, schema) => {
     if (data === undefined)        return "No data specified";
     if (!schema)                   return "No JSON schema specified";
-    let ajv = new Ajv(AJV_OPTIONS) // TODO: a single ajv instance will cache schemas, but the cache could grow unbounded...
+    let ajv = new Ajv(AJV_OPTIONS);
     let validate = null;
     try {
       validate = ajv.compile(schema);
@@ -105,6 +105,8 @@ let validators = module.exports.validators = {
   schema: (schema, isNested=false) => {
     if (!isNested) {
       if (!schema || schema.type !== 'object') return "Top-level schema must have type 'object'";
+      if (schema.additionalProperties)         return "Top-level schema must not allow additionalProperties";
+      schema.additionalProperties = false;
     }
     let err = null;
     util.iterateSchema(schema, subschema => {

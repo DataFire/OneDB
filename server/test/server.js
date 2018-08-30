@@ -203,7 +203,7 @@ describe("Server", () => {
   })
 
   it('should allow POST with auth', async () => {
-    const data = {type: 'object'};
+    const data = {type: 'object', properties: {message: {type: 'string'}}};
     let resp = await axios.post(HOST + '/data/core/schema/foo', data, {auth: USER_1, validateStatus: () => true});
     expect(resp.data).to.equal('foo');
 
@@ -213,7 +213,11 @@ describe("Server", () => {
     delete resp.data.$;
     expect(resp.data).to.deep.equal({
       type: 'object',
-      properties: {$: {type: 'object'}}
+      additionalProperties: false,
+      properties: {
+        $: {type: 'object'},
+        message: {type: 'string'},
+      }
     });
     resp = await axios.get(HOST + '/data/core/schema/foo/acl');
     expect(resp.data).to.deep.equal({
