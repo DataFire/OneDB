@@ -155,6 +155,7 @@ class DatabaseForUser {
   }
 
   getCollection(namespace, type) {
+    namespace = namespace.split('@')[0];
     const collectionName = namespace + '-' + type;
     return this.db.collection(collectionName);
   }
@@ -186,13 +187,16 @@ class DatabaseForUser {
     }
   }
 
-  async getSchema(namespaceID, typeID) {
+  async getSchema(namespaceIDWithVersion, typeID) {
+    const [namespaceID, versionID] = namespaceIDWithVersion.split('@');
     const namespace = await this.get('core', 'namespace', namespaceID);
     if (!namespace) return fail(`Namespace ${namespaceID} not found`);
-    const nsVersion = namespace.versions[namespace.versions.length - 1];
-    if (!nsVersion) return fail(`Namespace ${namespaceID}@${namespace.versions.length - 1} not found`);
+    const nsVersion = versionID ?
+          namespace.versions.filter(v => v.version === versionID).pop() :
+          namespace.versions[namespace.versions.length - 1];
+    if (!nsVersion) return fail(`Namespace ${namespaceIDWithVersion} not found`);
     const schemaRef = (nsVersion.types[typeID] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
-    if (!schemaRef) return fail(`Schema ${namespaceID}/${typeID} not found`);
+    if (!schemaRef) return fail(`Schema ${namespaceIDWithVersion}/${typeID} not found`);
     const schema = await this.get('core', 'schema', schemaRef);
     if (!schema) return fail(`Item core/schema/${schemaRef} not found`);
     delete schema.$;
@@ -200,6 +204,10 @@ class DatabaseForUser {
   }
 
   buildQuery(namespace, type, query={}, accesses='read', modifyACL=false) {
+    const nsVersion = namespace.split('@')[1];
+    if (nsVersion) {
+      query['info.namespace_version'] = nsVersion;
+    }
     if (accesses === 'force') return query;
     let accessType = modifyACL ? 'modify' : 'allow';
     query.$and = query.$and || [];
@@ -389,6 +397,7 @@ class DatabaseForUser {
         }
       }
     }
+    return data;
   }
 
   async create(namespace, type, data, id='') {
@@ -415,6 +424,8 @@ class DatabaseForUser {
       } else if (type === 'user') {
         acl.owner = id;
       } else if (type === 'namespace') {
+        data.versions = [data.versions[0]];
+        data.versions[0].version = '0.0';
         await this.disassembleNamespace(data);
       }
     }
@@ -424,6 +435,7 @@ class DatabaseForUser {
       created: time,
       updated: time,
       created_by: this.user.id,
+      namespace_version: namespaceVersion.version,
     }
 
     delete data.$;
@@ -459,6 +471,7 @@ class DatabaseForUser {
       $set: {
         data: dbUtil.encodeDocument(data),
         'info.updated': new Date(Date.now()),
+        'info.namespace_version': namespaceVersion.version,
       },
     });
     if (result.result.n === 0) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
@@ -472,7 +485,16 @@ class DatabaseForUser {
     if (!existing) return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     delete existing.$;
     const {schema, namespaceVersion} = await this.getSchema(namespace, type);
-    data = await this.disassemble(namespace, data, schema);
+    if (namespace === 'core' && type === 'namespace') {
+      data = await this.disassembleNamespace(data);
+      const lastVersion = existing.versions[existing.versions.length - 1];
+      let previousID = lastVersion.version;
+      (data.versions || []).forEach(newVersion => {
+        previousID = newVersion.version = (Math.floor(+previousID) + 1).toString() + '.0';
+      });
+    } else {
+      data = await this.disassemble(namespace, data, schema);
+    }
     const doc = {$push: {}}
     for (let key in data) {
       if (!Array.isArray(data[key])) continue;

@@ -114,7 +114,10 @@ describe('Database', () => {
     });
     expect(types.namespace).to.deep.equal({
       schema: {$ref: '/data/core/schema/namespace'},
-      initial_acl: dbUtil.READ_ONLY_ACL_SET,
+      initial_acl: {
+        allow: Object.assign({}, dbUtil.READ_ONLY_ACL, {append: ['_owner']}),
+        modify: dbUtil.SYSTEM_ACL,
+      },
     });
 
     let schema = await systemDB.get('core', 'schema', 'schema');
@@ -160,7 +163,7 @@ describe('Database', () => {
     const userDB = await database.user(USERS[0].$.id);
     await expectError(userDB.destroy('core', 'schema', 'namespace'), /User .* cannot destroy core\/schema\/namespace/);
     await expectError(userDB.destroy('core', 'namespace', 'core'), /User .* cannot destroy core\/namespace\/core/);
-    await expectError(userDB.update('core', 'namespace', 'core', {versions: []}), /User .* cannot update core\/namespace\/core/);
+    await expectError(userDB.update('core', 'namespace', 'core', {versions: [{types: {}}]}), /User .* cannot update core\/namespace\/core/);
     await expectError(userDB.update('core', 'schema', 'namespace', {type: 'string'}), /User .* cannot update core\/schema\/namespace/);
   });
 
@@ -168,13 +171,82 @@ describe('Database', () => {
     const userDB = await database.user(USERS[0].$.id);
     const ns = {
       versions: [{
-        version: '0',
         types: {
           'thing': {schema: {$ref: '/data/core/schema/thing'}},
         }
       }]
     }
     await userDB.create('core', 'namespace', ns, 'foo2');
+    const nsBack = await userDB.get('core', 'namespace', 'foo2');
+    expect(nsBack.versions.length).to.equal(1);
+    expect(nsBack.versions[0].version).to.equal('0.0');
+  });
+
+  it('should allow creating a new namespace version', async () => {
+    const userDB = await database.user(USERS[0].$.id);
+    const ns = {
+      versions: [{
+        types: {
+          'thing': {
+            schema: {
+              type: 'object',
+              properties: {
+                message: {type: 'string', maxLength: 5, minLength: 5},
+              }
+            }
+          },
+        }
+      }]
+    }
+    await userDB.create('core', 'namespace', JSON.parse(JSON.stringify(ns)), 'myns');
+    await userDB.create('myns', 'thing', {message: 'abcde'}, 'thing0');
+    const thingv0 = await userDB.get('myns', 'thing', 'thing0');
+    expect(thingv0.$.info.namespace_version).to.equal('0.0');
+    await expectError(userDB.create('myns', 'thing', {message: 'abcdef'}), /should NOT be longer than 5 characters/);
+
+    const v1 = ns.versions[0];
+    v1.types.thing.schema.properties.message.minLength = 10;
+    v1.types.thing.schema.properties.message.maxLength = 10;
+    await userDB.append('core', 'namespace', 'myns', {versions: [v1]});
+    const nsBack = await userDB.get('core', 'namespace', 'myns');
+    expect(nsBack.versions.length).to.equal(2);
+    expect(nsBack.versions[0].version).to.equal('0.0');
+    expect(nsBack.versions[1].version).to.equal('1.0');
+
+    await userDB.create('myns', 'thing', {message: 'abcdefghij'}, 'thing1');
+    await expectError(userDB.create('myns', 'thing', {message: 'abcde'}), /should NOT be shorter than 10 characters/);
+    const thing1 = await userDB.get('myns', 'thing', 'thing1');
+    expect(thing1.message).to.equal('abcdefghij');
+    expect(thing1.$.info.namespace_version).to.equal('1.0');
+
+    let foo = await userDB.create('myns@0.0', 'thing', {message: 'fghij'}, 'thing02');
+    const thing02 = await userDB.get('myns', 'thing', 'thing02');
+    expect(thing02.message).to.equal('fghij');
+    expect(thing02.$.info.namespace_version).to.equal('0.0');
+
+    expect(await userDB.get('myns@1.0', 'thing', 'thing02')).to.equal(undefined);
+
+    let list = await userDB.list('myns', 'thing');
+    expect(list.length).to.equal(3);
+    expect(list.map(i => i.message)).to.deep.equal(['fghij', 'abcdefghij', 'abcde']);
+
+    list = await userDB.list('myns@0.0', 'thing');
+    expect(list.length).to.equal(2);
+    expect(list.map(i => i.message)).to.deep.equal(['fghij', 'abcde']);
+
+    list = await userDB.list('myns@1.0', 'thing');
+    expect(list.length).to.equal(1);
+    expect(list.map(i => i.message)).to.deep.equal(['abcdefghij']);
+
+    await userDB.update('myns@0.0', 'thing', 'thing0', {message: '12345'});
+    let newThing0 = await userDB.get('myns', 'thing', 'thing0');
+    expect(newThing0.$.info.namespace_version).to.equal('0.0');
+    expect(newThing0.message).to.equal('12345');
+
+    await userDB.update('myns', 'thing', 'thing0', {message: '1234567890'})
+    newThing0 = await userDB.get('myns', 'thing', 'thing0');
+    expect(newThing0.$.info.namespace_version).to.equal('1.0');
+    expect(newThing0.message).to.equal('1234567890');
   });
 
   it('should not allow creating namespace with additional properties', async () => {
@@ -271,6 +343,10 @@ describe('Database', () => {
     ns.versions[0].version = '1';
     return expectError(user0DB.update('core', 'namespace', 'foo2', ns), /User .* cannot update core\/namespace\/foo/);
   });
+
+  it('should allow new versions of namespace', async () => {
+    const user0DB = await database.user(USERS[0].$.id);
+  })
 
   it('should allow user to create thing', async () => {
     const userDB = await database.user(USERS[0].$.id);

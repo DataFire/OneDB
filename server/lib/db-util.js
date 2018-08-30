@@ -145,8 +145,7 @@ module.exports.CORE_OBJECTS = module.exports.CORE_OBJECTS.concat([{
           namespace: {
             schema: {$ref: '/data/core/schema/namespace'},
             initial_acl: {
-              // TODO: enable append for versioning
-              allow: Object.assign({append: []}, READ_ONLY_ACL),
+              allow: Object.assign({}, READ_ONLY_ACL, {append: ['_owner']}),
               modify: SYSTEM_ACL,
             }
           },

@@ -139,10 +139,12 @@ class Client {
     return response.data;
   }
 
-  async loadNamespace(namespace) {
-    let nsInfo = null;
-    nsInfo = await this.get('core', 'namespace', namespace);
-    let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
+  async loadNamespace(namespace, versionID) {
+    const nsInfo = await this.get('core', 'namespace', namespace);
+    const nsID = versionID ? namespace + '@' + versionID : namespace;
+    const version = this.namespaces[nsID] = versionID ?
+          nsInfo.versions.filter(v => v.version === versionID).pop() :
+          nsInfo.versions[nsInfo.versions.length - 1];
     for (let type in version.types) {
       let typeInfo = version.types[type];
       delete typeInfo.schema.$;

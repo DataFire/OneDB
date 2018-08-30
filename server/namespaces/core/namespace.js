@@ -4,6 +4,7 @@ module.exports = {
   properties: {
     versions: {
       type: 'array',
+      minItems: 1,
       items: {
         type: 'object',
         additionalProperties: false,
