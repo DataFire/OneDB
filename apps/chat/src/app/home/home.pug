@@ -9,5 +9,14 @@ div(*ngIf="freedb.client.hosts.primary.user")
         input.form-control([(ngModel)]="chatRoomName", placeholder="Room name (optional)", name="chatRoomName")
         .input-group-append
           button.btn.btn-success(type="submit") Start a new chat
+  .row
+    .col
+      h2 Your Chatrooms
+      .chat(*ngFor="let chat of userChats")
+        a([routerLink]="['/chat', chat.$.id]") {{ chat.title || chat.$.id }}
+    .col
+      h2 Latest Chatrooms
+      .chat(*ngFor="let chat of publicChats")
+        a([routerLink]="['/chat', chat.$.id]") {{ chat.title || chat.$.id }}
 div(*ngIf="!freedb.client.hosts.primary.user")
   p Sign in to get started
