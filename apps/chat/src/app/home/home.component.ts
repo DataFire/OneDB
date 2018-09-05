@@ -45,7 +45,7 @@ export class HomeComponent {
 
   async startChat() {
     this.error = null;
-    let chatID = this.chatRoomName.replace(/\W+/g, '_');
+    let chatID = this.chatRoomName ? this.chatRoomName.replace(/\W+/g, '_') : undefined;
     try {
       const chat = {title: this.chatRoomName || ''};
       chatID = await this.freedb.client.create('alpha_chat', 'conversation', chat, chatID);

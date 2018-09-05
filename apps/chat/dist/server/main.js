@@ -6863,7 +6863,7 @@ var HomeComponent = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         this.error = null;
-                        chatID = this.chatRoomName.replace(/\W+/g, '_');
+                        chatID = this.chatRoomName ? this.chatRoomName.replace(/\W+/g, '_') : undefined;
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 3, , 4]);
