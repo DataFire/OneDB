@@ -52,7 +52,7 @@ export class ItemComponent {
   }
 
   stringify(item) {
-    return JSON.stringify(item, null, 2);
+    return JSON.stringify(item, (key, val) => key === '$' ? undefined : val, 2);
   }
 
   datestr(date) {
@@ -63,12 +63,11 @@ export class ItemComponent {
   async getData() {
     this.item = await this.freedb.client.get(this.namespace, this.type, this.item_id);
     this.acl = await this.freedb.client.getACL(this.namespace, this.type, this.item_id);
-    this.info = await this.freedb.client.getInfo(this.namespace, this.type, this.item_id);
+    this.info = this.item.$.info;
     this.itemString = this.stringify(this.item);
   }
 
   setACLString(str, aclType, accessType) {
-    console.log('change', str);
     const users = str.split(',').map(s => s.trim());
     this.acl[aclType][accessType] = users;
   }

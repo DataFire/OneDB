@@ -23,6 +23,7 @@ export class HomeComponent {
         }
       }
     });
+    this.initialize();
   }
 
   async initialize() {

@@ -36,7 +36,7 @@ module.exports = function() {
     login: function(type, idx) {
       window._freeDBHelpers.updateHost(type, idx);
       var host = getHost(type, idx);
-      self.authorize(host);
+      if (type !== 'core') self.authorize(host);
     },
     logout: function(type, idx) {
       var host = getHost(type, idx);
@@ -116,7 +116,7 @@ function hostTemplate(host, type, idx) {
       ` : `
         <div class="input-group-append">
           <button class="btn btn-outline-secondary" type="submit">
-            Log In
+            ${ type === 'core' ? 'Set Host' : 'Log In' }
           </button>
         </div>
       `}
