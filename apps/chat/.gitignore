@@ -10,7 +10,6 @@ morgan.log
 /node_modules/
 /typings/
 /tsd_typings/
-/dist/
 /dist-server/
 /compiled/
 
