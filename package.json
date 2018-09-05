@@ -8,7 +8,8 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "cd server && npm test ; cd ../client && npm test"
+    "test": "cd server && npm test ; cd ../client && npm test",
+    "build": "cd apps/todo && npm run build ; cd ../data-viewer && npm run build ; cd ../chat && npm run build"
   },
   "repository": {
     "type": "git",

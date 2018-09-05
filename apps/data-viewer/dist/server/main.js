@@ -413,7 +413,7 @@ module.exports = function() {
     login: function(type, idx) {
       window._freeDBHelpers.updateHost(type, idx);
       var host = getHost(type, idx);
-      self.authorize(host);
+      if (type !== 'core') self.authorize(host);
     },
     logout: function(type, idx) {
       var host = getHost(type, idx);
@@ -493,7 +493,7 @@ function hostTemplate(host, type, idx) {
       ` : `
         <div class="input-group-append">
           <button class="btn btn-outline-secondary" type="submit">
-            Log In
+            ${ type === 'core' ? 'Set Host' : 'Log In' }
           </button>
         </div>
       `}
@@ -6595,7 +6595,7 @@ var ItemComponent = /** @class */ (function () {
         }); });
     }
     ItemComponent.prototype.stringify = function (item) {
-        return JSON.stringify(item, null, 2);
+        return JSON.stringify(item, function (key, val) { return key === '$' ? undefined : val; }, 2);
     };
     ItemComponent.prototype.datestr = function (date) {
         var m = moment(date);
@@ -6603,22 +6603,19 @@ var ItemComponent = /** @class */ (function () {
     };
     ItemComponent.prototype.getData = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, _b, _c;
-            return __generator(this, function (_d) {
-                switch (_d.label) {
+            var _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
                         _a = this;
                         return [4 /*yield*/, this.freedb.client.get(this.namespace, this.type, this.item_id)];
                     case 1:
-                        _a.item = _d.sent();
+                        _a.item = _c.sent();
                         _b = this;
                         return [4 /*yield*/, this.freedb.client.getACL(this.namespace, this.type, this.item_id)];
                     case 2:
-                        _b.acl = _d.sent();
-                        _c = this;
-                        return [4 /*yield*/, this.freedb.client.getInfo(this.namespace, this.type, this.item_id)];
-                    case 3:
-                        _c.info = _d.sent();
+                        _b.acl = _c.sent();
+                        this.info = this.item.$.info;
                         this.itemString = this.stringify(this.item);
                         return [2 /*return*/];
                 }
@@ -6626,7 +6623,6 @@ var ItemComponent = /** @class */ (function () {
         });
     };
     ItemComponent.prototype.setACLString = function (str, aclType, accessType) {
-        console.log('change', str);
         var users = str.split(',').map(function (s) { return s.trim(); });
         this.acl[aclType][accessType] = users;
     };
