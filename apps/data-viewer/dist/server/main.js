@@ -110,7 +110,8 @@ const TIMEOUT = 10000;
 const DEFAULT_CORE = 'https://alpha.baasket.org';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
-const HOST_REGEX = /(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?/;
+const HOST_REGEX = /^(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?$/;
+const REF_REGEX =  /^(.*)\/data\/(\w+)\/(\w+)\/(\w+)$/;
 const DEFAULT_PAGE_SIZE = 20;
 
 function replaceProtocol(str) {
@@ -127,6 +128,7 @@ class Client {
       verbose: true,
       loadSchema: async (uri) => {
         let resp = await axios.get(uri);
+        delete resp.data.$;
         return resp.data;
       }
     });
@@ -177,11 +179,11 @@ class Client {
           host.username = host.password = host.token = null;
           return this.getUser(host);
         }
-        host.displayName = host.user._id + '@' + replaceProtocol(host.location);
+        host.displayName = host.user.$.id + '@' + replaceProtocol(host.location);
       }
     }
-    if (this.options.onUser) {
-      this.options.onUser(host);
+    if (this.options.onLogin) {
+      this.options.onLogin(host);
     }
   }
 
@@ -240,15 +242,17 @@ class Client {
     return response.data;
   }
 
-  async loadNamespace(namespace) {
-    let nsInfo = null;
-    nsInfo = await this.get('core', 'namespace', namespace, namespace === 'core');
-    let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
+  async loadNamespace(namespace, versionID) {
+    const nsInfo = await this.get('core', 'namespace', namespace);
+    const nsID = versionID ? namespace + '@' + versionID : namespace;
+    const version = this.namespaces[nsID] = versionID ?
+          nsInfo.versions.filter(v => v.version === versionID).pop() :
+          nsInfo.versions[nsInfo.versions.length - 1];
     for (let type in version.types) {
       let typeInfo = version.types[type];
+      delete typeInfo.schema.$;
       typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
     }
-    // TODO: validate core namespace
   }
 
   async validateItem(namespace, type, item) {
@@ -259,24 +263,36 @@ class Client {
     }
   }
 
-  async resolveRefs(obj, defaultHost) {
+  async resolveRefs(obj, defaultHost, cache={}) {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
       const resolved = await Promise.all(obj.map(item => {
-        return this.resolveRefs(item, defaultHost);
+        return this.resolveRefs(item, defaultHost, cache);
       }));
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
+      const match = obj.$ref.match(REF_REGEX);
+      if (!match) throw new Error("Bad $ref:" + obj.$ref);
+      const [full, hostname, ns, type, id] = match;
+      let host = hostname ? this.getHost(hostname) : defaultHost;
+      const noValidate = !!host;
+      host = host || {location: hostname};
+      cache[host.location] = cache[host.location] || {};
+      cache[host.location][ns] = cache[host.location][ns] || {};
+      const typeCache = cache[host.location][ns][type] = cache[host.location][ns][type] || {}
+      if (typeCache[id] !== undefined) {
+        return typeCache[id];
+      }
       try {
-        return await this.request(defaultHost, 'get', obj.$ref);
+        return typeCache[id] = await this.get(ns, type, id, host);
       } catch (e) {
         if (e.statusCode !== 404) throw e;
       }
       return obj;
     } else {
-      await Promise.all(Object.keys(obj).map(key => {
-        return this.resolveRefs(obj[key], defaultHost).then(resolved => {
+      await Promise.all(Object.keys(obj).filter(k => k !== '$').map(key => {
+        return this.resolveRefs(obj[key], defaultHost, cache).then(resolved => {
           return obj[key] = resolved;
         })
       }))
@@ -284,11 +300,14 @@ class Client {
     }
   }
 
-  async get(namespace, type, id, noValidate=false) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
-    await this.resolveRefs(item, host);
-    if (!noValidate) {
+  async get(namespace, type, id, host=null) {
+    host = host || namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const isTrusted = this.getHost(host.location);
+    const item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
+    const cache = {}
+    cache[host.location] = item.$ && item.$.cache;
+    await this.resolveRefs(item, host, cache);
+    if (!isTrusted) {
       await this.validateItem(namespace, type, item);
     }
     return item;
@@ -309,12 +328,15 @@ class Client {
   }
 
   async list(namespace, type, params={}) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const isTrusted = false; // If using another host, set to false
     params.skip = params.skip || 0;
     params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
-    let page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
-    for (let item of page.items) {
-      await this.validateItem(namespace, type, item);
+    const page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
+    if (!isTrusted) {
+      for (let item of page.items) {
+        await this.validateItem(namespace, type, item);
+      }
     }
     return page;
   }
@@ -361,14 +383,16 @@ module.exports = function() {
     throw new Error("Tried to get form in non-browser context");
   }
 
-  function getInput(idx) {
-    var inputID = 'FreeDBHost';
-    if (idx >= 0) inputID += idx;
+  function getInput(type, idx) {
+    var inputID = '_FreeDBHostInput_' + type;
+    if (type === 'secondary') inputID += idx;
     return document.getElementById(inputID).value;
   }
 
-  function getHost(idx) {
-    return idx === -1 ? self.hosts.primary : self.hosts.secondary[idx];
+  function getHost(type, idx) {
+    let host = self.hosts[type];
+    if (type === 'secondary') host = host[idx];
+    return host;
   }
 
   window._freeDBHelpers = window._freeDBHelpers || {
@@ -382,17 +406,17 @@ module.exports = function() {
       self.hosts.secondary = self.hosts.secondary.filter((h, i) => i !== idx);
       self.getUser(null);
     },
-    updateHost: function(idx) {
-      var host = getHost(idx);
-      host.location = getInput(idx);
+    updateHost: function(type, idx) {
+      var host = getHost(type, idx);
+      host.location = getInput(type, idx);
     },
-    login: function(idx) {
-      window._freeDBHelpers.updateHost(idx);
-      var host = getHost(idx);
+    login: function(type, idx) {
+      window._freeDBHelpers.updateHost(type, idx);
+      var host = getHost(type, idx);
       self.authorize(host);
     },
-    logout: function(idx) {
-      var host = getHost(idx);
+    logout: function(type, idx) {
+      var host = getHost(type, idx);
       host.username = host.password = host.token = null;
       self.getUser(host);
     },
@@ -410,7 +434,7 @@ module.exports = function() {
   return `
 <h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
-${hostTemplate(this.hosts.primary, -1)}
+${hostTemplate(this.hosts.primary, 'primary')}
 <a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
 <div id="_FreeDBAdvancedOptions" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
@@ -422,27 +446,27 @@ ${hostTemplate(this.hosts.primary, -1)}
   </p>
   <p>
     Note: removing hosts may prevent you from continuing interactions with other users.
-    ${this.hosts.secondary.map(hostTemplate).join('\n')}
+    ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
   </p>
   <p>
-    <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</a>
+    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</button>
   </p>
   <h4>Core</h4>
   <p>
     The Core host contains data schemas and other information.
     Only change this if you know what you're doing.
-    ${hostTemplate(this.hosts.core, -1)}
+    ${hostTemplate(this.hosts.core, 'core')}
   </p>
 </div>
 `
 }
 
-function hostTemplate(host, idx) {
+function hostTemplate(host, type, idx) {
   return `
-<form onsubmit="_freeDBHelpers.login(${idx}); return false">
+<form onsubmit="_freeDBHelpers.login('${type}', ${idx}); return false">
   <div class="form-group">
     <div class="input-group">
-      ${idx === -1 ? '' : `
+      ${type !== 'secondary' ? '' : `
         <div class="input-group-prepend">
           <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost(${idx})">
             &times;
@@ -451,17 +475,18 @@ function hostTemplate(host, idx) {
       `}
       ${!host.user ? '' : `
         <div class="input-group-prepend">
-          <span class="input-group-text">${host.user._id}@</span>
+          <span class="input-group-text">${host.user.$.id}@</span>
         </div>
       `}
       <input
           class="form-control"
           value="${host.location}"
-          id="FreeDBHost${idx >= 0 ? idx : ''}"
-          onchange="_freeDBHelpers.updateHost(${idx})">
+          id="_FreeDBHostInput_${type}${type === 'secondary' ? idx : ''}"
+          onchange="_freeDBHelpers.updateHost('${type}', ${idx})">
       ${host.user ? `
         <div class="input-group-append">
-          <button class="btn btn-outline-secondary" type="button" onclick="_freeDBHelpers.logout(${idx})">
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="_freeDBHelpers.logout('${type}', ${idx})">
             Log Out
           </button>
         </div>
@@ -6382,7 +6407,7 @@ function View_HomeComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
     } if (("ngModelChange" === en)) {
         var pd_4 = ((_co.query = $event) !== false);
         ad = (pd_4 && ad);
-    } return ad; }, null, null)), i0.ɵdid(11, 16384, null, 0, i3.DefaultValueAccessor, [i0.Renderer2, i0.ElementRef, [2, i3.COMPOSITION_BUFFER_MODE]], null, null), i0.ɵprd(1024, null, i3.NG_VALUE_ACCESSOR, function (p0_0) { return [p0_0]; }, [i3.DefaultValueAccessor]), i0.ɵdid(13, 671744, null, 0, i3.NgModel, [[8, null], [8, null], [8, null], [6, i3.NG_VALUE_ACCESSOR]], { model: [0, "model"] }, { update: "ngModelChange" }), i0.ɵprd(2048, null, i3.NgControl, null, [i3.NgModel]), i0.ɵdid(15, 16384, null, 0, i3.NgControlStatus, [[4, i3.NgControl]], null, null), (_l()(), i0.ɵeld(16, 0, null, null, 2, "ul", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_3)), i0.ɵdid(18, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_8 = _co.query; _ck(_v, 13, 0, currVal_8); var currVal_9 = _co.user.namespaces; _ck(_v, 18, 0, currVal_9); }, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.user._id; _ck(_v, 2, 0, currVal_0); var currVal_1 = i0.ɵnov(_v, 15).ngClassUntouched; var currVal_2 = i0.ɵnov(_v, 15).ngClassTouched; var currVal_3 = i0.ɵnov(_v, 15).ngClassPristine; var currVal_4 = i0.ɵnov(_v, 15).ngClassDirty; var currVal_5 = i0.ɵnov(_v, 15).ngClassValid; var currVal_6 = i0.ɵnov(_v, 15).ngClassInvalid; var currVal_7 = i0.ɵnov(_v, 15).ngClassPending; _ck(_v, 10, 0, currVal_1, currVal_2, currVal_3, currVal_4, currVal_5, currVal_6, currVal_7); }); }
+    } return ad; }, null, null)), i0.ɵdid(11, 16384, null, 0, i3.DefaultValueAccessor, [i0.Renderer2, i0.ElementRef, [2, i3.COMPOSITION_BUFFER_MODE]], null, null), i0.ɵprd(1024, null, i3.NG_VALUE_ACCESSOR, function (p0_0) { return [p0_0]; }, [i3.DefaultValueAccessor]), i0.ɵdid(13, 671744, null, 0, i3.NgModel, [[8, null], [8, null], [8, null], [6, i3.NG_VALUE_ACCESSOR]], { model: [0, "model"] }, { update: "ngModelChange" }), i0.ɵprd(2048, null, i3.NgControl, null, [i3.NgModel]), i0.ɵdid(15, 16384, null, 0, i3.NgControlStatus, [[4, i3.NgControl]], null, null), (_l()(), i0.ɵeld(16, 0, null, null, 2, "ul", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_3)), i0.ɵdid(18, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_8 = _co.query; _ck(_v, 13, 0, currVal_8); var currVal_9 = _co.user.namespaces; _ck(_v, 18, 0, currVal_9); }, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.user.$.id; _ck(_v, 2, 0, currVal_0); var currVal_1 = i0.ɵnov(_v, 15).ngClassUntouched; var currVal_2 = i0.ɵnov(_v, 15).ngClassTouched; var currVal_3 = i0.ɵnov(_v, 15).ngClassPristine; var currVal_4 = i0.ɵnov(_v, 15).ngClassDirty; var currVal_5 = i0.ɵnov(_v, 15).ngClassValid; var currVal_6 = i0.ɵnov(_v, 15).ngClassInvalid; var currVal_7 = i0.ɵnov(_v, 15).ngClassPending; _ck(_v, 10, 0, currVal_1, currVal_2, currVal_3, currVal_4, currVal_5, currVal_6, currVal_7); }); }
 function View_HomeComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { logInModal: 0 }), (_l()(), i0.ɵeld(1, 0, null, null, 1, "log-in-modal", [], null, null, null, i4.View_LogInModalComponent_0, i4.RenderType_LogInModalComponent)), i0.ɵdid(2, 49152, [[1, 4], ["logInModal", 4]], 0, i5.LogInModalComponent, [i6.FreeDBService, i7.NgbModal, i8.DomSanitizer], null, null), (_l()(), i0.ɵeld(3, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["FreeDB Data Viewer"])), (_l()(), i0.ɵeld(5, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["This site allows you to browse, modify, and delete data on your FreeDB accounts."])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_1)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_2)), i0.ɵdid(10, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = !_co.user; _ck(_v, 8, 0, currVal_0); var currVal_1 = _co.user; _ck(_v, 10, 0, currVal_1); }, null); }
 exports.View_HomeComponent_0 = View_HomeComponent_0;
 function View_HomeComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "home", [], null, null, null, View_HomeComponent_0, RenderType_HomeComponent)), i0.ɵdid(1, 49152, null, 0, i9.HomeComponent, [i6.FreeDBService], null, null)], null, null); }
@@ -6408,7 +6433,7 @@ var HomeComponent = /** @class */ (function () {
     function HomeComponent(freedb) {
         var _this = this;
         this.freedb = freedb;
-        this.freedb.onUser.subscribe(function (user) {
+        this.freedb.onLogin.subscribe(function (user) {
             _this.user = user.user;
         });
     }
@@ -6729,7 +6754,7 @@ var LogInModalComponent = /** @class */ (function () {
         this.modals = modals;
         this.sanitizer = sanitizer;
         this.refreshForm();
-        this.freedb.onUser.subscribe(function (user) { return _this.refreshForm(); });
+        this.freedb.onLogin.subscribe(function (user) { return _this.refreshForm(); });
     }
     LogInModalComponent.prototype.open = function () {
         this.modals.open(this.content);
@@ -6765,22 +6790,22 @@ var i1 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var i2 = __webpack_require__(/*! @angular/common */ "@angular/common");
 var i3 = __webpack_require__(/*! ./namespace.component */ "./src/app/namespace/namespace.component.ts");
 var i4 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
-var styles_NamespaceComponent = [".space[_ngcontent-%COMP%] {\n        margin-top: 20px;\n      }"];
+var styles_NamespaceComponent = [".space[_ngcontent-%COMP%] {\n        margin-top: 20px;\n      }\n      table[_ngcontent-%COMP%] {\n        margin-bottom: 15px;\n      }\n      table[_ngcontent-%COMP%]   td[_ngcontent-%COMP%] {\n        padding: 4px;\n      }"];
 var RenderType_NamespaceComponent = i0.ɵcrt({ encapsulation: 0, styles: styles_NamespaceComponent, data: {} });
 exports.RenderType_NamespaceComponent = RenderType_NamespaceComponent;
-function View_NamespaceComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 4, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(4, null, ["Below is all your data in the ", " space"]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace._id; _ck(_v, 2, 0, currVal_0); var currVal_1 = _co.namespace._id; _ck(_v, 4, 0, currVal_1); }); }
-function View_NamespaceComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(1, null, [" - ", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.title; _ck(_v, 1, 0, currVal_0); }); }
-function View_NamespaceComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 7, "div", [["class", "item"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 4, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
-        var pd_0 = (i0.ɵnov(_v, 2).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
+function View_NamespaceComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 4, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(4, null, ["Below is all your data in the ", " space"]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace.$.id; _ck(_v, 2, 0, currVal_0); var currVal_1 = _co.namespace.$.id; _ck(_v, 4, 0, currVal_1); }); }
+function View_NamespaceComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(1, null, [" ", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.title; _ck(_v, 1, 0, currVal_0); }); }
+function View_NamespaceComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 9, "tr", [["class", "item"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 5, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 4, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
+        var pd_0 = (i0.ɵnov(_v, 3).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), i0.ɵdid(2, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(3, 4), (_l()(), i0.ɵeld(4, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(5, null, ["", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_4)), i0.ɵdid(7, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = _ck(_v, 3, 0, "/data", _co.namespace._id, _v.parent.context.$implicit.type, _v.context.$implicit._id); _ck(_v, 2, 0, currVal_2); var currVal_4 = _v.context.$implicit.title; _ck(_v, 7, 0, currVal_4); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 2).target; var currVal_1 = i0.ɵnov(_v, 2).href; _ck(_v, 1, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit._id; _ck(_v, 5, 0, currVal_3); }); }
-function View_NamespaceComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "li", [["class", "page-item"]], [[2, "active", null]], null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "a", [["class", "page-link"], ["href", "javascript:void(0)"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
+    } return ad; }, null, null)), i0.ɵdid(3, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(4, 4), (_l()(), i0.ɵeld(5, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(6, null, ["", ""])), (_l()(), i0.ɵeld(7, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_4)), i0.ɵdid(9, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = _ck(_v, 4, 0, "/data", _co.namespace.$.id, _v.parent.context.$implicit.type, _v.context.$implicit.$.id); _ck(_v, 3, 0, currVal_2); var currVal_4 = _v.context.$implicit.title; _ck(_v, 9, 0, currVal_4); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 3).target; var currVal_1 = i0.ɵnov(_v, 3).href; _ck(_v, 2, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit.$.id; _ck(_v, 6, 0, currVal_3); }); }
+function View_NamespaceComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "li", [["class", "page-item"]], [[2, "active", null]], null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "button", [["class", "page-link"]], [[8, "disabled", 0]], [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
         var pd_0 = (_co.goToPage(_v.parent.parent.context.index, _v.context.$implicit.skip) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.context.$implicit.active; _ck(_v, 0, 0, currVal_0); var currVal_1 = _v.context.$implicit.label; _ck(_v, 2, 0, currVal_1); }); }
+    } return ad; }, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.context.$implicit.active; _ck(_v, 0, 0, currVal_0); var currVal_1 = _v.context.$implicit.disabled; _ck(_v, 1, 0, currVal_1); var currVal_2 = _v.context.$implicit.label; _ck(_v, 2, 0, currVal_2); }); }
 function View_NamespaceComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "ul", [["class", "pagination"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_6)), i0.ɵdid(2, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.dataset.pages; _ck(_v, 2, 0, currVal_0); }, null); }
-function View_NamespaceComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 6, "div", [["class", "space"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h2", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_3)), i0.ɵdid(4, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_5)), i0.ɵdid(6, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var currVal_1 = _v.context.$implicit.dataset.items; _ck(_v, 4, 0, currVal_1); var currVal_2 = _v.context.$implicit.dataset.pages; _ck(_v, 6, 0, currVal_2); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit.type; _ck(_v, 2, 0, currVal_0); }); }
-function View_NamespaceComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_1)), i0.ɵdid(1, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_2)), i0.ɵdid(3, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace; _ck(_v, 1, 0, currVal_0); var currVal_1 = _co.data; _ck(_v, 3, 0, currVal_1); }, null); }
+function View_NamespaceComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 8, "div", [["class", "col space"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h2", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 3, "table", [], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 2, "tbody", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_3)), i0.ɵdid(6, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_5)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var currVal_1 = _v.context.$implicit.dataset.items; _ck(_v, 6, 0, currVal_1); var currVal_2 = _v.context.$implicit.dataset.pages; _ck(_v, 8, 0, currVal_2); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit.type; _ck(_v, 2, 0, currVal_0); }); }
+function View_NamespaceComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_1)), i0.ɵdid(1, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(2, 0, null, null, 2, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_2)), i0.ɵdid(4, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace; _ck(_v, 1, 0, currVal_0); var currVal_1 = _co.data; _ck(_v, 4, 0, currVal_1); }, null); }
 exports.View_NamespaceComponent_0 = View_NamespaceComponent_0;
 function View_NamespaceComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "namespace", [], null, null, null, View_NamespaceComponent_0, RenderType_NamespaceComponent)), i0.ɵdid(1, 49152, null, 0, i3.NamespaceComponent, [i4.FreeDBService, i1.Router, i1.ActivatedRoute], null, null)], null, null); }
 exports.View_NamespaceComponent_Host_0 = View_NamespaceComponent_Host_0;
@@ -6894,20 +6919,19 @@ var NamespaceComponent = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        query = { skip: skip, owner: this.freedb.client.hosts.primary.user._id };
-                        return [4 /*yield*/, this.freedb.client.list(this.namespace._id, type, query)];
+                        query = { skip: skip, owner: this.freedb.client.hosts.primary.user.$.id };
+                        return [4 /*yield*/, this.freedb.client.list(this.namespace.$.id, type, query)];
                     case 1:
                         dataset = _a.sent();
                         if (dataset.total > dataset.items.length) {
                             dataset.pages = [];
                             numPages = Math.ceil(dataset.total / dataset.pageSize);
                             curPage = Math.floor(dataset.skip / dataset.pageSize);
-                            if (curPage !== 0) {
-                                dataset.pages.push({
-                                    label: 'Previous',
-                                    skip: Math.max(0, dataset.skip - dataset.pageSize)
-                                });
-                            }
+                            dataset.pages.push({
+                                label: 'Previous',
+                                skip: Math.max(0, dataset.skip - dataset.pageSize),
+                                disabled: curPage === 0,
+                            });
                             for (i = 0; i < numPages; ++i) {
                                 dataset.pages.push({
                                     label: (i + 1).toString(),
@@ -6915,12 +6939,11 @@ var NamespaceComponent = /** @class */ (function () {
                                     active: i === curPage,
                                 });
                             }
-                            if (curPage !== numPages - 1) {
-                                dataset.pages.push({
-                                    label: 'Next',
-                                    skip: dataset.skip + dataset.pageSize
-                                });
-                            }
+                            dataset.pages.push({
+                                label: 'Next',
+                                skip: dataset.skip + dataset.pageSize,
+                                disabled: curPage === numPages - 1,
+                            });
                         }
                         return [2 /*return*/, dataset];
                 }
@@ -7075,7 +7098,7 @@ var FreeDBService = /** @class */ (function () {
     function FreeDBService(zone) {
         var _this = this;
         this.zone = zone;
-        this.onUser = new rxjs_1.BehaviorSubject(null);
+        this.onLogin = new rxjs_1.BehaviorSubject(null);
         window.freedbService = this;
         this.client = new Client({
             hosts: {
@@ -7083,12 +7106,12 @@ var FreeDBService = /** @class */ (function () {
                     location: CORE_HOST,
                 }
             },
-            onUser: function (user) {
-                _this.zone.run(function (_) { return _this.onUser.next(user); });
-            }
+            onLogin: function (user) {
+                _this.zone.run(function (_) { return _this.onLogin.next(user); });
+            },
         });
         this.maybeRestore();
-        this.onUser.subscribe(function (user) {
+        this.onLogin.subscribe(function (user) {
             _this.user = user;
             if (!window.localStorage)
                 return;
@@ -7112,8 +7135,6 @@ var FreeDBService = /** @class */ (function () {
                         existing = JSON.parse(existing);
                         if (!existing || !existing.hosts)
                             return [2 /*return*/];
-                        existing.hosts.core = existing.hosts.core || {};
-                        existing.hosts.core.location = CORE_HOST;
                         return [4 /*yield*/, this.client.setHosts(existing.hosts)];
                     case 1:
                         _a.sent();

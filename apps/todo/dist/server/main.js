@@ -110,7 +110,8 @@ const TIMEOUT = 10000;
 const DEFAULT_CORE = 'https://alpha.baasket.org';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
-const HOST_REGEX = /(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?/;
+const HOST_REGEX = /^(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?$/;
+const REF_REGEX =  /^(.*)\/data\/(\w+)\/(\w+)\/(\w+)$/;
 const DEFAULT_PAGE_SIZE = 20;
 
 function replaceProtocol(str) {
@@ -127,6 +128,7 @@ class Client {
       verbose: true,
       loadSchema: async (uri) => {
         let resp = await axios.get(uri);
+        delete resp.data.$;
         return resp.data;
       }
     });
@@ -177,11 +179,11 @@ class Client {
           host.username = host.password = host.token = null;
           return this.getUser(host);
         }
-        host.displayName = host.user._id + '@' + replaceProtocol(host.location);
+        host.displayName = host.user.$.id + '@' + replaceProtocol(host.location);
       }
     }
-    if (this.options.onUser) {
-      this.options.onUser(host);
+    if (this.options.onLogin) {
+      this.options.onLogin(host);
     }
   }
 
@@ -240,15 +242,17 @@ class Client {
     return response.data;
   }
 
-  async loadNamespace(namespace) {
-    let nsInfo = null;
-    nsInfo = await this.get('core', 'namespace', namespace, namespace === 'core');
-    let version = this.namespaces[namespace] = JSON.parse(JSON.stringify(nsInfo.versions[nsInfo.versions.length - 1]));
+  async loadNamespace(namespace, versionID) {
+    const nsInfo = await this.get('core', 'namespace', namespace);
+    const nsID = versionID ? namespace + '@' + versionID : namespace;
+    const version = this.namespaces[nsID] = versionID ?
+          nsInfo.versions.filter(v => v.version === versionID).pop() :
+          nsInfo.versions[nsInfo.versions.length - 1];
     for (let type in version.types) {
       let typeInfo = version.types[type];
+      delete typeInfo.schema.$;
       typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
     }
-    // TODO: validate core namespace
   }
 
   async validateItem(namespace, type, item) {
@@ -259,24 +263,36 @@ class Client {
     }
   }
 
-  async resolveRefs(obj, defaultHost) {
+  async resolveRefs(obj, defaultHost, cache={}) {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
       const resolved = await Promise.all(obj.map(item => {
-        return this.resolveRefs(item, defaultHost);
+        return this.resolveRefs(item, defaultHost, cache);
       }));
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
+      const match = obj.$ref.match(REF_REGEX);
+      if (!match) throw new Error("Bad $ref:" + obj.$ref);
+      const [full, hostname, ns, type, id] = match;
+      let host = hostname ? this.getHost(hostname) : defaultHost;
+      const noValidate = !!host;
+      host = host || {location: hostname};
+      cache[host.location] = cache[host.location] || {};
+      cache[host.location][ns] = cache[host.location][ns] || {};
+      const typeCache = cache[host.location][ns][type] = cache[host.location][ns][type] || {}
+      if (typeCache[id] !== undefined) {
+        return typeCache[id];
+      }
       try {
-        return await this.request(defaultHost, 'get', obj.$ref);
+        return typeCache[id] = await this.get(ns, type, id, host);
       } catch (e) {
         if (e.statusCode !== 404) throw e;
       }
       return obj;
     } else {
-      await Promise.all(Object.keys(obj).map(key => {
-        return this.resolveRefs(obj[key], defaultHost).then(resolved => {
+      await Promise.all(Object.keys(obj).filter(k => k !== '$').map(key => {
+        return this.resolveRefs(obj[key], defaultHost, cache).then(resolved => {
           return obj[key] = resolved;
         })
       }))
@@ -284,11 +300,14 @@ class Client {
     }
   }
 
-  async get(namespace, type, id, noValidate=false) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    let item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
-    await this.resolveRefs(item, host);
-    if (!noValidate) {
+  async get(namespace, type, id, host=null) {
+    host = host || namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const isTrusted = this.getHost(host.location);
+    const item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
+    const cache = {}
+    cache[host.location] = item.$ && item.$.cache;
+    await this.resolveRefs(item, host, cache);
+    if (!isTrusted) {
       await this.validateItem(namespace, type, item);
     }
     return item;
@@ -309,12 +328,15 @@ class Client {
   }
 
   async list(namespace, type, params={}) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    const isTrusted = false; // If using another host, set to false
     params.skip = params.skip || 0;
     params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
-    let page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
-    for (let item of page.items) {
-      await this.validateItem(namespace, type, item);
+    const page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
+    if (!isTrusted) {
+      for (let item of page.items) {
+        await this.validateItem(namespace, type, item);
+      }
     }
     return page;
   }
@@ -361,14 +383,16 @@ module.exports = function() {
     throw new Error("Tried to get form in non-browser context");
   }
 
-  function getInput(idx) {
-    var inputID = 'FreeDBHost';
-    if (idx >= 0) inputID += idx;
+  function getInput(type, idx) {
+    var inputID = '_FreeDBHostInput_' + type;
+    if (type === 'secondary') inputID += idx;
     return document.getElementById(inputID).value;
   }
 
-  function getHost(idx) {
-    return idx === -1 ? self.hosts.primary : self.hosts.secondary[idx];
+  function getHost(type, idx) {
+    let host = self.hosts[type];
+    if (type === 'secondary') host = host[idx];
+    return host;
   }
 
   window._freeDBHelpers = window._freeDBHelpers || {
@@ -382,17 +406,17 @@ module.exports = function() {
       self.hosts.secondary = self.hosts.secondary.filter((h, i) => i !== idx);
       self.getUser(null);
     },
-    updateHost: function(idx) {
-      var host = getHost(idx);
-      host.location = getInput(idx);
+    updateHost: function(type, idx) {
+      var host = getHost(type, idx);
+      host.location = getInput(type, idx);
     },
-    login: function(idx) {
-      window._freeDBHelpers.updateHost(idx);
-      var host = getHost(idx);
+    login: function(type, idx) {
+      window._freeDBHelpers.updateHost(type, idx);
+      var host = getHost(type, idx);
       self.authorize(host);
     },
-    logout: function(idx) {
-      var host = getHost(idx);
+    logout: function(type, idx) {
+      var host = getHost(type, idx);
       host.username = host.password = host.token = null;
       self.getUser(host);
     },
@@ -410,7 +434,7 @@ module.exports = function() {
   return `
 <h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
-${hostTemplate(this.hosts.primary, -1)}
+${hostTemplate(this.hosts.primary, 'primary')}
 <a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
 <div id="_FreeDBAdvancedOptions" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
@@ -422,27 +446,27 @@ ${hostTemplate(this.hosts.primary, -1)}
   </p>
   <p>
     Note: removing hosts may prevent you from continuing interactions with other users.
-    ${this.hosts.secondary.map(hostTemplate).join('\n')}
+    ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
   </p>
   <p>
-    <a class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</a>
+    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</button>
   </p>
   <h4>Core</h4>
   <p>
     The Core host contains data schemas and other information.
     Only change this if you know what you're doing.
-    ${hostTemplate(this.hosts.core, -1)}
+    ${hostTemplate(this.hosts.core, 'core')}
   </p>
 </div>
 `
 }
 
-function hostTemplate(host, idx) {
+function hostTemplate(host, type, idx) {
   return `
-<form onsubmit="_freeDBHelpers.login(${idx}); return false">
+<form onsubmit="_freeDBHelpers.login('${type}', ${idx}); return false">
   <div class="form-group">
     <div class="input-group">
-      ${idx === -1 ? '' : `
+      ${type !== 'secondary' ? '' : `
         <div class="input-group-prepend">
           <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost(${idx})">
             &times;
@@ -451,17 +475,18 @@ function hostTemplate(host, idx) {
       `}
       ${!host.user ? '' : `
         <div class="input-group-prepend">
-          <span class="input-group-text">${host.user._id}@</span>
+          <span class="input-group-text">${host.user.$.id}@</span>
         </div>
       `}
       <input
           class="form-control"
           value="${host.location}"
-          id="FreeDBHost${idx >= 0 ? idx : ''}"
-          onchange="_freeDBHelpers.updateHost(${idx})">
+          id="_FreeDBHostInput_${type}${type === 'secondary' ? idx : ''}"
+          onchange="_freeDBHelpers.updateHost('${type}', ${idx})">
       ${host.user ? `
         <div class="input-group-append">
-          <button class="btn btn-outline-secondary" type="button" onclick="_freeDBHelpers.logout(${idx})">
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="_freeDBHelpers.logout('${type}', ${idx})">
             Log Out
           </button>
         </div>
@@ -6394,7 +6419,7 @@ function View_HomeComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
 function View_HomeComponent_8(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 5, "div", [["class", "list"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 4, "h4", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 3, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 3).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), i0.ɵdid(3, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(4, 2), (_l()(), i0.ɵted(5, null, ["", ""]))], function (_ck, _v) { var currVal_2 = _ck(_v, 4, 0, "/list", _v.context.$implicit._id); _ck(_v, 3, 0, currVal_2); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 3).target; var currVal_1 = i0.ɵnov(_v, 3).href; _ck(_v, 2, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit.title; _ck(_v, 5, 0, currVal_3); }); }
+    } return ad; }, null, null)), i0.ɵdid(3, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(4, 2), (_l()(), i0.ɵted(5, null, ["", ""]))], function (_ck, _v) { var currVal_2 = _ck(_v, 4, 0, "/list", _v.context.$implicit.$.id); _ck(_v, 3, 0, currVal_2); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 3).target; var currVal_1 = i0.ɵnov(_v, 3).href; _ck(_v, 2, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit.title; _ck(_v, 5, 0, currVal_3); }); }
 function View_HomeComponent_7(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 5, "div", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_8)), i0.ɵdid(2, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null), (_l()(), i0.ɵeld(3, 0, null, null, 2, "a", [["class", "btn btn-min-width btn-success"], ["routerLink", "/new-list"]], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 4).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
@@ -6461,9 +6486,15 @@ var HomeComponent = /** @class */ (function () {
     function HomeComponent(freedb) {
         var _this = this;
         this.freedb = freedb;
-        this.freedb.onUser.subscribe(function (user) {
-            if (user)
-                _this.loadTodoLists();
+        this.freedb.onLogin.subscribe(function (host) {
+            if (host === _this.freedb.client.hosts.primary) {
+                if (host.user) {
+                    _this.loadTodoLists();
+                }
+                else {
+                    _this.lists = [];
+                }
+            }
         });
     }
     HomeComponent.prototype.initialize = function () {
@@ -6697,14 +6728,14 @@ var ListComponent = /** @class */ (function () {
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 6, , 7]);
-                        if (!!this.list._id) return [3 /*break*/, 3];
+                        if (!!this.list.$) return [3 /*break*/, 3];
                         return [4 /*yield*/, this.freedb.client.create('alpha_todo', 'list', this.list)];
                     case 2:
                         id = _a.sent();
                         return [3 /*break*/, 5];
                     case 3:
-                        id = this.list._id;
-                        return [4 /*yield*/, this.freedb.client.update('alpha_todo', 'list', this.list._id, this.list)];
+                        id = this.list.$.id;
+                        return [4 /*yield*/, this.freedb.client.update('alpha_todo', 'list', this.list.$.id, this.list)];
                     case 4:
                         _a.sent();
                         _a.label = 5;
@@ -6731,11 +6762,11 @@ var ListComponent = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         this.error = null;
-                        if (!item._id) return [3 /*break*/, 4];
+                        if (!item.$) return [3 /*break*/, 4];
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this.freedb.client.destroy('alpha_todo', 'item', item._id)];
+                        return [4 /*yield*/, this.freedb.client.destroy('alpha_todo', 'item', item.$.id)];
                     case 2:
                         _a.sent();
                         return [3 /*break*/, 4];
@@ -6760,10 +6791,11 @@ var ListComponent = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         this.error = null;
+                        if (!this.list.$) return [3 /*break*/, 4];
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this.freedb.client.destroy('alpha_todo', 'list', this.list._id)];
+                        return [4 /*yield*/, this.freedb.client.destroy('alpha_todo', 'list', this.list.$.id)];
                     case 2:
                         _a.sent();
                         return [3 /*break*/, 4];
@@ -6844,7 +6876,7 @@ var LogInModalComponent = /** @class */ (function () {
         this.modals = modals;
         this.sanitizer = sanitizer;
         this.refreshForm();
-        this.freedb.onUser.subscribe(function (user) { return _this.refreshForm(); });
+        this.freedb.onLogin.subscribe(function (host) { return _this.refreshForm(); });
     }
     LogInModalComponent.prototype.open = function () {
         this.modals.open(this.content);
@@ -6984,7 +7016,7 @@ var FreeDBService = /** @class */ (function () {
     function FreeDBService(zone) {
         var _this = this;
         this.zone = zone;
-        this.onUser = new rxjs_1.BehaviorSubject(null);
+        this.onLogin = new rxjs_1.BehaviorSubject(null);
         window.freedbService = this;
         this.client = new Client({
             hosts: {
@@ -6992,13 +7024,13 @@ var FreeDBService = /** @class */ (function () {
                     location: CORE_HOST,
                 }
             },
-            onUser: function (user) {
-                _this.zone.run(function (_) { return _this.onUser.next(user); });
+            onLogin: function (user) {
+                _this.zone.run(function (_) { return _this.onLogin.next(user); });
             },
             scope: ['alpha_todo:read', 'alpha_todo:create', 'alpha_todo:write', 'alpha_todo:destroy', 'alpha_todo:modify_acl', 'alpha_todo:append'],
         });
         this.maybeRestore();
-        this.onUser.subscribe(function (user) {
+        this.onLogin.subscribe(function (user) {
             _this.user = user;
             if (!window.localStorage)
                 return;
