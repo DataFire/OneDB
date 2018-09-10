@@ -4,7 +4,6 @@ const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 const expect = chai.expect;
-const config = require('../lib/config');
 const Database = require('../lib/database');
 const dbUtil = require('../lib/db-util');
 
@@ -685,31 +684,31 @@ describe('Database', () => {
   });
 
   it('should hit a limit for number of items per user', async () => {
-    const oldMaxItems = config.maxItemsPerUser;
-    config.maxItemsPerUser = 10;
     const userDB = await database.user(USERS[2].$.id);
-    for (let i = 0; i < config.maxItemsPerUser; ++i) {
+    const oldMaxItems = userDB.config.maxItemsPerUser;
+    userDB.config.maxItemsPerUser = 10;
+    for (let i = 0; i < userDB.config.maxItemsPerUser; ++i) {
       await userDB.create('foo', 'thing', {message: 'foobar'});
     }
     await expectError(userDB.create('foo', 'thing', {message: 'foobar'}), /You have hit your maximum of 10 items. Please destroy something to create a new one/);
-    config.maxItemsPerUser = oldMaxItems;
+    userDB.config.maxItemsPerUser = oldMaxItems;
   });
 
   it('should respect the maximum number of bytes per item in append', async function() {
     this.timeout(10000);
-    const oldMaxBytes = config.maxBytesPerItem;
-    config.maxBytesPerItem = 1000;
     const userDB = await database.user(USERS[0].$.id);
+    const oldMaxBytes = userDB.config.maxBytesPerItem;
+    userDB.config.maxBytesPerItem = 1000;
     const list = await userDB.create('foo', 'list', {things: []});
     // each message is {"$ref":"/data/foo/list/12345678"}, = 36 bytes
     // top level is {"things":[...]} = 13 bytes
     // +1 for one item missing a comma
-    const iterations = Math.floor((config.maxBytesPerItem - 12) / 36);
+    const iterations = Math.floor((userDB.config.maxBytesPerItem - 12) / 36);
     for (let i = 0; i < iterations; ++i) {
       await userDB.append('foo', 'list', list.$.id, {things: [{message: 'a'}]});
     }
     await expectError(userDB.append('foo', 'list', list.$.id, {things: [{message: 'a'}]}), /would exceed the maximum of 1000 bytes/);
-    config.maxBytesPerItem = oldMaxBytes;
+    userDB.config.maxBytesPerItem = oldMaxBytes;
   });
 
   it('should allow ref to external item', async () => {

@@ -35,10 +35,7 @@ class Server {
   }
 
   async listen(port=DEFAULT_PORT) {
-    this.database = new Database({
-      mongodb: this.config.mongodb,
-      host: this.config.host,
-    });
+    this.database = new Database(this.config);
     await this.database.initialize();
     this.app = express();
     this.app.set('view engine', 'pug');
@@ -57,8 +54,8 @@ class Server {
       this.app.use(plugin);
     }
 
-    this.app.use('/users', new RateLimit(this.config.rateLimit.users), routes.users);
-    this.app.use(middleware.authenticate);
+    this.app.use('/users', new RateLimit(this.config.rateLimit.users), routes.users(this.config));
+    this.app.use(middleware.authenticate(this.config));
 
     let getRateLimit = new RateLimit(this.config.rateLimit.getData);
     let mutateRateLimit = new RateLimit(this.config.rateLimit.mutateData);

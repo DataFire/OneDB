@@ -14,7 +14,6 @@ axios.interceptors.response.use(
 		return Promise.reject(error.response.data);
 	});
 
-const mongod = new MongoMemoryServer();
 
 const PORT = 3333;
 const HOST = 'http://localhost:' + PORT;
@@ -26,11 +25,13 @@ const USER_1 = {
 }
 
 let server = null;
+let mongod = null;
 
 describe("Server", () => {
   const oldMaxBytes = config.maxBytesPerItem;
 
-  before(async () => {
+  beforeEach(async function() {
+    mongod = new MongoMemoryServer();
     config.maxBytesPerItem = MAX_BYTES;
     config.email = {file: EMAIL_FILE};
     config.host = HOST;
@@ -38,6 +39,11 @@ describe("Server", () => {
       host: HOST,
       mongodb: await mongod.getConnectionString(),
       rateLimit: {
+        createUser: {
+          windowMs: 2000,
+          max: 1000,
+          delayMs: 0,
+        },
         all: {
           windowMs: 2000,
           max: 100,
@@ -45,12 +51,44 @@ describe("Server", () => {
         }
       }
     });
-    return server.listen(PORT);
+    await server.listen(PORT);
+
+    const username = 'foobar';
+    let resp = await axios.post(HOST + '/users/register/' + username, {}, {auth: USER_1});
+    USER_1.id = resp.data;
+
+    const data = {type: 'object', properties: {message: {type: 'string'}}};
+    resp = await axios.post(HOST + '/data/core/schema/foo', data, {auth: USER_1});
+    const ns = {
+      versions: [{
+        version: '0',
+        types: {
+          foo: {
+            schema: {$ref: '/data/core/schema/foo'},
+          },
+          foo_set: {
+            schema: {
+              type: 'object',
+              properties: {
+                foos: {
+                  type: 'array',
+                  items: {$ref: '#/definitions/foo'},
+                }
+              }
+            }
+          }
+        }
+      }]
+    }
+    resp = await axios.post(HOST + '/data/core/namespace/foo', ns, {auth: USER_1});
+    expect(resp.status).to.equal(200);
   });
 
-  after(() => {
+  afterEach(() => {
+    mongod.stop();
     config.maxBytesPerItem = oldMaxBytes;
-    fs.unlinkSync(EMAIL_FILE);
+    if (fs.existsSync(EMAIL_FILE)) fs.unlinkSync(EMAIL_FILE);
+    server.close();
   })
 
   it('should respond with info', async () => {
@@ -94,24 +132,24 @@ describe("Server", () => {
 
   it('should list schemas', async () => {
     let resp = await axios.get(HOST + '/data/core/schema');
-    expect(resp.data.total).to.equal(5);
-    expect(resp.data.items.length).to.equal(5);
+    expect(resp.data.total).to.equal(7);
+    expect(resp.data.items.length).to.equal(7);
 
-    resp = await axios.get(HOST + '/data/core/schema?pageSize=3');
-    expect(resp.data.total).to.equal(5);
-    expect(resp.data.items.length).to.equal(3);
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=4');
+    expect(resp.data.total).to.equal(7);
+    expect(resp.data.items.length).to.equal(4);
     expect(resp.data.hasNext).to.equal(true);
 
-    resp = await axios.get(HOST + '/data/core/schema?pageSize=3&skip=3');
-    expect(resp.data.total).to.equal(5);
-    expect(resp.data.items.length).to.equal(2);
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=4&skip=4');
+    expect(resp.data.total).to.equal(7);
+    expect(resp.data.items.length).to.equal(3);
     expect(resp.data.hasNext).to.equal(false);
   })
 
   it('should give 404 for missing item', async () => {
-    const resp = await axios.get(HOST + '/data/core/schema/foo', {validateStatus: () => true});
+    const resp = await axios.get(HOST + '/data/core/schema/foo2', {validateStatus: () => true});
     expect(resp.status).to.equal(404);
-    expect(resp.data).to.deep.equal({message: 'Item core/schema/foo not found'});
+    expect(resp.data).to.deep.equal({message: 'Item core/schema/foo2 not found'});
   });
 
   it('should not allow POST without auth', async () => {
@@ -121,22 +159,28 @@ describe("Server", () => {
     expect(resp.data).to.deep.equal({message: 'You need to log in to do that'});
   });
 
-  it('should allow registration', async () => {
-    const username = 'foobar';
-    const resp = await axios.post(HOST + '/users/register/' + username, {}, {auth: USER_1});
+  it('should allow registration', async function() {
+    const username = 'foobarbaz';
+    const user = {username: 'you@example.com', password: 'abcdefgh'}
+    const resp = await axios.post(HOST + '/users/register/' + username, {}, {auth: user});
     expect(resp.data).to.be.a('string');
     expect(resp.data).to.equal(username);
-    USER_1.id = resp.data;
   });
 
-  it('should confirm email', async () => {
-    const userQuery = {'data.email': USER_1.username}
+  it('should confirm email', async function() {
+    const username = 'foobarbaz';
+    const creds = {username: 'you@example.com', password: 'abcdefgh'}
+    let resp = await axios.post(HOST + '/users/register/' + username, {}, {auth: creds});
+    expect(resp.data).to.be.a('string');
+    expect(resp.data).to.equal(username);
+
+    const userQuery = {'data.email': creds.username}
     let user = await server.database.db.collection('core-user_private').findOne(userQuery);
     expect(user.data.email_confirmation.confirmed).to.not.equal(true);
     expect(user.data.email_confirmation.code).to.be.a('string');
     const email = fs.readFileSync(EMAIL_FILE, 'utf8');
     const link = email.match(/href="(http.*)"/)[1];
-    let resp = await axios.get(link);
+    resp = await axios.get(link);
     user = await server.database.db.collection('core-user_private').findOne(userQuery);
     expect(user.data.email_confirmation.confirmed).to.equal(true);
     expect(user.data.email_confirmation.code).to.equal(null);
@@ -204,12 +248,12 @@ describe("Server", () => {
 
   it('should allow POST with auth', async () => {
     const data = {type: 'object', properties: {message: {type: 'string'}}};
-    let resp = await axios.post(HOST + '/data/core/schema/foo', data, {auth: USER_1, validateStatus: () => true});
-    expect(resp.data).to.equal('foo');
+    let resp = await axios.post(HOST + '/data/core/schema/foo2', data, {auth: USER_1});
+    expect(resp.data).to.equal('foo2');
 
-    resp = await axios.get(HOST + '/data/core/schema/foo');
+    resp = await axios.get(HOST + '/data/core/schema/foo2');
     expect(resp.data.$.cache).to.deep.equal({});
-    expect(resp.data.$.id).to.deep.equal('foo');
+    expect(resp.data.$.id).to.deep.equal('foo2');
     delete resp.data.$;
     expect(resp.data).to.deep.equal({
       type: 'object',
@@ -226,29 +270,6 @@ describe("Server", () => {
       modify: dbUtil.SYSTEM_ACL,
       disallow: {},
     });
-    const ns = {
-      versions: [{
-        version: '0',
-        types: {
-          foo: {
-            schema: {$ref: '/data/core/schema/foo'},
-          },
-          foo_set: {
-            schema: {
-              type: 'object',
-              properties: {
-                foos: {
-                  type: 'array',
-                  items: {$ref: '#/definitions/foo'},
-                }
-              }
-            }
-          }
-        }
-      }]
-    }
-    resp = await axios.post(HOST + '/data/core/namespace/foo', ns, {auth: USER_1});
-    expect(resp.status).to.equal(200);
   });
 
   it('should not allow DELETE of schema', async () => {

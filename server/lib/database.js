@@ -5,7 +5,6 @@ const validate = require('./validate');
 const dbUtil = require('./db-util');
 const util = require('./util');
 const fail = require('./fail');
-const config = require('./config');
 
 const DB_NAME = 'freedb';
 const ID_LENGTH = 8;
@@ -22,12 +21,12 @@ class Database {
     if (typeof opts == 'string') {
       opts = {mongodb: opts};
     }
-    this.options = opts;
+    this.config = opts;
   }
 
   async initialize() {
     if (this.client) return fail("Database already initialized");
-    this.client = await mongodb.MongoClient.connect(this.options.mongodb, {useNewUrlParser: true});
+    this.client = await mongodb.MongoClient.connect(this.config.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
     for (let obj of dbUtil.CORE_OBJECTS) {
       const coll = this.db.collection(obj.namespace + '-' + obj.type);
@@ -49,7 +48,7 @@ class Database {
 
   async user(user, permissions) {
     if (!this.db) return fail("Database not initialized");
-    const db = new DatabaseForUser({db: this.db, user, permissions});
+    const db = new DatabaseForUser({config: this.config, db: this.db, user, permissions});
     await db.initialize();
     return db;
   }
@@ -140,6 +139,7 @@ class DatabaseForUser {
     this.db = opts.db;
     this.userID = opts.user;
     this.permissions = opts.permissions;
+    this.config = opts.config;
     if (!this.userID) throw new Error("Username not specified");
   }
 
@@ -401,8 +401,8 @@ class DatabaseForUser {
   }
 
   async create(namespace, type, data, id='') {
-    if (this.user.data.items >= config.maxItemsPerUser) {
-      return fail(`You have hit your maximum of ${config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
+    if (this.user.data.items >= this.config.maxItemsPerUser) {
+      return fail(`You have hit your maximum of ${this.config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
     }
     if (!this.checkPermission(namespace, type, 'create')) {
       return fail(`This app does not have permission to create items in ${namespace}/${type}`, 401);
@@ -514,8 +514,8 @@ class DatabaseForUser {
     }
 
     const newDoc = JSON.stringify(existing);
-    if (newDoc.length > config.maxBytesPerItem) {
-      return fail(`Item ${namespace}/${type}/${id} would exceed the maximum of ${config.maxBytesPerItem} bytes`);
+    if (newDoc.length > this.config.maxBytesPerItem) {
+      return fail(`Item ${namespace}/${type}/${id} would exceed the maximum of ${this.config.maxBytesPerItem} bytes`);
     }
 
     const result = await col.update(query, doc);
