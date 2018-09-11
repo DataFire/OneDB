@@ -8,6 +8,7 @@ module.exports = {
   maxBytesPerItem: 100 * 1000, // 100 kiB
   maxItemsPerUser: 10 * 1000,  // 1 GiB total
   host: 'http://localhost:3000',
+  namespaces: {},
   rateLimit: {
     all: {
       windowMs: FIFTEEN_MIN,

@@ -1,6 +1,7 @@
 const mongodb = require('mongodb');
 const randomstring = require("randomstring");
 const moment = require('moment');
+const axios = require('axios');
 const validate = require('./validate');
 const dbUtil = require('./db-util');
 const util = require('./util');
@@ -140,6 +141,7 @@ class DatabaseForUser {
     this.userID = opts.user;
     this.permissions = opts.permissions;
     this.config = opts.config;
+    this.config.namespaces = this.config.namespaces || {};
     if (!this.userID) throw new Error("Username not specified");
   }
 
@@ -158,6 +160,20 @@ class DatabaseForUser {
     namespace = namespace.split('@')[0];
     const collectionName = namespace + '-' + type;
     return this.db.collection(collectionName);
+  }
+
+  checkNamespace(namespace) {
+    const [namespaceID, version] = namespace.split('@');
+    let allowed = true;
+    if (this.config.namespaces.allow) {
+      allowed = allowed && this.config.namespaces.allow.includes(namespaceID);
+    }
+    if (this.config.namespaces.disallow) {
+      allowed = allowed && !this.config.namespaces.disallow.includes(namespaceID);
+    }
+    if (!allowed) {
+      fail("Namespace " + namespaceID + " is not supported by this server", 501);
+    }
   }
 
   checkPermission(namespace, type, access) {
@@ -187,17 +203,32 @@ class DatabaseForUser {
     }
   }
 
+  async maybeProxy(namespace, type, id) {
+    const proxyHost = this.config.namespaces.proxy && this.config.namespaces.proxy[namespace];
+    let item = null;
+    if (proxyHost) {
+      try {
+        item = (await axios.get(`${proxyHost}/data/${namespace}/${type}/${id}`)).data
+      } catch (e) {
+        if (!e.response || e.response.status !== 404) throw e;
+      }
+    } else {
+      item = await this.get(namespace, type, id);
+    }
+    return item;
+  }
+
   async getSchema(namespaceIDWithVersion, typeID) {
     const [namespaceID, versionID] = namespaceIDWithVersion.split('@');
-    const namespace = await this.get('core', 'namespace', namespaceID);
+    const namespace = await this.maybeProxy('core', 'namespace', namespaceID);
     if (!namespace) return fail(`Namespace ${namespaceID} not found`);
     const nsVersion = versionID ?
           namespace.versions.filter(v => v.version === versionID).pop() :
           namespace.versions[namespace.versions.length - 1];
-    if (!nsVersion) return fail(`Namespace ${namespaceIDWithVersion} not found`);
+    if (!nsVersion) return fail(`Version ${namespaceIDWithVersion} not found`);
     const schemaRef = (nsVersion.types[typeID] || {schema: {$ref: ''}}).schema.$ref.split('/').pop();
     if (!schemaRef) return fail(`Schema ${namespaceIDWithVersion}/${typeID} not found`);
-    const schema = await this.get('core', 'schema', schemaRef);
+    const schema = await this.maybeProxy('core', 'schema', schemaRef);
     if (!schema) return fail(`Item core/schema/${schemaRef} not found`);
     delete schema.$;
     return {schema, namespaceVersion: nsVersion};
@@ -307,6 +338,7 @@ class DatabaseForUser {
   }
 
   async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0, keepACL=false) {
+    this.checkNamespace(namespace);
     if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(namespace, type, query, access);
@@ -324,6 +356,7 @@ class DatabaseForUser {
   }
 
   async count(namespace, type, query) {
+    this.checkNamespace(namespace);
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(namespace, type, query, 'read');
     let count = await col.find(query).count();
@@ -331,6 +364,7 @@ class DatabaseForUser {
   }
 
   async get(namespace, type, id, access='read') {
+    this.checkNamespace(namespace);
     const arr = await this.getAll(namespace, type, {id}, access);
     if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     if (!arr.length) return;
@@ -338,6 +372,7 @@ class DatabaseForUser {
   }
 
   async getACL(namespace, type, id) {
+    this.checkNamespace(namespace);
     const arr = await this.getAll(namespace, type, {id}, 'read', DEFAULT_SORT, DEFAULT_PAGE_SIZE, 0, true);
     if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     if (!arr.length) return;
@@ -345,6 +380,7 @@ class DatabaseForUser {
   }
 
   async list(namespace, type, query={}, sort=DEFAULT_SORT, pageSize, skip) {
+    this.checkNamespace(namespace);
     return this.getAll(namespace, type, query, 'read', sort, pageSize, skip);
   }
 
@@ -401,6 +437,7 @@ class DatabaseForUser {
   }
 
   async create(namespace, type, data, id='') {
+    this.checkNamespace(namespace);
     if (this.user.data.items >= this.config.maxItemsPerUser) {
       return fail(`You have hit your maximum of ${this.config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
     }
@@ -461,6 +498,7 @@ class DatabaseForUser {
   }
 
   async update(namespace, type, id, data) {
+    this.checkNamespace(namespace);
     const query = this.buildQuery(namespace, type, {id}, 'write');
     const {schema, namespaceVersion} = await this.getSchema(namespace, type);
     delete data.$;
@@ -528,6 +566,7 @@ class DatabaseForUser {
   }
 
   async modifyACL(namespace, type, id, acl) {
+    this.checkNamespace(namespace);
     const copyACL = JSON.parse(JSON.stringify(acl)); // Make a copy where defaults are set
     await this.validate({acl: Object.assign({owner: 'dummy'}, copyACL)});
     const {schema, namespaceVersion} = await this.getSchema(namespace, type);
@@ -553,6 +592,7 @@ class DatabaseForUser {
   }
 
   async destroy(namespace, type, id) {
+    this.checkNamespace(namespace);
     let query = {id};
     query = this.buildQuery(namespace, type, query, 'destroy');
     const col = this.getCollection(namespace, type);

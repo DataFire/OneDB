@@ -11,7 +11,7 @@ config.jwtSecret = 'thisisasecret';
 axios.interceptors.response.use(
     (response) => response,
 	function (error) {
-		return Promise.reject(error.response.data);
+		return Promise.reject(error.response ? error.response.data : error);
 	});
 
 
