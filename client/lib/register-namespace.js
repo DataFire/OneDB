@@ -1,4 +1,5 @@
 const fs = require('fs');
+
 const npath = require('path');
 const args = require('yargs').argv;
 const Client = require('./client');
@@ -6,8 +7,8 @@ const client = new Client({
   hosts: {
     primary: {
       location: args.host,
-      username: args.username,
-      password: args.password,
+      username: args.username || process.env.FREEDB_USERNAME,
+      password: args.password || process.env.FREEDB_PASSWORD,
     }
   }
 });
