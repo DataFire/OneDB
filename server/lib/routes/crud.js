@@ -9,6 +9,7 @@ const ITEM_PATH = TYPE_PATH + '/:itemID';
 const ACL_PATH = ITEM_PATH + '/acl';
 const INFO_PATH = ITEM_PATH + '/info';
 const DATA_PATH = ITEM_PATH + '/data';
+const APPEND_PATH = ITEM_PATH + '/append';
 
 const GET_ONLY_PATHS = [
   '/core/user',
@@ -112,6 +113,14 @@ router.post([TYPE_PATH, ITEM_PATH], errorGuard(async (req, res) => {
  */
 router.put(ITEM_PATH, errorGuard(async (req, res) => {
   await req.db.update(req.params.namespace, req.params.typeID, req.params.itemID, req.body)
+  res.json("Success");
+}));
+
+/**
+ * Append
+ */
+router.put(APPEND_PATH, errorGuard(async (req, res) => {
+  await req.db.append(req.params.namespace, req.params.typeID, req.params.itemID, req.body);
   res.json("Success");
 }));
 
