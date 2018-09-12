@@ -18,7 +18,7 @@ function replaceProtocol(str) {
 class Client {
   constructor(options={}) {
     this.options = options;
-    this.setHosts(this.options.hosts);
+    this.setHosts(this.options.hosts || {});
     this.namespaces = {};
     this.ajv = new Ajv({
       allErrors: true,
@@ -39,9 +39,7 @@ class Client {
     this.hosts.core = this.hosts.core || {location: DEFAULT_CORE};
     this.hosts.primary = this.hosts.primary || {location: DEFAULT_PRIMARY};
     this.hosts.secondary = this.hosts.secondary || [];
-    if (this.hosts.primary) {
-      await this.getUser(this.hosts.primary);
-    }
+    await this.getUser(this.hosts.primary);
     for (let host of this.hosts.secondary) {
       await this.getUser(host);
     }
@@ -80,7 +78,7 @@ class Client {
       }
     }
     if (this.options.onLogin) {
-      this.options.onLogin(host);
+      setTimeout(() => this.options.onLogin(host));
     }
   }
 
