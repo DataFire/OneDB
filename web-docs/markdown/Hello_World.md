@@ -2,7 +2,7 @@
 
 In this minimal example, we'll create an app that lets the user post status updates, similar to Twitter.
 
-We will use the pre-built `status` data model. You can also learn how to [create your own data model](/Data_Models).
+We will use the pre-built `status` data model. You can also learn how to [create your own data model](Data_Models).
 
 ## Step 1: Add the FreeDB Client
 
