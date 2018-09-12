@@ -3,19 +3,21 @@ const fs = require('fs');
 const npath = require('path');
 const args = require('yargs').argv;
 const Client = require('./client');
+const host = {
+  location: args.host,
+  username: args.username || process.env.FREEDB_USERNAME,
+  password: args.password || process.env.FREEDB_PASSWORD,
+}
 const client = new Client({
   hosts: {
-    primary: {
-      location: args.host,
-      username: args.username || process.env.FREEDB_USERNAME,
-      password: args.password || process.env.FREEDB_PASSWORD,
-    }
+    primary: host,
+    core: host,
   }
 });
 
 const DIR = npath.join(process.cwd(), args.directory);
 
-;(async () => {
+async function run() {
   const files = fs.readdirSync(DIR).filter(f => f.endsWith('.schema.json'));
   const types = {}
   for (let file of files) {
@@ -30,12 +32,29 @@ const DIR = npath.join(process.cwd(), args.directory);
     }
   }
   const ns = {
-    versions: [{
-      version: '0',
-      types,
-    }]
+    versions: [{types}]
   }
-  const namespaceID = await client.create('core', 'namespace', ns, args.name);
-  console.log("Created namespace " + namespaceID);
+  let existing = null;
+  try {
+    existing = await client.get('core', 'namespace', args.name);
+  } catch (e) {
+    if (e.statusCode !== 404) throw e;
+    console.log(e);
+  }
+  if (existing) {
+    await client.append('core', 'namespace', args.name, ns);
+    console.log("Updated namespace " + args.name);
+  } else {
+    await client.create('core', 'namespace', ns, args.name);
+    console.log("Created namespace " + args.name);
+  }
   process.exit(0);
+}
+
+;(async () => {
+  try {
+    await run()
+  } catch (e) {
+    console.error(e.message);
+  }
 })();
