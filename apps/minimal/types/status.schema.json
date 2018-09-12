@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "maxLength": 280,
+      "minLength": 1
+    }
+  }
+}

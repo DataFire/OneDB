@@ -1,0 +1,82 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="./freedb.min.js"></script>
+    <script>
+	  window.freedb = new FreeDBClient({
+		onLogin: function(instance) {
+          if (instance === freedb.hosts.primary) {
+            if (instance.user) {
+              // User is logging in
+              startApp();
+            } else {
+              // User is logging out
+              endApp()
+            }
+          }
+		},
+		scope: [
+          'alpha_status:read',
+          'alpha_status:create',
+        ],
+	  });
+
+      function startApp() {
+        document.getElementById('Username').innerHTML = freedb.hosts.primary.user.$.id;
+        document.getElementById('App').setAttribute('style', '')
+        showLatestStatus();
+      }
+
+      function endApp() {
+        document.getElementById('App').setAttribute('style', 'display: none')
+      }
+
+      function showLatestStatus() {
+        // Get the user's last status message
+        var query = {
+          owner: freedb.hosts.primary.user.$.id,
+          limit: 1,
+          sort: 'info.created:descending',
+        }
+        freedb.list('alpha_status', 'status', query)
+            .then(function(response) {
+              var status = '';
+              if (response.items.length) {
+                status = response.items[0].status
+                status = status.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+              } else {
+                status = "<i>You haven't set your status yet. Use the form below to set your status</i>"
+              }
+              document.getElementById('LatestStatus').innerHTML = status;
+            })
+      }
+
+      function setStatus() {
+        var status = document.getElementById('StatusInput').value;
+        freedb.create('alpha_status', 'status', {status: status})
+            .then(function(statuID) {
+              showLatestStatus();
+            })
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="LoginForm"></div>
+      <script>
+        document.getElementById('LoginForm').innerHTML = freedb.loginForm();
+      </script>
+      <hr>
+
+      <div id="App" style="display: none">
+        <label>Your Status (<span id="Username"></span>):</label>
+        <p id="LatestStatus"></p>
+        <form onsubmit="setStatus(); return false">
+          <input type="text" id="StatusInput">
+          <button type="submit">Set status</button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
