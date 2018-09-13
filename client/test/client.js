@@ -71,11 +71,12 @@ describe("FreeDB Client", () => {
         message: {type: 'string'},
       }
     }
-    await client.create('core', 'schema', schema, 'message');
+    await client.create('core', 'schema', 'message', schema);
     let item = await client.get('core', 'schema', 'message');
     expect(item.$.id).to.equal('message');
     delete item.$;
     schema.properties.$ = {type: 'object'};
+    schema.additionalProperties = false;
     expect(item).to.deep.equal(schema);
   });
 
@@ -96,7 +97,7 @@ describe("FreeDB Client", () => {
             schema: {
               type: 'object',
               properties: {
-                message: {
+                messages: {
                   type: 'array',
                   items: {$ref: '#/definitions/message'},
                 }
@@ -106,7 +107,7 @@ describe("FreeDB Client", () => {
         }
       }]
     }
-    await client.create('core', 'namespace', ns, 'messages');
+    await client.create('core', 'namespace', 'messages', ns);
   });
 
   it('should allow creating message', async () => {

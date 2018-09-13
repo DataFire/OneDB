@@ -45,7 +45,7 @@ async function run() {
     await client.append('core', 'namespace', args.name, ns);
     console.log("Updated namespace " + args.name);
   } else {
-    await client.create('core', 'namespace', ns, args.name);
+    await client.create('core', 'namespace', args.name, ns);
     console.log("Created namespace " + args.name);
   }
   process.exit(0);

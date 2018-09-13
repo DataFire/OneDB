@@ -104,7 +104,8 @@ router.use(requireLogin);
  *  Create
  */
 router.post([TYPE_PATH, ITEM_PATH], errorGuard(async (req, res) => {
-  let item = await req.db.create(req.params.namespace, req.params.typeID, req.body, req.params.itemID);
+  let item = null;
+  item = await req.db.create(req.params.namespace, req.params.typeID, req.params.itemID, req.body);
   res.json(item.$.id);
 }));
 

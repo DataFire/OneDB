@@ -68,7 +68,7 @@ class Database {
     const db = await this.user(dbUtil.USER_KEYS.system);
     const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
-    const user = await db.create('core', 'user', {}, username);
+    const user = await db.create('core', 'user', username, {});
     const creds = await dbUtil.computeCredentials(password);
     creds.email = email;
     creds.id = user.$.id;
@@ -436,7 +436,11 @@ class DatabaseForUser {
     return data;
   }
 
-  async create(namespace, type, data, id='') {
+  async create(namespace, type, id, data) {
+    if (typeof data === 'undefined') {
+      data = id;
+      id = undefined;
+    }
     this.checkNamespace(namespace);
     if (this.user.data.items >= this.config.maxItemsPerUser) {
       return fail(`You have hit your maximum of ${this.config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);

@@ -236,7 +236,11 @@ class Client {
     return page;
   }
 
-  async create(namespace, type, data, id='') {
+  async create(namespace, type, id, data) {
+    if (typeof data === 'undefined') {
+      data = id;
+      id = undefined;
+    }
     let url = '/data/' + namespace + '/' + type;
     if (id) url += '/' + id;
     id = await this.request(this.hosts.primary, 'post', url, {}, data);
