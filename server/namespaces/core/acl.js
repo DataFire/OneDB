@@ -19,7 +19,7 @@ const ACL_SET_SCHEMA = {
     read:  ACL_LIST_SCHEMA,
     write: ACL_LIST_SCHEMA,
     append: ACL_LIST_SCHEMA,
-    destroy: ACL_LIST_SCHEMA,
+    delete: ACL_LIST_SCHEMA,
   }
 }
 const ACL_SET_WITH_DEFAULT_SCHEMA = {
@@ -30,7 +30,7 @@ const ACL_SET_WITH_DEFAULT_SCHEMA = {
     read:  ACL_LIST_WITH_DEFAULT_SCHEMA,
     write: ACL_LIST_WITH_DEFAULT_SCHEMA,
     append: ACL_LIST_WITH_DEFAULT_SCHEMA,
-    destroy: ACL_LIST_WITH_DEFAULT_SCHEMA,
+    delete: ACL_LIST_WITH_DEFAULT_SCHEMA,
   }
 }
 

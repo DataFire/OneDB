@@ -11,7 +11,7 @@ const REGEX = {
   typeID: WORDY_REGEX,
   itemID: WORDY_REGEX,
   namespace: WORDY_REGEX,
-  scope: /^(\w+:(read|write|append|destroy|create|modify_acl))( \w+:(read|write|append|destroy|create|modify_acl))*$/,
+  scope: /^(\w+:(read|write|append|delete|create|modify_acl))( \w+:(read|write|append|delete|create|modify_acl))*$/,
 }
 
 const LIST_QUERY_SCHEMA = {

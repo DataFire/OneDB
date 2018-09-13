@@ -16,7 +16,7 @@ div(*ngIf="list")
               [class.missing]="item.$ref", [class.done]="item.done",
               [disabled]="item.$ref", autofocus)
         .input-group-append
-          button.btn.btn-danger(type="button", (click)="destroyItem(item)")
+          button.btn.btn-danger(type="button", (click)="deleteItem(item)")
             i.fa.fa-times
   .form-group
     .row
@@ -27,6 +27,6 @@ div(*ngIf="list")
           button.btn.btn-min-width.btn-success.mr-4((click)="save()")
             span(*ngIf="!saving") Save
             i.fa.fa-spin.fa-refresh(*ngIf="saving")
-          button.btn.btn-min-width.btn-danger((click)="destroy()")
+          button.btn.btn-min-width.btn-danger((click)="delete()")
             span Delete
 .alert.alert-danger(*ngIf="error" role="alert") {{ error }}

@@ -137,7 +137,7 @@ router.put(ACL_PATH, errorGuard(async (req, res) => {
  * Destroy
  */
 router.delete(ITEM_PATH, errorGuard(async (req, res) => {
-  await req.db.destroy(req.params.namespace, req.params.typeID, req.params.itemID);
+  await req.db.delete(req.params.namespace, req.params.typeID, req.params.itemID);
   res.json("Succes");
 }));
 

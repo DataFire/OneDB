@@ -94,4 +94,4 @@ Within each top-level option, the following access types can be set:
 * `read` - view the data
 * `write` - modify the data
 * `append` - add to arrays in the data
-* `destroy` - delete the data
+* `delete` - delete the data

@@ -127,12 +127,12 @@ describe("FreeDB Client", () => {
     expect(msg.message).to.equal("Hi world");
   });
 
-  it('should allow destroying message', async () => {
+  it('should allow deleteing message', async () => {
     let id = await client.create('messages', 'message', {message: "Hello world"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
     expect(msg.message).to.equal("Hello world");
-    await client.destroy('messages', 'message', id);
+    await client.delete('messages', 'message', id);
     await expectError(client.get('messages', 'message', id), /Item messages\/message\/.* not found/);
   });
 

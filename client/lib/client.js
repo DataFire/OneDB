@@ -255,7 +255,7 @@ class Client {
     await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/append`, {}, data);
   }
 
-  async destroy(namespace, type, id) {
+  async delete(namespace, type, id) {
     await this.request(this.hosts.primary, 'delete', `/data/${namespace}/${type}/${id}`);
   }
 

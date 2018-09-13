@@ -51,7 +51,6 @@ export class ChatComponent {
   }
 
   ngOnDestroy() {
-    console.log('destroy');
     clearInterval(this.interval);
   }
 

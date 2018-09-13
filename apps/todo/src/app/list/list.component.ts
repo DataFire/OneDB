@@ -84,11 +84,11 @@ export class ListComponent {
     await this.router.navigate(['/list', id]);
   }
 
-  async destroyItem(item) {
+  async deleteItem(item) {
     this.error = null;
     if (item.$) {
       try {
-        await this.freedb.client.destroy('alpha_todo', 'item', item.$.id);
+        await this.freedb.client.delete('alpha_todo', 'item', item.$.id);
       } catch (e) {
         this.error = e.message;
         return;
@@ -98,11 +98,11 @@ export class ListComponent {
     await this.save();
   }
 
-  async destroy() {
+  async delete() {
     this.error = null;
     if (this.list.$) {
       try {
-        await this.freedb.client.destroy('alpha_todo', 'list', this.list.$.id);
+        await this.freedb.client.delete('alpha_todo', 'list', this.list.$.id);
       } catch (e) {
         this.error = e.message;
         return;

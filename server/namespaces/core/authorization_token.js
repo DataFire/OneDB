@@ -11,7 +11,7 @@ module.exports = {
         type: 'array',
         items: {
           type: 'string',
-          enum: ['read', 'write', 'append', 'destroy', 'modify_acl', 'create'],
+          enum: ['read', 'write', 'append', 'delete', 'modify_acl', 'create'],
         }
       }
     }

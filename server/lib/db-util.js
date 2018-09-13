@@ -33,7 +33,7 @@ const OWNER_ACL = {
   read: [USER_KEYS.owner],
   write: [USER_KEYS.owner],
   append: [USER_KEYS.owner],
-  destroy: [USER_KEYS.owner],
+  delete: [USER_KEYS.owner],
 }
 
 const OWNER_ACL_SET = module.exports.OWNER_ACL_SET = {
@@ -45,14 +45,14 @@ const SYSTEM_ACL = module.exports.SYSTEM_ACL = {
   read: [USER_KEYS.system],
   write: [USER_KEYS.system],
   append: [USER_KEYS.system],
-  destroy: [USER_KEYS.system],
+  delete: [USER_KEYS.system],
 }
 
 const READ_ONLY_ACL = module.exports.READ_ONLY_ACL = {
   read: [USER_KEYS.all],
   write: [USER_KEYS.system],
   append: [USER_KEYS.system],
-  destroy: [USER_KEYS.system],
+  delete: [USER_KEYS.system],
 }
 
 const READ_ONLY_ACL_SET = module.exports.READ_ONLY_ACL_SET = {

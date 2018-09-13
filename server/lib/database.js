@@ -443,7 +443,7 @@ class DatabaseForUser {
     }
     this.checkNamespace(namespace);
     if (this.user.data.items >= this.config.maxItemsPerUser) {
-      return fail(`You have hit your maximum of ${this.config.maxItemsPerUser} items. Please destroy something to create a new one`, 403);
+      return fail(`You have hit your maximum of ${this.config.maxItemsPerUser} items. Please delete something to create a new one`, 403);
     }
     if (!this.checkPermission(namespace, type, 'create')) {
       return fail(`This app does not have permission to create items in ${namespace}/${type}`, 401);
@@ -595,13 +595,13 @@ class DatabaseForUser {
     if (result.result.n > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
   }
 
-  async destroy(namespace, type, id) {
+  async delete(namespace, type, id) {
     this.checkNamespace(namespace);
     let query = {id};
-    query = this.buildQuery(namespace, type, query, 'destroy');
+    query = this.buildQuery(namespace, type, query, 'delete');
     const col = this.getCollection(namespace, type);
     const result = await col.remove(query, {justOne: true});
-    if (result.result.n === 0) return fail(`User ${this.userID} cannot destroy ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
+    if (result.result.n === 0) return fail(`User ${this.userID} cannot delete ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     const userUpdate = {
       $inc: {'data.items': -1}
     };

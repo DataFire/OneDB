@@ -275,7 +275,7 @@ describe("Server", () => {
   it('should not allow DELETE of schema', async () => {
     let resp = await axios.delete(HOST + '/data/core/schema/foo', {auth: USER_1, validateStatus: () => true});
     expect(resp.status).to.equal(401);
-    expect(resp.data).to.deep.equal({message: `User ${USER_1.id} cannot destroy core/schema/foo, or core/schema/foo does not exist`});
+    expect(resp.data).to.deep.equal({message: `User ${USER_1.id} cannot delete core/schema/foo, or core/schema/foo does not exist`});
   });
 
   it('should have $refs set with host', async () => {

@@ -158,10 +158,10 @@ describe('Database', () => {
     await expectError(database.createUser('me@example.com', 'afsdjklsf'), /A user with that email address already exists/)
   });
 
-  it('should not allow updating or destroying core type', async () => {
+  it('should not allow updating or deleteing core type', async () => {
     const userDB = await database.user(USERS[0].$.id);
-    await expectError(userDB.destroy('core', 'schema', 'namespace'), /User .* cannot destroy core\/schema\/namespace/);
-    await expectError(userDB.destroy('core', 'namespace', 'core'), /User .* cannot destroy core\/namespace\/core/);
+    await expectError(userDB.delete('core', 'schema', 'namespace'), /User .* cannot delete core\/schema\/namespace/);
+    await expectError(userDB.delete('core', 'namespace', 'core'), /User .* cannot delete core\/namespace\/core/);
     await expectError(userDB.update('core', 'namespace', 'core', {versions: [{types: {}}]}), /User .* cannot update core\/namespace\/core/);
     await expectError(userDB.update('core', 'schema', 'namespace', {type: 'string'}), /User .* cannot update core\/schema\/namespace/);
   });
@@ -277,14 +277,14 @@ describe('Database', () => {
     await expectError(userDB.create('core', 'schema', 'thingamajig', schema), /must have type 'object'/);
   })
 
-  it('should not allow destroying schema', async () => {
+  it('should not allow deleteing schema', async () => {
     const userDB = await database.user(USERS[0].$.id);
     const schema = {type: 'object'};
     const created = await userDB.create('core', 'schema', 'thingamajig', schema);
-    return expectError(userDB.destroy('core', 'schema', 'thingamajig'), /User .* cannot destroy core\/schema\/thingamajig/)
+    return expectError(userDB.delete('core', 'schema', 'thingamajig'), /User .* cannot delete core\/schema\/thingamajig/)
   });
 
-  it('should not allow destroying namespace', async () => {
+  it('should not allow deleteing namespace', async () => {
     const userDB = await database.user(USERS[0].$.id);
     const ns = {
       versions: [{
@@ -295,7 +295,7 @@ describe('Database', () => {
       }]
     }
     await userDB.create('core', 'namespace', 'foo2', ns);
-    return expectError(userDB.destroy('core', 'namespace', 'foo'), /User .* cannot destroy core\/namespace\/foo/)
+    return expectError(userDB.delete('core', 'namespace', 'foo'), /User .* cannot delete core\/namespace\/foo/)
   });
 
   it('should not allow other user to add duplicate namespace', async () => {
@@ -400,7 +400,7 @@ describe('Database', () => {
     expect(thing).to.equal(undefined);
     await expectError(user1DB.update('foo', 'thing', 'thing2', {message: "This is a new string"}), /User .* cannot update foo\/thing\/thing2/);
     await expectError(user1DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
-    await expectError(user1DB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
+    await expectError(user1DB.delete('foo', 'thing', 'thing2'), /User .* cannot delete foo\/thing\/thing2/);
   });
 
   it('should allow user to retrieve all things', async () => {
@@ -472,12 +472,12 @@ describe('Database', () => {
     expect(list).to.deep.equal(['one', 'three', 'four', 'five']);
   });
 
-  it('should allow user to destroy thing', async () => {
+  it('should allow user to delete thing', async () => {
     const userDB = await database.user(USERS[0].$.id);
     await userDB.create('foo', 'thing', 'thing1', {message: "Hello"});
     let item = await userDB.get('foo', 'thing', 'thing1');
     expect(item.message).to.equal('Hello');
-    await userDB.destroy('foo', 'thing', 'thing1');
+    await userDB.delete('foo', 'thing', 'thing1');
     item = await userDB.get('foo', 'thing', 'thing1');
     expect(item).to.equal(undefined);
   });
@@ -518,7 +518,7 @@ describe('Database', () => {
     await user0DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}});
     await expectError(user1DB.update('foo', 'thing', 'thing2', {message: "This is a new string"}), /User .* cannot update foo\/thing\/thing2/);
     await expectError(user1DB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
-    await expectError(user1DB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
+    await expectError(user1DB.delete('foo', 'thing', 'thing2'), /User .* cannot delete foo\/thing\/thing2/);
   });
 
   it('should allow blacklisting access to thing2', async () => {
@@ -555,7 +555,7 @@ describe('Database', () => {
     await userDB.modifyACL('foo', 'thing', 'thing2', {owner: USERS[0].$.id});
     await expectError(userDB.update('foo', 'thing', 'thing2', {message: "This is a new string"}), /User .* cannot update foo\/thing\/thing2/);
     await expectError(userDB.modifyACL('foo', 'thing', 'thing2', {allow: {read: ['_all']}}), /User .* cannot update ACL for foo\/thing\/thing2/);
-    await expectError(userDB.destroy('foo', 'thing', 'thing2'), /User .* cannot destroy foo\/thing\/thing2/);
+    await expectError(userDB.delete('foo', 'thing', 'thing2'), /User .* cannot delete foo\/thing\/thing2/);
   });
 
   it('should allow updates from new owner after owner transfer', async () => {
@@ -607,11 +607,11 @@ describe('Database', () => {
     userDB = await database.user(USERS[1].$.id, permissions);
     thing = await userDB.get('foo', 'thing', 'mything');
     expect(thing.message).to.equal('hello');
-    await expectError(userDB.destroy('foo', 'thing', 'mything'), /This app does not have permission to destroy foo\/thing/);
+    await expectError(userDB.delete('foo', 'thing', 'mything'), /This app does not have permission to delete foo\/thing/);
 
-    permissions = {foo: ['destroy', 'read']}
+    permissions = {foo: ['delete', 'read']}
     userDB = await database.user(USERS[1].$.id, permissions);
-    await userDB.destroy('foo', 'thing', 'mything');
+    await userDB.delete('foo', 'thing', 'mything');
     thing = await userDB.get('foo', 'thing', 'mything');
     expect(thing).to.equal(undefined);
   })
@@ -631,10 +631,10 @@ describe('Database', () => {
           initial_acl: {
             allow: {
               read: ['_all'],
-              destroy: [],
+              delete: [],
             },
             modify: {
-              destroy: [],
+              delete: [],
             },
           },
         }
@@ -648,13 +648,13 @@ describe('Database', () => {
         read: ['_all'],
         write: ['_owner'],
         append: ['_owner'],
-        destroy: [],
+        delete: [],
       },
       modify: {
         read: ['_owner'],
         write: ['_owner'],
         append: ['_owner'],
-        destroy: [],
+        delete: [],
       },
       disallow: {},
     })
@@ -677,7 +677,7 @@ describe('Database', () => {
     expect(user.items).to.equal(3);
     expect(user.namespaces).to.deep.equal(['foo', 'core']);
 
-    await userDB.destroy('foo', 'thing', thing2.$.id)
+    await userDB.delete('foo', 'thing', thing2.$.id)
     user = await userDB.get('core', 'user', USERS[2].$.id);
     expect(user.items).to.equal(2);
     expect(user.namespaces).to.deep.equal(['foo', 'core']);
@@ -690,7 +690,7 @@ describe('Database', () => {
     for (let i = 0; i < userDB.config.maxItemsPerUser; ++i) {
       await userDB.create('foo', 'thing', {message: 'foobar'});
     }
-    await expectError(userDB.create('foo', 'thing', {message: 'foobar'}), /You have hit your maximum of 10 items. Please destroy something to create a new one/);
+    await expectError(userDB.create('foo', 'thing', {message: 'foobar'}), /You have hit your maximum of 10 items. Please delete something to create a new one/);
     userDB.config.maxItemsPerUser = oldMaxItems;
   });
 

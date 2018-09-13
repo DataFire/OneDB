@@ -27,7 +27,7 @@ export class FreeDBService {
       onLogin: user => {
         this.zone.run(_ => this.onLogin.next(user));
       },
-      scope: ['alpha_todo:read', 'alpha_todo:create', 'alpha_todo:write', 'alpha_todo:destroy', 'alpha_todo:modify_acl', 'alpha_todo:append'],
+      scope: ['alpha_todo:read', 'alpha_todo:create', 'alpha_todo:write', 'alpha_todo:delete', 'alpha_todo:modify_acl', 'alpha_todo:append'],
     });
     this.maybeRestore();
     this.onLogin.subscribe(user => {

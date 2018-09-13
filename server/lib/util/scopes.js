@@ -1,4 +1,4 @@
-const SCOPE_ORDER = ['read', 'create', 'write', 'append', 'destroy', 'modify_acl'];
+const SCOPE_ORDER = ['read', 'create', 'write', 'append', 'delete', 'modify_acl'];
 
 module.exports = function(scopeString) {
   const permissions = {};

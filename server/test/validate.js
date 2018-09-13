@@ -40,7 +40,7 @@ describe('Validation', () => {
     let acls = [
       {owner: 'me'},
       {owner: 'me', allow: {read: ['you']}},
-      {owner: 'me', modify: {read: [], write: [], destroy: [], append: []}},
+      {owner: 'me', modify: {read: [], write: [], delete: [], append: []}},
     ];
     let errors = acls.map(validate.validators.acl);
     errors.forEach((err, idx) => {
@@ -141,9 +141,9 @@ describe('Validation', () => {
     expect(validate.validators.scope('foo:create')).to.equal(undefined);
     expect(validate.validators.scope('foo:append')).to.equal(undefined);
     expect(validate.validators.scope('foo:modify_acl')).to.equal(undefined);
-    expect(validate.validators.scope('foo:destroy')).to.equal(undefined);
+    expect(validate.validators.scope('foo:delete')).to.equal(undefined);
     expect(validate.validators.scope('foo:write foo:read')).to.equal(undefined);
-    expect(validate.validators.scope('foo:write bar:destroy')).to.equal(undefined);
+    expect(validate.validators.scope('foo:write bar:delete')).to.equal(undefined);
     expect(validate.validators.scope('foo:write bar:write baz:write')).to.equal(undefined);
   })
 })

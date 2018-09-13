@@ -30,7 +30,7 @@ export class ItemComponent {
   info:any;
   itemString:string;
 
-  ACCESS_TYPES = ['read', 'write', 'append', 'destroy'];
+  ACCESS_TYPES = ['read', 'write', 'append', 'delete'];
   ACL_TYPES = ['allow', 'disallow', 'modify'];
 
   loading:boolean;
@@ -92,8 +92,8 @@ export class ItemComponent {
     this.getData();
   }
 
-  async destroy() {
-    await this.freedb.client.destroy(this.namespace, this.type, this.item_id);
+  async delete() {
+    await this.freedb.client.delete(this.namespace, this.type, this.item_id);
     this.router.navigate(['/data', this.namespace]);
   }
 }
