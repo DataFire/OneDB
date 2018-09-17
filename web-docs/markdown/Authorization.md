@@ -1,6 +1,6 @@
 # Authentication and Authorization
 
-FreeDB has two authentication mechanisms available:
+OneDB has two authentication mechanisms available:
 * Basic authentication (username and password)
 * Bearer authentication (temporary access tokens)
 
@@ -17,8 +17,8 @@ curl -X POST \
 ```
 
 ## Authorizing your Users
-The FreeDB Authentication process works similar to OAuth 2.0. Your users will be sent
-to the FreeDB instance of their choice, and will be shown the list of permissions you're requesting.
+The OneDB Authentication process works similar to OAuth 2.0. Your users will be sent
+to the OneDB instance of their choice, and will be shown the list of permissions you're requesting.
 If they accept, you'll recieve an access token that allows you to perform those actions on the
 user's behalf.
 
@@ -29,12 +29,12 @@ allows the user to choose their instance.
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/freedb/dist/freedb.min.js"></script>
+    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
   </head>
   <body>
     <div id="LoginForm"></div>
     <script>
-	  window.freedb = new FreeDBClient({
+	  window.onedb = new OneDBClient({
 		onLogin: function(instance) {
           console.log(instance);
 		},
@@ -43,7 +43,7 @@ allows the user to choose their instance.
           'alpha_status:create',
         ],
 	  });
-      document.getElementById('LoginForm').innerHTML = freedb.loginForm();
+      document.getElementById('LoginForm').innerHTML = onedb.loginForm();
     </script>
   </head>
 </html>
@@ -55,7 +55,7 @@ When a user logs in, the `onLogin` function will be called with information abou
 the user and the instance they've chosen:
 
 ```js
-window.freedb = new FreeDBClient({
+window.onedb = new OneDBClient({
   onLogin: function(instance) {
     console.log(instance.location); // https://alpha.onedb.datafire.io
     if (!instance.user) {
@@ -71,9 +71,9 @@ window.freedb = new FreeDBClient({
 Before you start your app, you should make sure the user has logged into their primary instance.
 
 ```js
-window.freedb = new FreeDBClient({
+window.onedb = new OneDBClient({
   onLogin: function(instance) {
-    if (instance === freedb.hosts.primary && instance.user) {
+    if (instance === onedb.hosts.primary && instance.user) {
       startApp()
     }
   }
@@ -87,10 +87,10 @@ You can use `localStorage` or cookies to save your user's session and restore it
 ```js
 var SESSION_KEY = 'session';
 var previousSession = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
-window.freedb = new FreeDBClient({
+window.onedb = new OneDBClient({
   hosts: previousSession,
   onLogin: function(instance) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(freedb.hosts));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(onedb.hosts));
   }
 })
 ```

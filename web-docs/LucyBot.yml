@@ -1,0 +1,16 @@
+favicon: assets/logo-no-text.png
+
+routes:
+  /:
+    ui: documentation
+    title: OneDB
+    navigation:
+      - title: Introduction
+        markdownFile: markdown/Overview.md
+      - title: Hello World
+        markdownFile: markdown/Hello_World.md
+      - markdownFile: markdown/Data_Models.md
+      - title: Authorization
+        markdownFile: markdown/Authorization.md
+      - markdownFile: markdown/Multiple_Instances.md
+

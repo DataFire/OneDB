@@ -2,16 +2,17 @@
 
 In this minimal example, we'll create an app that lets the user post status updates, similar to Twitter.
 
-We will use the pre-built `status` data model. You can also learn how to [create your own data model](Data_Models).
+Typically, when creating a new OneDB app, you would start by [creating a Data Model](/Data_Models).
+However, in this example, we will use the pre-built `status` data model.
 
-## Step 1: Add the FreeDB Client
+## Step 1: Add the OneDB Client
 
-You can get the latest FreeDB JavaScript client via `npm install freedb`, or use the unpkg CDN:
+You can get the latest OneDB JavaScript client via `npm install onedb`, or use the unpkg CDN:
 
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/freedb/dist/freedb.min.js"></script>
+    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
   </head>
 </html>
 ```
@@ -20,9 +21,9 @@ Now let's initialize the client, telling it what data we want access to:
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/freedb/dist/freedb.min.js"></script>
+    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
     <script>
-	  window.freedb = new FreeDBClient({
+	  window.onedb = new OneDBClient({
 		onLogin: function(instance) {
 		  startApp();
 		},
@@ -41,7 +42,7 @@ Now let's initialize the client, telling it what data we want access to:
 
 ## Step 2: Add a Login Form
 
-The FreeDB client comes with a login form that will allow users to choose which FreeDB instance to use.
+The OneDB client comes with a login form that will allow users to choose which OneDB instance to use.
 The default instance is the DataFire instance above.
 
 ```html
@@ -52,7 +53,7 @@ The default instance is the DataFire instance above.
   <body>
     <div id="LoginForm"></div>
     <script>
-      document.getElementById('LoginForm').innerHTML = freedb.loginForm();
+      document.getElementById('LoginForm').innerHTML = onedb.loginForm();
     </script>
   </body>
 </html>
@@ -92,15 +93,15 @@ We'll add two elements for the app, which will be hidden until the user logs in:
 
 When the user logs in, we'll want to pull their latests status and display it. Notice that when
 we initialized the client, we passed in the `onLogin` function, which will get called anytime
-the user logs in or out of a FreeDB instance. Let's make it a little more sophisticated:
+the user logs in or out of a OneDB instance. Let's make it a little more sophisticated:
 
-1. We'll check to make sure the user is logging into their primary FreeDB instance
+1. We'll check to make sure the user is logging into their primary OneDB instance
 2. We'll check if the user is logging in or out
 
 ```js
-window.freedb = new FreeDBClient({
+window.onedb = new OneDBClient({
   onLogin: function(instance) {
-    if (instance === freedb.hosts.primary) {
+    if (instance === onedb.hosts.primary) {
       if (instance.user) {
         // User is logging in
         startApp();
@@ -117,7 +118,7 @@ Then we define the `startApp` and `endApp` functions, which show and hide the ap
 
 ```js
 function startApp() {
-  document.getElementById('Username').innerHTML = freedb.hosts.primary.user.$.id;
+  document.getElementById('Username').innerHTML = onedb.hosts.primary.user.$.id;
   document.getElementById('App').setAttribute('style', '')
   showLatestStatus();
 }
@@ -130,20 +131,20 @@ function endApp() {
 ## Step 5: Interact with the data
 
 You'll notice that we've defined two functions above: `showLatestStatus()` and `postStatus()`.
-These functions will add and retrieve data from the user's FreeDB instance.
+These functions will add and retrieve data from the user's OneDB instance.
 
-`showLatestStatus` uses `freedb.list` to get a list of the user's status messages.
+`showLatestStatus` uses `onedb.list` to get a list of the user's status messages.
 Since we only care about the latest status, we set `limit=1`, and sort by the creation date.
 
 ```js
 function showLatestStatus() {
   // Get the user's last status message
   var query = {
-    owner: freedb.hosts.primary.user.$.id,
+    owner: onedb.hosts.primary.user.$.id,
     limit: 1,
     sort: 'info.created:descending',
   }
-  freedb.list('alpha_status', 'status', query)
+  onedb.list('alpha_status', 'status', query)
       .then(function(response) {
         var status = '';
         if (response.items.length) {
@@ -157,11 +158,11 @@ function showLatestStatus() {
 }
 ```
 
-Now let's implement `setStatus()` using `freedb.create`:
+Now let's implement `setStatus()` using `onedb.create`:
 ```js
 function setStatus() {
   var status = document.getElementById('StatusInput').value;
-  freedb.create('alpha_status', 'status', {status: status})
+  onedb.create('alpha_status', 'status', {status: status})
       .then(function(statuID) {
         showLatestStatus();
       })
@@ -169,14 +170,14 @@ function setStatus() {
 ```
 
 #### Side note: async/await
-Note that the FreeDB client
+Note that the OneDB client
 [JavaScript Promises](https://developers.google.com/web/fundamentals/primers/promises)
-to make requests to FreeDB instances. If you're using a transpiler like
+to make requests to OneDB instances. If you're using a transpiler like
 [Babel](https://babeljs.io/) with ES2017 support, you can use `async/await` for easier syntax:
 
 ```js
 async function showLatestStatus() {
-  response = await freedb.list('alpha_status', 'list');
+  response = await onedb.list('alpha_status', 'list');
   console.log(response.items);
 }
 ```
@@ -189,11 +190,11 @@ That's it! Here's the final code:
 <html>
   <head>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <script src="./freedb.min.js"></script>
+    <script src="./onedb.min.js"></script>
     <script>
-	  window.freedb = new FreeDBClient({
+	  window.onedb = new OneDBClient({
 		onLogin: function(instance) {
-          if (instance === freedb.hosts.primary) {
+          if (instance === onedb.hosts.primary) {
             if (instance.user) {
               // User is logging in
               startApp();
@@ -210,7 +211,7 @@ That's it! Here's the final code:
 	  });
 
       function startApp() {
-        document.getElementById('Username').innerHTML = freedb.hosts.primary.user.$.id;
+        document.getElementById('Username').innerHTML = onedb.hosts.primary.user.$.id;
         document.getElementById('App').setAttribute('style', '')
         showLatestStatus();
       }
@@ -222,11 +223,11 @@ That's it! Here's the final code:
       function showLatestStatus() {
         // Get the user's last status message
         var query = {
-          owner: freedb.hosts.primary.user.$.id,
+          owner: onedb.hosts.primary.user.$.id,
           limit: 1,
           sort: 'info.created:descending',
         }
-        freedb.list('alpha_status', 'status', query)
+        onedb.list('alpha_status', 'status', query)
             .then(function(response) {
               var status = '';
               if (response.items.length) {
@@ -241,7 +242,7 @@ That's it! Here's the final code:
 
       function setStatus() {
         var status = document.getElementById('StatusInput').value;
-        freedb.create('alpha_status', 'status', {status: status})
+        onedb.create('alpha_status', 'status', {status: status})
             .then(function(statuID) {
               showLatestStatus();
             })
@@ -253,7 +254,7 @@ That's it! Here's the final code:
     <div class="container">
       <div id="LoginForm"></div>
       <script>
-        document.getElementById('LoginForm').innerHTML = freedb.loginForm();
+        document.getElementById('LoginForm').innerHTML = onedb.loginForm();
       </script>
       <hr>
 

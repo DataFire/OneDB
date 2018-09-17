@@ -1,10 +1,18 @@
-# Data Schemas
+# Data Models
 
-All the data in FreeDB conforms to a particular schema. For example, we might have a `tweet` schema:
+## Schemas
+
+All the data in OneDB conforms to a particular [JSON Schema](https://json-schema.org/).
+This allows you to dictate exactly what your
+app's data should look like, as well as define validation parameters,
+like regular expressions, max/mins, and required fields.
+
+For example, we might have a `tweet` schema:
 
 ```json
 {
   "type": "object",
+  "required": ["message"],
   "properties": {
     "message": {
       "type": "string",
@@ -15,7 +23,7 @@ All the data in FreeDB conforms to a particular schema. For example, we might ha
 }
 ```
 
-This tells FreeDB that a `tweet` must have a string `message`, which is between 1 and 140 characters.
+This tells OneDB that a `tweet` must have a string `message`, which is between 1 and 140 characters.
 
 ## Namespaces
 
@@ -40,14 +48,57 @@ Then create a schema in that folder, e.g. `types/tweet.schema.json`:
 }
 ```
 
-Then use the FreeDB CLI to register your namespace:
+Then use the OneDB CLI to register your namespace:
 
 ```bash
 export FREEDB_USERNAME=me@example.com
 export FREEDB_PASSWORD=thisisasecret
-freedb register --directory ./types --name my_twitter
+onedb register --directory ./types --name my_twitter
 # Created namespace my_twitter
 ```
+
+### Schema Refs
+You can reference other schemas within your namespace by using `$ref` pointers.
+For example, say we have a `petstore` namespace with a `pet` and `owner` schema:
+
+##### `types/pet.schema.json`
+```json
+{
+  "title": "Pet",
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "age": {"type": "integer", "minimum": 0}
+  }
+}
+```
+
+##### `types/owner.schema.json`
+```json
+{
+  "title": "Owner",
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "pets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/pet"
+      }
+    }
+  }
+}
+```
+
+Note the `$ref` in the owner schema, under `properties/pets/items`. The `pet` keyword
+comes from the name of the file `types/pet.schema.json`.
+
+When an `owner` object is uploaded to OneDB, any `pets` in the array will get broken
+out into their own `pet` documents. When an `owner` is retrieved from OneDB, the
+OneDB client will populate the `pets` array.
+
+However, if the data is unavailable, the client will leave the `$ref` there.
+Learn more about [hosting data across multiple instances](/Multiple_Instances.md)
 
 ## Access Control
 
@@ -95,3 +146,39 @@ Within each top-level option, the following access types can be set:
 * `write` - modify the data
 * `append` - add to arrays in the data
 * `delete` - delete the data
+
+## JSON Schema Support
+OneDB uses a subset of JSON Schema 7. We also enforce a few key contstrains:
+* Top-level schemas must be of type `object`
+* Top-level schemas must have `additionalProperties` set to `false` (or unspecified)
+* Property names must be alphanumeric (including underscores)
+
+OneDB currently supports the following JSON Schema keywords:
+
+* `title`
+* `description`
+* `type`
+* `properties`
+* `maxProperties`
+* `minProperties`
+* `required`
+* `additionalProperties`
+* `items`
+* `maxItems`
+* `minItems`
+* `default`
+* `examples`
+* `multipleOf`
+* `maximum`
+* `exclusiveMaximum`
+* `minimum`
+* `exclusiveMinimum`
+* `maxLength`
+* `minLength`
+* `pattern`
+* `uniqueItems`
+* `const`
+* `enum`
+* `not`
+
+We do not support `oneOf`, `allOf` or `anyOf` due to the potential for computationally expensive validation. We will also attempt to detect and disallow `pattern` regex that are computationally expensive.
