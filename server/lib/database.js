@@ -421,6 +421,7 @@ class DatabaseForUser {
       let definitions = {};
       for (let type in version.types) {
         let schema = version.types[type].schema;
+        if (!schema) return fail("No schema specified for type " + type, 400);
         if (!schema.$ref) {
           definitions[type] = schema;
         }
