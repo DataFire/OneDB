@@ -35,6 +35,10 @@ describe("FreeDB Client", () => {
     return server.listen(PORT);
   });
 
+  after(() => {
+    server.close();
+  })
+
   it('should work', async () => {
     let resp = await client.request(client.hosts.core, 'get', '/ping');
     expect(resp).to.equal('pong');

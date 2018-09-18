@@ -1,5 +1,9 @@
 const DEFAULT_SECONDARY_LOCATION = 'http://localhost:4000';
 
+function isMultiType(type) {
+  return type === 'secondary' || type === 'broadcast';
+}
+
 module.exports = function() {
   var self = this;
   if (typeof window === 'undefined') {
@@ -8,25 +12,25 @@ module.exports = function() {
 
   function getInput(type, idx) {
     var inputID = '_FreeDBHostInput_' + type;
-    if (type === 'secondary') inputID += idx;
+    if (isMultiType(type)) inputID += idx;
     return document.getElementById(inputID).value;
   }
 
   function getHost(type, idx) {
     let host = self.hosts[type];
-    if (type === 'secondary') host = host[idx];
+    if (isMultiType(type)) host = host[idx];
     return host;
   }
 
   window._freeDBHelpers = window._freeDBHelpers || {
     showAdvanced: false,
-    addHost: function() {
+    addHost: function(type) {
       var newHost = {location: DEFAULT_SECONDARY_LOCATION};
-      self.hosts.secondary.push(newHost);
+      self.hosts[type].push(newHost);
       self.getUser(newHost);
     },
-    removeHost: function(idx) {
-      self.hosts.secondary = self.hosts.secondary.filter((h, i) => i !== idx);
+    removeHost: function(type, idx) {
+      self.hosts[type] = self.hosts[type].filter((h, i) => i !== idx);
       self.getUser(null);
     },
     updateHost: function(type, idx) {
@@ -61,7 +65,7 @@ ${hostTemplate(this.hosts.primary, 'primary')}
 <a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
 <div id="_FreeDBAdvancedOptions" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
-  <h4>Broadcast</h4>
+  <h4>Broadcast Hosts</h4>
   <p>
     Changes to your data will be broadcast to these hosts.
     They won't store your data - they'll
@@ -69,12 +73,20 @@ ${hostTemplate(this.hosts.primary, 'primary')}
   </p>
   <p>
     Note: removing hosts may prevent you from continuing interactions with other users.
-    ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
   </p>
+  ${this.hosts.broadcast.map((host, idx) => hostTemplate(host, 'broadcast', idx)).join('\n')}
   <p>
-    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</button>
+    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost('broadcast')">Add a broadcast host</button>
   </p>
-  <h4>Core</h4>
+  <h4>Secondary Hosts</h4>
+  <p>
+    Use a secondary host to log into an instance that you might need to read private data from.
+  </p>
+  ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
+  <p>
+    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost('secondary')">Add a broadcast host</button>
+  </p>
+  <h4>Core Host</h4>
   <p>
     The Core host contains data schemas and other information.
     Only change this if you know what you're doing.
@@ -89,9 +101,9 @@ function hostTemplate(host, type, idx) {
 <form onsubmit="_freeDBHelpers.login('${type}', ${idx}); return false">
   <div class="form-group">
     <div class="input-group">
-      ${type !== 'secondary' ? '' : `
+      ${!isMultiType(type) ? '' : `
         <div class="input-group-prepend">
-          <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost(${idx})">
+          <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost('${type}', ${idx})">
             &times;
           </button>
         </div>
@@ -104,7 +116,7 @@ function hostTemplate(host, type, idx) {
       <input
           class="form-control"
           value="${host.location}"
-          id="_FreeDBHostInput_${type}${type === 'secondary' ? idx : ''}"
+          id="_FreeDBHostInput_${type}${isMultiType(type) ? idx : ''}"
           onchange="_freeDBHelpers.updateHost('${type}', ${idx})">
       ${host.user ? `
         <div class="input-group-append">

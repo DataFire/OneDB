@@ -39,8 +39,17 @@ class Client {
     this.hosts.core = this.hosts.core || {location: DEFAULT_CORE};
     this.hosts.primary = this.hosts.primary || {location: DEFAULT_PRIMARY};
     this.hosts.secondary = this.hosts.secondary || [];
-    await this.getUser(this.hosts.primary);
-    for (let host of this.hosts.secondary) {
+    this.hosts.broadcast = this.hosts.broadcast || [];
+    this.allHosts = [this.hosts.primary].concat(this.hosts.broadcast).concat(this.hosts.secondary).concat([this.hosts.core]);
+    for (let host of this.allHosts) {
+      if (!host.location) {
+        let type = '';
+        if (host === this.hosts.core) type = 'core';
+        else if (host === this.hosts.primary) type = 'primary';
+        else if (this.hosts.secondary.includes(host)) type = 'secondary';
+        else if (this.hosts.broadcast.includes(host)) type = 'broadcast';
+        throw new Error("No location specified for " + type + " host")
+      }
       await this.getUser(host);
     }
   }
@@ -49,9 +58,7 @@ class Client {
     let match = url.match(HOST_REGEX);
     if (!match) throw new Error("Bad URL: " + url);
     let location = match[1];
-    let hosts = [this.hosts.primary].concat(this.hosts.secondary);
-    hosts.push(this.hosts.core);
-    for (let host of hosts) {
+    for (let host of this.allHosts) {
       if (host.location === location) return host;
     }
   }
@@ -104,6 +111,7 @@ class Client {
 
   async request(host, method, path, query={}, body=null) {
     let url = path;
+    if (!host) throw new Error();
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = host.location + path;
     } else {
@@ -128,9 +136,10 @@ class Client {
     }
     let response = await axios.request(requestOpts);
     if (response.status >= 300) {
-      let message = (response.data && response.data.message)
-      message = message || `Error code ${response.status} for ${method.toUpperCase()} ${path}`;
-      const err = new Error(message);
+      let serverMessage = (response.data && response.data.message)
+      let errorMessage = `${response.status} error from ${method.toUpperCase()} ${host.location}${path}`;
+      if (serverMessage) errorMessage += ': ' + serverMessage;
+      const err = new Error(errorMessage);
       err.statusCode = response.status;
       return Promise.reject(err);
     }
@@ -144,9 +153,23 @@ class Client {
           nsInfo.versions.filter(v => v.version === versionID).pop() :
           nsInfo.versions[nsInfo.versions.length - 1];
     for (let type in version.types) {
-      let typeInfo = version.types[type];
+      const typeInfo = version.types[type];
       delete typeInfo.schema.$;
-      typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
+      const schema = {
+        anyOf: [
+          typeInfo.schema,
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['$ref'],
+            properties: {
+              $ref: {type: 'string'},
+              $: {type: 'object'},
+            },
+          }
+        ]
+      }
+      typeInfo.validate = await this.ajv.compileAsync(schema);
     }
   }
 
@@ -158,12 +181,12 @@ class Client {
     }
   }
 
-  async resolveRefs(obj, defaultHost, cache={}) {
+  async resolveRefs(obj, defaultHost, cache={}, shallow=false) {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
       const resolved = await Promise.all(obj.map(item => {
-        return this.resolveRefs(item, defaultHost, cache);
+        return this.resolveRefs(item, defaultHost, cache, shallow);
       }));
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
@@ -185,49 +208,52 @@ class Client {
         if (e.statusCode !== 404) throw e;
       }
       return obj;
-    } else {
+    } else if (!shallow) {
       await Promise.all(Object.keys(obj).filter(k => k !== '$').map(key => {
-        return this.resolveRefs(obj[key], defaultHost, cache).then(resolved => {
+        return this.resolveRefs(obj[key], defaultHost, cache, shallow).then(resolved => {
           return obj[key] = resolved;
         })
       }))
+      return obj;
+    } else {
       return obj;
     }
   }
 
   async get(namespace, type, id, host=null) {
-    host = host || namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
     const isTrusted = this.getHost(host.location);
-    const item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
+    let item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
     const cache = {}
     cache[host.location] = item.$ && item.$.cache;
-    await this.resolveRefs(item, host, cache);
+    item = await this.resolveRefs(item, host, cache);
     if (!isTrusted) {
       await this.validateItem(namespace, type, item);
     }
     return item;
   }
 
-  async getACL(namespace, type, id) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+  async getACL(namespace, type, id, host=null) {
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
     let acl = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/acl`);
     // TODO: validate
     return acl;
   }
 
-  async getInfo(namespace, type, id) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+  async getInfo(namespace, type, id, host=null) {
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
     let info = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/info`);
     // TODO: validate
     return info;
   }
 
-  async list(namespace, type, params={}) {
-    const host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    const isTrusted = false; // If using another host, set to false
+  async list(namespace, type, params={}, host=null) {
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
+    const isTrusted = this.getHost(host.location);
     params.skip = params.skip || 0;
     params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
     const page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
+    page.items = await this.resolveRefs(page.items, host, {}, true);
     if (!isTrusted) {
       for (let item of page.items) {
         await this.validateItem(namespace, type, item);
@@ -236,31 +262,48 @@ class Client {
     return page;
   }
 
-  async create(namespace, type, id, data) {
-    if (typeof data === 'undefined') {
+  async create(namespace, type, id, data, host=null) {
+    if (typeof id !== 'string') {
+      host = data;
       data = id;
       id = undefined;
     }
+    host = host || this.hosts.primary;
     let url = '/data/' + namespace + '/' + type;
     if (id) url += '/' + id;
-    id = await this.request(this.hosts.primary, 'post', url, {}, data);
+    id = await this.request(host, 'post', url, {}, data);
+    await this.broadcast(namespace, type, id, 'create');
     return id;
   }
 
-  async update(namespace, type, id, data) {
-    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}`, {}, data);
+  async update(namespace, type, id, data, host=null) {
+    await this.request(host || this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}`, {}, data);
+    await this.broadcast(namespace, type, id, 'update');
   }
 
-  async append(namespace, type, id, data) {
-    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/append`, {}, data);
+  async append(namespace, type, id, data, host=null) {
+    await this.request(host || this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/append`, {}, data);
+    await this.broadcast(namespace, type, id, 'update');
   }
 
-  async delete(namespace, type, id) {
-    await this.request(this.hosts.primary, 'delete', `/data/${namespace}/${type}/${id}`);
+  async delete(namespace, type, id, host=null) {
+    await this.request(host || this.hosts.primary, 'delete', `/data/${namespace}/${type}/${id}`);
+    await this.broadcast(namespace, type, id, 'delete');
   }
 
-  async updateACL(namespace, type, id, acl) {
-    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/acl`, {}, acl);
+  async updateACL(namespace, type, id, acl, host=null) {
+    await this.request(host || this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/acl`, {}, acl);
+  }
+
+  async broadcast(namespace, type, id, operation) {
+    const path = `/data/${namespace}/${type}/${id}`;
+    const link = `${this.hosts.primary.location}${path}`;
+    let method = 'post';
+    if (operation === 'update') method = 'put';
+    else if (operation === 'delete') method = 'delete';
+    for (let host of this.hosts.broadcast) {
+      await this.request(host, method, path, {}, {$ref: link});
+    }
   }
 }
 
