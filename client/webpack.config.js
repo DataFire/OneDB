@@ -1,7 +1,7 @@
 var webpack = require("webpack");
 module.exports = {
   entry: {
-    "free-db-client": "./browser.js"
+    "freedb-client": "./browser.js"
   },
   output: {
     path: __dirname,

@@ -1,10 +1,11 @@
 <html>
   <head>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <script src="./freedb.min.js"></script>
+    <script src="./freedb-client.min.js"></script>
     <script>
 	  window.freedb = new FreeDBClient({
 		onLogin: function(instance) {
+          setLoginForm();
           if (instance === freedb.hosts.primary) {
             if (instance.user) {
               // User is logging in
@@ -58,6 +59,10 @@
               showLatestStatus();
             })
       }
+
+      function setLoginForm() {
+        document.getElementById('LoginForm').innerHTML = freedb.loginForm();
+      }
     </script>
   </head>
 
@@ -65,7 +70,7 @@
     <div class="container">
       <div id="LoginForm"></div>
       <script>
-        document.getElementById('LoginForm').innerHTML = freedb.loginForm();
+        setLoginForm();
       </script>
       <hr>
 
