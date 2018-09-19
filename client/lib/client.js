@@ -68,6 +68,7 @@ class Client {
     if (event.origin !== this.hosts.authorizing.location) return;
     this.hosts.authorizing.token = event.data;
     this.getUser(this.hosts.authorizing);
+    delete this.hosts.authorizing;
   }
 
   async getUser(host) {
@@ -111,7 +112,7 @@ class Client {
 
   async request(host, method, path, query={}, body=null) {
     let url = path;
-    if (!host) throw new Error();
+    if (!host || !host.location) throw new Error("Host or host location unspecified");
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = host.location + path;
     } else {
@@ -263,7 +264,7 @@ class Client {
   }
 
   async create(namespace, type, id, data, host=null) {
-    if (typeof id !== 'string') {
+    if (typeof id === 'object' && id !== null) {
       host = data;
       data = id;
       id = undefined;
