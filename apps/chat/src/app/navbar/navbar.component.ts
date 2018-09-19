@@ -5,6 +5,11 @@ import {FreeDBService} from '../services/freedb.service';
 @Component({
     selector: 'navbar',
     templateUrl: './navbar.pug',
+    styles: [`
+      nav {
+        display: block;
+      }
+    `]
 })
 export class NavbarComponent {
   @ViewChild('logInModal') logInModal;

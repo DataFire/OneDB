@@ -1,14 +1,30 @@
 .alert.alert-danger(*ngIf="error") {{ error }}
-div(*ngIf="chat")
-  div([ngSwitch]="acl?.owner === freedb.client.hosts.primary.user?.$.id")
-    .form-group(*ngSwitchCase="true")
-      .input-group
-        input.input-lg.form-control(placeholder="Name this conversation...", [(ngModel)]="chat.title")
-        .input-group-append
-          button.btn.btn-success((click)="save()", [disabled]="saving")
-            span(*ngIf="!saving") Save
-            i.fa.fa-spin.fa-refresh(*ngIf="saving")
-    h1(*ngSwitchCase="false") {{ chat.title || chat.$.id }}
+div(*ngIf="!chatID")
+  h1 Welcome to OneChat!
+  p.
+    OneChat is a decentralized chat application. It is built on OneDB, which means
+    you'll retain control over any messages and conversations you create here.
+  p.
+    To get started, pick a OneDB server to host your data (the default is onedb.datafire.io).
+    When you post a message, the text will be stored on that server. When other users
+    load the conversation, that's where the data will come from.
+  p.
+    At any point, you can use the <a href="https://data.one-db.org">Data Explorer</a> to review,
+    modify, and delete data you've created with this app.
+h1.text-center(*ngIf="loading")
+  i.fa.fa-spin.fa-refresh
+div(*ngIf="chat && !loading")
+  h1(*ngIf="!editingTitle")
+    span {{ chat.title || chat.$.id }}
+    a.btn.btn-warning.pull-right(*ngIf="acl?.owner === freedb.client.hosts.primary.user?.$.id", (click)="editingTitle = true")
+      i.fa.fa-edit
+  .form-group(*ngIf="editingTitle")
+    .input-group
+      input.input-lg.form-control(placeholder="Name this conversation...", [(ngModel)]="chat.title")
+      .input-group-append
+        button.btn.btn-success((click)="save()", [disabled]="saving")
+          span(*ngIf="!saving") Save
+          i.fa.fa-spin.fa-refresh(*ngIf="saving")
   .message-list(#messageList, [style.max-height]="maxChatHeight + 'px'")
     .text-center(*ngIf="hasEarlierMessages")
       button.btn.btn-link((click)="loadEarlierMessages()")
@@ -24,4 +40,6 @@ div(*ngIf="chat")
   .form-group
     textarea.form-control(placeholder="Write a new message", [(ngModel)]="message", (keydown)="onKey($event)")
   .form-group
-    button.btn.btn-lg.btn-success((click)="sendMessage()") Send
+    button.btn.btn-lg.btn-success((click)="sendMessage()", [disabled]="sendingMessage")
+      span(*ngIf="!sendingMessage") Send
+      i.fa.fa-spin.fa-refresh(*ngIf="sendingMessage")

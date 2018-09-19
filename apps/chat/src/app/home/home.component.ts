@@ -1,58 +1,52 @@
-import {Component, ViewChild} from '@angular/core';
-import {Router} from '@angular/router';
-import {FreeDBService} from '../services/freedb.service';
+import {Component} from '@angular/core';
 
-declare let window:any;
-declare let require:any;
+const SMALL_SIDEBAR_WIDTH = 72;
+const LARGE_SIDEBAR_WIDTH = 300;
 
 @Component({
     selector: 'home',
     templateUrl: './home.pug',
+    styles: [`
+      .content {
+        width: 100%;
+        position: absolute;
+        top: 56px;
+        bottom: 0px;
+      }
+      .sidebar, .main-content {
+        padding: 15px;
+      }
+      .sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        border-right: 1px solid #32334a;
+      }
+      .main-content {
+        min-width: 300px;
+      }
+    `]
 })
 export class HomeComponent {
-  @ViewChild('logInModal') logInModal;
-  listingChats:boolean;
-  error:string;
-  chatRoomName:string;
+  public collapsed:boolean;
+  public sidebarWidth:number;
 
-  userChats:any[];
-  publicChats:any[];
-
-  constructor(public freedb:FreeDBService, private router:Router) {
-    this.freedb.onLogin.subscribe(user => {
-      this.listChats();
-    });
-    this.listChats();
+  constructor() {
+    if (typeof window !== 'undefined' && window.innerWidth < 600) {
+      this.collapse();
+    } else {
+      this.expand();
+    }
   }
 
-  async listChats() {
-    if (this.listingChats) return setTimeout(this.listChats.bind(this), 100);
-    this.listingChats = true;
-    this.publicChats = (await this.freedb.client.list('alpha_chat', 'conversation')).items;
-    let userMessages = await this.freedb.client.list('alpha_chat', 'message');
-    let chatIDs = [];
-    for (let message of userMessages.items) {
-      if (chatIDs.indexOf(message.conversationID) === -1) {
-        chatIDs.push(message.conversationID);
-      }
-    }
-    this.userChats = [];
-    for (let chatID of chatIDs) {
-      this.userChats.push(await this.freedb.client.get('alpha_chat', 'conversation', chatID));
-    }
-    this.listingChats = false;
+  collapse() {
+    this.collapsed = true;
+    this.sidebarWidth = SMALL_SIDEBAR_WIDTH;
   }
 
-  async startChat() {
-    this.error = null;
-    let chatID = this.chatRoomName ? this.chatRoomName.replace(/\W+/g, '_') : undefined;
-    try {
-      const chat = {title: this.chatRoomName || ''};
-      chatID = await this.freedb.client.create('alpha_chat', 'conversation', chatID, chat);
-    } catch (e) {
-      this.error = e.message;
-      return;
-    }
-    this.router.navigate(['/chat', chatID])
+  expand() {
+    this.collapsed = false;
+    this.sidebarWidth = LARGE_SIDEBAR_WIDTH;
   }
 }

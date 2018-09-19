@@ -13,6 +13,7 @@ import { HomeComponent }       from './home/home.component';
 import { NavbarComponent }       from './navbar/navbar.component';
 import {LogInModalComponent} from './log-in-modal/log-in-modal.component'
 import {ChatComponent} from './chat/chat.component'
+import {RoomsComponent} from './rooms/rooms.component'
 
 import {PlatformService} from './services/platform.service';
 import {FreeDBService} from './services/freedb.service'
@@ -38,6 +39,7 @@ import { environment } from '../environments/environment';
     NavbarComponent,
     LogInModalComponent,
     ChatComponent,
+    RoomsComponent,
   ],
   bootstrap: [ AppComponent ],
 })

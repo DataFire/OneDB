@@ -29,6 +29,9 @@ export class ChatComponent {
 
   public error:string;
   public saving:boolean = false;
+  public loading:boolean = false;
+  public editingTitle:boolean = false;
+  public sendingMessage:boolean = false;
   public loadingMessages:boolean = false;
   public hasEarlierMessages:boolean = false;
 
@@ -71,13 +74,18 @@ export class ChatComponent {
       await this.freedb.client.update('alpha_chat', 'conversation', this.chatID, this.chat);
     } catch (e) {
       this.error = e;
+      this.saving = false;
+      return;
     }
+    this.editingTitle = false;
     this.saving = false;
   }
 
   async load(id) {
     this.chatID = id;
     this.error = null;
+    this.loading = true;
+    this.editingTitle = false;
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
@@ -85,12 +93,14 @@ export class ChatComponent {
     try {
       this.chat = await this.freedb.client.get('alpha_chat', 'conversation', id);
       this.acl = await this.freedb.client.getACL('alpha_chat', 'conversation', id);
+      this.messages = [];
       this.loadMessages(true);
     } catch (e) {
       this.error = e.message;
       return;
     }
     this.interval = setInterval(() => this.loadMessages(), RELOAD_INTERVAL);
+    this.loading = false;
   }
 
   async loadEarlierMessages() {
@@ -133,14 +143,17 @@ export class ChatComponent {
 
   async sendMessage() {
     this.error = null;
+    this.sendingMessage = true;
     try {
       const message = {message: this.message, conversationID: this.chatID};
       await this.freedb.client.create('alpha_chat', 'message', message);
       await this.loadMessages(true);
     } catch (e) {
       this.error = e.message;
+      this.sendingMessage = false;
       return;
     }
     this.message = null;
+    this.sendingMessage = false;
   }
 }

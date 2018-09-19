@@ -1,0 +1,21 @@
+log-in-modal(#logInModal)
+.alert.alert-danger(*ngIf="error") {{ error }}
+div(*ngIf="freedb.client.hosts.primary.user")
+  form((submit)="startChat()")
+    .form-group
+      button.btn.btn-success(type="submit") Start a new chat
+  hr
+  mixin rooms(title, arr)
+    h4(*ngIf=arr)= title
+    p(*ngIf=arr + "&& !" + arr + ".length")
+      i None found
+    .chat(*ngFor="let chat of " + arr)
+      a([routerLink]="['/chat', chat.$.id]") {{ chat.title || chat.$.id }}
+  +rooms('Chats you own', 'ownedChats')
+  hr
+  +rooms('Chats you participate in', 'userChats')
+  hr
+  +rooms('Public chats', 'publicChats')
+div(*ngIf="!freedb.client.hosts.primary.user")
+  p
+    a((click)="logInModal.open()") Sign in to get started

@@ -1,14 +1,13 @@
 log-in-modal(#logInModal)
 nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
-  .container
-    a.navbar-brand(routerLink="/") OneChat
-    div
-      ul.navbar-nav.ml-auto
-        li
-          a.nav-link((click)="logInModal.open()")
-            i.fa.fa-left.fa-users
-            span([ngSwitch]="!!freedb.client.hosts.primary.user")
-              span(*ngSwitchCase="true")
-                span {{freedb.client.hosts.primary.displayName}}
-              span(*ngSwitchCase="false") Sign In
+  a.navbar-brand(routerLink="/") OneChat
+  .float-right
+    ul.navbar-nav.ml-auto
+      li
+        a.nav-link((click)="logInModal.open()")
+          i.fa.fa-left.fa-users
+          span([ngSwitch]="!!freedb.client.hosts.primary.user")
+            span(*ngSwitchCase="true")
+              span.d-sm-none.d-md-inline-block {{freedb.client.hosts.primary.displayName}}
+            span(*ngSwitchCase="false") Sign In
 
