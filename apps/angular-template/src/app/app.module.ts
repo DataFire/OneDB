@@ -14,7 +14,7 @@ import { NavbarComponent }       from './navbar/navbar.component';
 import {LogInModalComponent} from './log-in-modal/log-in-modal.component'
 
 import {PlatformService} from './services/platform.service';
-import {FreeDBService} from './services/freedb.service'
+import {OneDBService} from './services/onedb.service'
 
 import { environment } from '../environments/environment';
 
@@ -29,7 +29,7 @@ import { environment } from '../environments/environment';
   providers: [
     {provide: APP_BASE_HREF, useValue: environment.baseHref || '/'},
     PlatformService,
-    FreeDBService,
+    OneDBService,
   ],
   declarations: [
     AppComponent,

@@ -6,8 +6,8 @@ nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
       li
         a.nav-link((click)="logInModal.open()")
           i.fa.fa-left.fa-users
-          span([ngSwitch]="!!freedb.client.hosts.primary.user")
+          span([ngSwitch]="!!onedb.client.hosts.primary.user")
             span(*ngSwitchCase="true")
-              span.d-sm-none.d-md-inline-block {{freedb.client.hosts.primary.displayName}}
+              span.d-sm-none.d-md-inline-block {{onedb.client.hosts.primary.displayName}}
             span(*ngSwitchCase="false") Sign In
 

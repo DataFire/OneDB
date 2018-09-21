@@ -2,11 +2,11 @@ const npath = require('path');
 const fs = require('fs');
 const read = require('read')
 
-const Client = require('freedb-client');
+const Client = require('onedb-client');
 
 const homedir = require('os').homedir();
-const SESSION_FILE = npath.join(homedir, '.freedb.session.json');
-const DEFAULT_HOST = 'https://alpha.freedb.io';
+const SESSION_FILE = npath.join(homedir, '.onedb.session.json');
+const DEFAULT_HOST = 'https://alpha.onedb.io';
 
 const promptForPassphrase = () => {
   return new Promise((resolve, reject) => {
@@ -45,7 +45,7 @@ args = args.command('login', "Logs the user in by storing passphrase to a local 
   console.log("Success");
 })
 
-args = args.command('logout', "Kills the current FreeDB session", async yargs => {
+args = args.command('logout', "Kills the current OneDB session", async yargs => {
   let argv = yargs.argv;
   if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE);
   console.log("Success");

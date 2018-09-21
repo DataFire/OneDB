@@ -120,7 +120,7 @@ class Client {
     }
     let headers = {
       'Content-Type': 'application/json',
-      'X-FreeDB-Client': packageInfo.version,
+      'X-OneDB-Client': packageInfo.version,
     }
     let requestOpts = {method, url, headers, params: query, timeout: TIMEOUT};
     requestOpts.validateStatus = () => true;

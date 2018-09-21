@@ -3,13 +3,13 @@ h1 Hey there!
 p.
   Open To-Do is a free and open source tool for creating to-do lists.
 p.
-  Open Todo uses FreeDB
+  Open Todo uses OneDB
   for cloud storage, which means <b>you</b> get to decide where your data is stored -
   in the cloud, or on your company's servers, or on your local hard drive.
-p(*ngIf="!freedb.client.hosts.primary.user")
+p(*ngIf="!onedb.client.hosts.primary.user")
   a((click)="logInModal.open()" href="javascript:void(0)") Get a free account now
 .alert.alert-danger(*ngIf="error" role="alert") {{ error }}
-div(*ngIf="freedb.client.hosts.primary.user")
+div(*ngIf="onedb.client.hosts.primary.user")
   hr
   h2.text-center Your To-Do Lists
   h2(*ngIf="!lists")

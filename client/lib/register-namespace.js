@@ -5,8 +5,8 @@ const args = require('yargs').argv;
 const Client = require('./client');
 const host = {
   location: args.host,
-  username: args.username || process.env.FREEDB_USERNAME,
-  password: args.password || process.env.FREEDB_PASSWORD,
+  username: args.username || process.env.ONEDB_USERNAME,
+  password: args.password || process.env.ONEDB_PASSWORD,
 }
 const client = new Client({
   hosts: {

@@ -28,7 +28,7 @@ const expectError = function(prom, regex) {
   })
 }
 
-describe("FreeDB Client", () => {
+describe("OneDB Client", () => {
   before(async () => {
     const mongoURI = await mongod.getConnectionString();
     server = new Server({mongodb: mongoURI, host: HOST});

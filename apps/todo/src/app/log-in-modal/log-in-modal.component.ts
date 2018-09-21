@@ -1,5 +1,5 @@
 import {Component, ViewChild} from '@angular/core';
-import {FreeDBService} from '../services/freedb.service';
+import {OneDBService} from '../services/onedb.service';
 import {NgbModal, ModalDismissReasons} from '@ng-bootstrap/ng-bootstrap';
 import {DomSanitizer, SafeHtml} from '@angular/platform-browser'
 
@@ -12,11 +12,11 @@ export class LogInModalComponent {
   formContent:SafeHtml;
 
   constructor(
-      private freedb:FreeDBService,
+      private onedb:OneDBService,
       private modals: NgbModal,
       private sanitizer:DomSanitizer) {
     this.refreshForm();
-    this.freedb.onLogin.subscribe(host => this.refreshForm())
+    this.onedb.onLogin.subscribe(host => this.refreshForm())
   }
 
   open() {
@@ -24,6 +24,6 @@ export class LogInModalComponent {
   }
 
   refreshForm() {
-    this.formContent = this.sanitizer.bypassSecurityTrustHtml(this.freedb.client.loginForm());
+    this.formContent = this.sanitizer.bypassSecurityTrustHtml(this.onedb.client.loginForm());
   }
 }

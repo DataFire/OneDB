@@ -12,7 +12,7 @@ module.exports = function(type) {
   }
 
   function getInput(type, idx) {
-    var inputID = '_FreeDBHostInput_' + type;
+    var inputID = '_OneDBHostInput_' + type;
     if (isMultiType(type)) inputID += idx;
     return document.getElementById(inputID).value;
   }
@@ -23,7 +23,7 @@ module.exports = function(type) {
     return host;
   }
 
-  window._freeDBHelpers = window._freeDBHelpers || {
+  window._oneDBHelpers = window._oneDBHelpers || {
     showAdvanced: false,
     addHost: function(type) {
       var newHost = {location: DEFAULT_SECONDARY_LOCATION};
@@ -39,7 +39,7 @@ module.exports = function(type) {
       host.location = getInput(type, idx);
     },
     login: function(type, idx) {
-      window._freeDBHelpers.updateHost(type, idx);
+      window._oneDBHelpers.updateHost(type, idx);
       var host = getHost(type, idx);
       if (type !== 'core') self.authorize(host);
     },
@@ -49,9 +49,9 @@ module.exports = function(type) {
       self.getUser(host);
     },
     toggleAdvancedOptions: function() {
-      var el = document.getElementByClassName('_freedb_advanced');
-      _freeDBHelpers.showAdvanced = !_freeDBHelpers.showAdvanced;
-      if (_freeDBHelpers.showAdvanced) {
+      var el = document.getElementByClassName('_onedb_advanced');
+      _oneDBHelpers.showAdvanced = !_oneDBHelpers.showAdvanced;
+      if (_oneDBHelpers.showAdvanced) {
         el.setAttribute('style', '');
       } else {
         el.setAttribute('style', 'display: none');
@@ -60,7 +60,7 @@ module.exports = function(type) {
   }
 
   if (type === 'hub_and_spoke' && !self.hosts.broadcast[0]) {
-    window._freeDBHelpers.addHost('broadcast');
+    window._oneDBHelpers.addHost('broadcast');
   }
 
   return TEMPLATES[type].bind(self)();
@@ -89,8 +89,8 @@ ${hostTemplate(this.hosts.broadcast[0], 'broadcast')}
 <h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
 ${hostTemplate(this.hosts.primary, 'primary')}
-<a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
-<div class="_freedb_advanced" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
+<a href="javascript:void(0)" onclick="_oneDBHelpers.toggleAdvancedOptions()">Advanced options</a>
+<div class="_onedb_advanced" style="${ _oneDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
   <h4>Broadcast Hosts</h4>
   <p>
@@ -103,7 +103,7 @@ ${hostTemplate(this.hosts.primary, 'primary')}
   </p>
   ${this.hosts.broadcast.map((host, idx) => hostTemplate(host, 'broadcast', idx)).join('\n')}
   <p>
-    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost('broadcast')">Add a broadcast host</button>
+    <button class="btn btn-secondary" onclick="_oneDBHelpers.addHost('broadcast')">Add a broadcast host</button>
   </p>
   <h4>Secondary Hosts</h4>
   <p>
@@ -111,7 +111,7 @@ ${hostTemplate(this.hosts.primary, 'primary')}
   </p>
   ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
   <p>
-    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost('secondary')">Add a broadcast host</button>
+    <button class="btn btn-secondary" onclick="_oneDBHelpers.addHost('secondary')">Add a broadcast host</button>
   </p>
   <h4>Core Host</h4>
   <p>
@@ -126,12 +126,12 @@ ${hostTemplate(this.hosts.primary, 'primary')}
 
 function hostTemplate(host, type, idx) {
   return `
-<form onsubmit="_freeDBHelpers.login('${type}', ${idx}); return false">
+<form onsubmit="_oneDBHelpers.login('${type}', ${idx}); return false">
   <div class="form-group">
     <div class="input-group">
       ${!isMultiType(type) ? '' : `
         <div class="input-group-prepend">
-          <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost('${type}', ${idx})">
+          <button class="btn btn-danger" type="button" onclick="_oneDBHelpers.removeHost('${type}', ${idx})">
             &times;
           </button>
         </div>
@@ -144,12 +144,12 @@ function hostTemplate(host, type, idx) {
       <input
           class="form-control"
           value="${host.location}"
-          id="_FreeDBHostInput_${type}${isMultiType(type) ? idx : ''}"
-          onchange="_freeDBHelpers.updateHost('${type}', ${idx})">
+          id="_OneDBHostInput_${type}${isMultiType(type) ? idx : ''}"
+          onchange="_oneDBHelpers.updateHost('${type}', ${idx})">
       ${host.user ? `
         <div class="input-group-append">
           <button class="btn btn-outline-secondary" type="button"
-                  onclick="_freeDBHelpers.logout('${type}', ${idx})">
+                  onclick="_oneDBHelpers.logout('${type}', ${idx})">
             Log Out
           </button>
         </div>

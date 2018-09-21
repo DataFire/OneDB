@@ -179,7 +179,7 @@ block body
           else
             ul.list-group.list-group-flush.non-scope
               li.list-group-item
-                span Read, Write, Create, and Destroy ALL your data in FreeDB
+                span Read, Write, Create, and Destroy ALL your data in OneDB
           .card-body
             .btn-toolbar
               a.btn.btn-lg.btn-success.mr-2(href="#" onclick="authorize()") Allow
@@ -189,15 +189,15 @@ block body
               a(onclick="showLogIn()" href="#") Switch accounts
         #LogInCard.card
           .card-body
-            h1.text-center Sign in with FreeDB
+            h1.text-center Sign in with OneDB
             p.
-              <b>Lucky you!</b>  #{query.originNoProtocol} uses FreeDB,
+              <b>Lucky you!</b>  #{query.originNoProtocol} uses OneDB,
               which means you will always own your data.
               Your data will be stored here at #{config.hostWithoutProtocol} - 
               you can come back here anytime to modify or delete your data.
             p
-              a(href="FreeDB" target="_blank") Learn more
-              span  about how FreeDB gives users more control over their data.
+              a(href="https://one-db.org" target="_blank") Learn more
+              span  about how OneDB gives users more control over their data.
             #SignIn
               h3 Sign in 
                 small

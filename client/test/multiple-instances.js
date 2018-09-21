@@ -59,7 +59,7 @@ const expectError = function(prom, regex) {
   })
 }
 
-describe("FreeDB Client with Multiple Instances", () => {
+describe("OneDB Client with Multiple Instances", () => {
   beforeEach(async function () {
     this.timeout(100000);
     for (let key in INSTANCES) {

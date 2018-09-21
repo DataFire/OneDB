@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {FreeDBService} from '../services/freedb.service';
+import {OneDBService} from '../services/onedb.service';
 import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
@@ -22,12 +22,12 @@ export class NamespaceComponent {
   version:any;
   data:any[];
   constructor(
-        public freedb:FreeDBService,
+        public onedb:OneDBService,
         private router:Router,
         private route:ActivatedRoute) {
     this.route.params.subscribe(async params => {
       if (params['namespace']) {
-        this.setNamespace(await this.freedb.client.get('core', 'namespace', params['namespace']))
+        this.setNamespace(await this.onedb.client.get('core', 'namespace', params['namespace']))
       }
     })
   }
@@ -44,8 +44,8 @@ export class NamespaceComponent {
   }
 
   async getDataset(type, skip=0) {
-    const query = {skip, owner: this.freedb.client.hosts.primary.user.$.id}
-    const dataset = await this.freedb.client.list(this.namespace.$.id, type, query);
+    const query = {skip, owner: this.onedb.client.hosts.primary.user.$.id}
+    const dataset = await this.onedb.client.list(this.namespace.$.id, type, query);
     if (dataset.total > dataset.items.length) {
       dataset.pages = [];
       const numPages = Math.ceil(dataset.total / dataset.pageSize);

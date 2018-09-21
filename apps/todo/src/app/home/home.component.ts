@@ -1,6 +1,6 @@
 import {Component, ViewChild} from '@angular/core';
 import {Router} from '@angular/router';
-import {FreeDBService} from '../services/freedb.service';
+import {OneDBService} from '../services/onedb.service';
 
 declare let window:any;
 declare let require:any;
@@ -13,9 +13,9 @@ export class HomeComponent {
   @ViewChild('logInModal') logInModal;
   lists:any[];
   error:string;
-  constructor(public freedb:FreeDBService) {
-    this.freedb.onLogin.subscribe(host => {
-      if (host === this.freedb.client.hosts.primary) {
+  constructor(public onedb:OneDBService) {
+    this.onedb.onLogin.subscribe(host => {
+      if (host === this.onedb.client.hosts.primary) {
         if (host.user) {
           this.loadTodoLists();
         } else {
@@ -27,13 +27,13 @@ export class HomeComponent {
   }
 
   async initialize() {
-    if (this.freedb.user) this.loadTodoLists();
+    if (this.onedb.user) this.loadTodoLists();
   }
 
   async loadTodoLists() {
     this.error = null;
     try {
-      this.lists = (await this.freedb.client.list('alpha_todo', 'list')).items;
+      this.lists = (await this.onedb.client.list('alpha_todo', 'list')).items;
     } catch (e) {
       this.error = e.message;
     }

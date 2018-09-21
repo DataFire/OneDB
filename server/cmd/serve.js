@@ -10,7 +10,7 @@ module.exports = function(opts) {
     let opts = require('yargs').argv;
     try {
       await module.exports(opts);
-      console.log('FreeDB listening on port ' + opts.port);
+      console.log('OneDB listening on port ' + opts.port);
     } catch (e) {
       console.log(e.message);
       console.log(e.stack);

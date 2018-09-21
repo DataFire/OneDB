@@ -51,8 +51,8 @@ Then create a schema in that folder, e.g. `types/tweet.schema.json`:
 Then use the OneDB CLI to register your namespace:
 
 ```bash
-export FREEDB_USERNAME=me@example.com
-export FREEDB_PASSWORD=thisisasecret
+export ONEDB_USERNAME=me@example.com
+export ONEDB_PASSWORD=thisisasecret
 onedb register --directory ./types --name my_twitter
 # Created namespace my_twitter
 ```

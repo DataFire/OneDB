@@ -16,7 +16,7 @@ import {ChatComponent} from './chat/chat.component'
 import {RoomsComponent} from './rooms/rooms.component'
 
 import {PlatformService} from './services/platform.service';
-import {FreeDBService} from './services/freedb.service'
+import {OneDBService} from './services/onedb.service'
 
 import { environment } from '../environments/environment';
 
@@ -31,7 +31,7 @@ import { environment } from '../environments/environment';
   providers: [
     {provide: APP_BASE_HREF, useValue: environment.baseHref || '/'},
     PlatformService,
-    FreeDBService,
+    OneDBService,
   ],
   declarations: [
     AppComponent,

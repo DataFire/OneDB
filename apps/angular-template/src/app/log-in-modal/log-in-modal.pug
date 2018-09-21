@@ -4,8 +4,4 @@ ng-template(#content let-c="close" let-d="dismiss")
     button.close(type="button", class="close", aria-label="Close", (click)="d('Cross click')")
       span(aria-hidden="true") &times;
   .modal-body
-    p Open Todo uses FreeDB, so <b>you</b> get to decide where your data is stored.
-    p.
-      You can create a free account on alpha.freedb.io to store public data, or
-      host your own server for private storage.
     div([innerHtml]="formContent")

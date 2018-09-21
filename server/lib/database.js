@@ -7,7 +7,7 @@ const dbUtil = require('./db-util');
 const util = require('./util');
 const fail = require('./fail');
 
-const DB_NAME = 'freedb';
+const DB_NAME = 'onedb';
 const ID_LENGTH = 8;
 const REF_REGEX = /^\/data\/(\w+)\/(\w+)\/(\w+)$/;
 

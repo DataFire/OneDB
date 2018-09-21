@@ -1,12 +1,12 @@
 <html>
   <head>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <script src="./freedb-client.min.js"></script>
+    <script src="./onedb-client.min.js"></script>
     <script>
-	  window.freedb = new FreeDBClient({
+	  window.onedb = new OneDBClient({
 		onLogin: function(instance) {
           setLoginForm();
-          if (instance === freedb.hosts.primary) {
+          if (instance === onedb.hosts.primary) {
             if (instance.user) {
               // User is logging in
               startApp();
@@ -23,7 +23,7 @@
 	  });
 
       function startApp() {
-        document.getElementById('Username').innerHTML = freedb.hosts.primary.user.$.id;
+        document.getElementById('Username').innerHTML = onedb.hosts.primary.user.$.id;
         document.getElementById('App').setAttribute('style', '')
         showLatestStatus();
       }
@@ -35,11 +35,11 @@
       function showLatestStatus() {
         // Get the user's last status message
         var query = {
-          owner: freedb.hosts.primary.user.$.id,
+          owner: onedb.hosts.primary.user.$.id,
           limit: 1,
           sort: 'info.created:descending',
         }
-        freedb.list('alpha_status', 'status', query)
+        onedb.list('alpha_status', 'status', query)
             .then(function(response) {
               var status = '';
               if (response.items.length) {
@@ -54,14 +54,14 @@
 
       function setStatus() {
         var status = document.getElementById('StatusInput').value;
-        freedb.create('alpha_status', 'status', {status: status})
+        onedb.create('alpha_status', 'status', {status: status})
             .then(function(statuID) {
               showLatestStatus();
             })
       }
 
       function setLoginForm() {
-        document.getElementById('LoginForm').innerHTML = freedb.loginForm();
+        document.getElementById('LoginForm').innerHTML = onedb.loginForm();
       }
     </script>
   </head>

@@ -82,8 +82,8 @@ module.exports = function(config) {
             const code = randomstring.generate(CODE_LENGTH);
             const user = await req.systemDB.createUser(email, password, req.params.username, code);
             const link = config.host + '/users/confirm_email?code=' + code + '&email=' + email;
-            await sendEmail(email, `Welcome to FreeDB! Please confirm your email address`, `
-              <a href="${link}">Click here</a> to confirm your email address for FreeDB
+            await sendEmail(email, `Welcome to OneDB! Please confirm your email address`, `
+              <a href="${link}">Click here</a> to confirm your email address for OneDB
             `)
             res.json(user.$.id);
           } else {
@@ -127,7 +127,7 @@ module.exports = function(config) {
       'password_reset.expires': moment().add(1, 'days').toISOString(),
     }});
     const link = config.host + '/reset_password?code=' + code;
-    await sendEmail(req.query.email, "Reset your FreeDB password", `
+    await sendEmail(req.query.email, "Reset your OneDB password", `
       <a href="${link}">Click here</a> to reset your password, or paste the link below into your browser.
       <br><br>
       ${link}

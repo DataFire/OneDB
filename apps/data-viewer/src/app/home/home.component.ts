@@ -1,6 +1,6 @@
 import {Component, ViewChild} from '@angular/core';
 import {Router} from '@angular/router';
-import {FreeDBService} from '../services/freedb.service';
+import {OneDBService} from '../services/onedb.service';
 
 declare let window:any;
 declare let require:any;
@@ -19,8 +19,8 @@ export class HomeComponent {
   @ViewChild('logInModal') logInModal;
   user:any;
   error:string;
-  constructor(public freedb:FreeDBService) {
-    this.freedb.onLogin.subscribe(user => {
+  constructor(public onedb:OneDBService) {
+    this.onedb.onLogin.subscribe(user => {
       this.user = user.user;
     });
   }

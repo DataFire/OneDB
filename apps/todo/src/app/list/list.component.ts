@@ -1,5 +1,5 @@
 import {Component, Input} from '@angular/core';
-import {FreeDBService} from '../services/freedb.service';
+import {OneDBService} from '../services/onedb.service';
 import { Router, ActivatedRoute } from '@angular/router';
 
 
@@ -40,7 +40,7 @@ export class ListComponent {
   saving:boolean;
 
   constructor(
-        private freedb:FreeDBService,
+        private onedb:OneDBService,
         private router:Router,
         private route:ActivatedRoute) {
     this.route.params.subscribe(params => {
@@ -58,7 +58,7 @@ export class ListComponent {
     this.list = null;
     this.error = null;
     try {
-      this.list = await this.freedb.client.get('alpha_todo', 'list', id);
+      this.list = await this.onedb.client.get('alpha_todo', 'list', id);
     } catch (e) {
       this.error = e.message;
     }
@@ -70,10 +70,10 @@ export class ListComponent {
     this.saving = true;
     try {
       if (!this.list.$) {
-        id = await this.freedb.client.create('alpha_todo', 'list', this.list);
+        id = await this.onedb.client.create('alpha_todo', 'list', this.list);
       } else {
         id = this.list.$.id;
-        await this.freedb.client.update('alpha_todo', 'list', this.list.$.id, this.list);
+        await this.onedb.client.update('alpha_todo', 'list', this.list.$.id, this.list);
       }
     } catch (e) {
       this.error = e.message;
@@ -88,7 +88,7 @@ export class ListComponent {
     this.error = null;
     if (item.$) {
       try {
-        await this.freedb.client.delete('alpha_todo', 'item', item.$.id);
+        await this.onedb.client.delete('alpha_todo', 'item', item.$.id);
       } catch (e) {
         this.error = e.message;
         return;
@@ -102,7 +102,7 @@ export class ListComponent {
     this.error = null;
     if (this.list.$) {
       try {
-        await this.freedb.client.delete('alpha_todo', 'list', this.list.$.id);
+        await this.onedb.client.delete('alpha_todo', 'list', this.list.$.id);
       } catch (e) {
         this.error = e.message;
         return;

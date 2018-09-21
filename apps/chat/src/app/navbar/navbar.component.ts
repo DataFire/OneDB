@@ -1,6 +1,6 @@
 import {ViewChild, Component} from '@angular/core';
 import {Router} from '@angular/router';
-import {FreeDBService} from '../services/freedb.service';
+import {OneDBService} from '../services/onedb.service';
 
 @Component({
     selector: 'navbar',
@@ -13,5 +13,5 @@ import {FreeDBService} from '../services/freedb.service';
 })
 export class NavbarComponent {
   @ViewChild('logInModal') logInModal;
-  constructor(public router: Router, public freedb:FreeDBService) {}
+  constructor(public router: Router, public onedb:OneDBService) {}
 }

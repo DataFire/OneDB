@@ -1,27 +1,27 @@
 {
-  "name": "freedb",
+  "name": "onedb",
   "version": "1.0.0",
-  "description": "FreeDB is a decentralized backend-as-a-service.",
+  "description": "OneDB is a decentralized backend-as-a-service.",
   "main": "index.js",
   "dependencies": {
-    "freedb-client": "^0.0.1"
+    "onedb-client": "^0.0.1"
   },
   "devDependencies": {},
   "scripts": {
     "test": "cd server && npm test ; cd ../client && npm test",
     "build": "npm run build:client && npm run build:apps && npm run build:docs",
     "build:client": "cd client && npm run build",
-    "build:apps": "cp client/dist/freedb-client.min.js apps/minimal/ ; cd apps/todo && npm run build ; cd ../data-viewer && npm run build ; cd ../chat && npm run build",
+    "build:apps": "cp client/dist/onedb-client.min.js apps/minimal/ ; cd apps/todo && npm run build ; cd ../data-viewer && npm run build ; cd ../chat && npm run build",
     "build:docs": "lucybot build --directory web-docs --destination docs"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bobby-brennan/FreeDB.git"
+    "url": "git+https://github.com/bobby-brennan/OneDB.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/bobby-brennan/FreeDB/issues"
+    "url": "https://github.com/bobby-brennan/OneDB/issues"
   },
-  "homepage": "https://github.com/bobby-brennan/FreeDB#readme"
+  "homepage": "https://github.com/bobby-brennan/OneDB#readme"
 }

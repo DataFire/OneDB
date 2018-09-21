@@ -16,7 +16,7 @@ h1.text-center(*ngIf="loading")
 div(*ngIf="chat && !loading")
   h1(*ngIf="!editingTitle")
     span {{ chat.title || chat.$.id }}
-    a.btn.btn-warning.pull-right(*ngIf="acl?.owner === freedb.client.hosts.primary.user?.$.id", (click)="editingTitle = true")
+    a.btn.btn-warning.pull-right(*ngIf="acl?.owner === onedb.client.hosts.primary.user?.$.id", (click)="editingTitle = true")
       i.fa.fa-edit
   .form-group(*ngIf="editingTitle")
     .input-group

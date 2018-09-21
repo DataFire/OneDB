@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {FreeDBService} from '../services/freedb.service';
+import {OneDBService} from '../services/onedb.service';
 import { Router, ActivatedRoute } from '@angular/router';
 
 declare let window:any;
@@ -37,7 +37,7 @@ export class ItemComponent {
   error:string;
 
   constructor(
-        public freedb:FreeDBService,
+        public onedb:OneDBService,
         private router:Router,
         private route:ActivatedRoute) {
     window.item = this;
@@ -61,8 +61,8 @@ export class ItemComponent {
   }
 
   async getData() {
-    this.item = await this.freedb.client.get(this.namespace, this.type, this.item_id);
-    this.acl = await this.freedb.client.getACL(this.namespace, this.type, this.item_id);
+    this.item = await this.onedb.client.get(this.namespace, this.type, this.item_id);
+    this.acl = await this.onedb.client.getACL(this.namespace, this.type, this.item_id);
     this.info = this.item.$.info;
     this.itemString = this.stringify(this.item);
   }
@@ -87,13 +87,13 @@ export class ItemComponent {
 
   async save() {
     let item = JSON.parse(this.itemString);
-    await this.freedb.client.update(this.namespace, this.type, this.item_id, item);
-    await this.freedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl);
+    await this.onedb.client.update(this.namespace, this.type, this.item_id, item);
+    await this.onedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl);
     this.getData();
   }
 
   async delete() {
-    await this.freedb.client.delete(this.namespace, this.type, this.item_id);
+    await this.onedb.client.delete(this.namespace, this.type, this.item_id);
     this.router.navigate(['/data', this.namespace]);
   }
 }

@@ -1,2 +1,2 @@
 require('babel-polyfill')
-window.FreeDBClient = require('./lib/client');
+window.OneDBClient = require('./lib/client');

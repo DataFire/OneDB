@@ -72,9 +72,9 @@
 /******/ ({
 
 /***/ "../../.server-config.json":
-/*!***************************************************!*\
-  !*** /home/ubuntu/git/freedb/.server-config.json ***!
-  \***************************************************/
+/*!**************************************************!*\
+  !*** /home/ubuntu/git/onedb/.server-config.json ***!
+  \**************************************************/
 /*! exports provided: jwtSecret, mongodb, host, email, default */
 /***/ (function(module) {
 
@@ -83,9 +83,9 @@ module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://lo
 /***/ }),
 
 /***/ "../../client/index.js":
-/*!***********************************************!*\
-  !*** /home/ubuntu/git/freedb/client/index.js ***!
-  \***********************************************/
+/*!**********************************************!*\
+  !*** /home/ubuntu/git/onedb/client/index.js ***!
+  \**********************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -95,9 +95,9 @@ module.exports = __webpack_require__(/*! ./lib/client */ "../../client/lib/clien
 /***/ }),
 
 /***/ "../../client/lib/client.js":
-/*!****************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/lib/client.js ***!
-  \****************************************************/
+/*!***************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/lib/client.js ***!
+  \***************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -121,7 +121,7 @@ function replaceProtocol(str) {
 class Client {
   constructor(options={}) {
     this.options = options;
-    this.setHosts(this.options.hosts);
+    this.setHosts(this.options.hosts || {});
     this.namespaces = {};
     this.ajv = new Ajv({
       allErrors: true,
@@ -142,10 +142,17 @@ class Client {
     this.hosts.core = this.hosts.core || {location: DEFAULT_CORE};
     this.hosts.primary = this.hosts.primary || {location: DEFAULT_PRIMARY};
     this.hosts.secondary = this.hosts.secondary || [];
-    if (this.hosts.primary) {
-      await this.getUser(this.hosts.primary);
-    }
-    for (let host of this.hosts.secondary) {
+    this.hosts.broadcast = this.hosts.broadcast || [];
+    this.allHosts = [this.hosts.primary].concat(this.hosts.broadcast).concat(this.hosts.secondary).concat([this.hosts.core]);
+    for (let host of this.allHosts) {
+      if (!host.location) {
+        let type = '';
+        if (host === this.hosts.core) type = 'core';
+        else if (host === this.hosts.primary) type = 'primary';
+        else if (this.hosts.secondary.includes(host)) type = 'secondary';
+        else if (this.hosts.broadcast.includes(host)) type = 'broadcast';
+        throw new Error("No location specified for " + type + " host")
+      }
       await this.getUser(host);
     }
   }
@@ -154,9 +161,7 @@ class Client {
     let match = url.match(HOST_REGEX);
     if (!match) throw new Error("Bad URL: " + url);
     let location = match[1];
-    let hosts = [this.hosts.primary].concat(this.hosts.secondary);
-    hosts.push(this.hosts.core);
-    for (let host of hosts) {
+    for (let host of this.allHosts) {
       if (host.location === location) return host;
     }
   }
@@ -166,6 +171,7 @@ class Client {
     if (event.origin !== this.hosts.authorizing.location) return;
     this.hosts.authorizing.token = event.data;
     this.getUser(this.hosts.authorizing);
+    delete this.hosts.authorizing;
   }
 
   async getUser(host) {
@@ -183,7 +189,7 @@ class Client {
       }
     }
     if (this.options.onLogin) {
-      this.options.onLogin(host);
+      setTimeout(() => this.options.onLogin(host));
     }
   }
 
@@ -209,6 +215,7 @@ class Client {
 
   async request(host, method, path, query={}, body=null) {
     let url = path;
+    if (!host || !host.location) throw new Error("Host or host location unspecified");
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = host.location + path;
     } else {
@@ -216,7 +223,7 @@ class Client {
     }
     let headers = {
       'Content-Type': 'application/json',
-      'X-FreeDB-Client': packageInfo.version,
+      'X-OneDB-Client': packageInfo.version,
     }
     let requestOpts = {method, url, headers, params: query, timeout: TIMEOUT};
     requestOpts.validateStatus = () => true;
@@ -233,9 +240,10 @@ class Client {
     }
     let response = await axios.request(requestOpts);
     if (response.status >= 300) {
-      let message = (response.data && response.data.message)
-      message = message || `Error code ${response.status} for ${method.toUpperCase()} ${path}`;
-      const err = new Error(message);
+      let serverMessage = (response.data && response.data.message)
+      let errorMessage = `${response.status} error from ${method.toUpperCase()} ${host.location}${path}`;
+      if (serverMessage) errorMessage += ': ' + serverMessage;
+      const err = new Error(errorMessage);
       err.statusCode = response.status;
       return Promise.reject(err);
     }
@@ -249,9 +257,23 @@ class Client {
           nsInfo.versions.filter(v => v.version === versionID).pop() :
           nsInfo.versions[nsInfo.versions.length - 1];
     for (let type in version.types) {
-      let typeInfo = version.types[type];
+      const typeInfo = version.types[type];
       delete typeInfo.schema.$;
-      typeInfo.validate = await this.ajv.compileAsync(typeInfo.schema);
+      const schema = {
+        anyOf: [
+          typeInfo.schema,
+          {
+            type: 'object',
+            additionalProperties: false,
+            required: ['$ref'],
+            properties: {
+              $ref: {type: 'string'},
+              $: {type: 'object'},
+            },
+          }
+        ]
+      }
+      typeInfo.validate = await this.ajv.compileAsync(schema);
     }
   }
 
@@ -263,12 +285,12 @@ class Client {
     }
   }
 
-  async resolveRefs(obj, defaultHost, cache={}) {
+  async resolveRefs(obj, defaultHost, cache={}, shallow=false) {
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     } else if (Array.isArray(obj)) {
       const resolved = await Promise.all(obj.map(item => {
-        return this.resolveRefs(item, defaultHost, cache);
+        return this.resolveRefs(item, defaultHost, cache, shallow);
       }));
       return resolved;
     } else if (obj.$ref && !obj.$ref.startsWith('#')) {
@@ -290,49 +312,52 @@ class Client {
         if (e.statusCode !== 404) throw e;
       }
       return obj;
-    } else {
+    } else if (!shallow) {
       await Promise.all(Object.keys(obj).filter(k => k !== '$').map(key => {
-        return this.resolveRefs(obj[key], defaultHost, cache).then(resolved => {
+        return this.resolveRefs(obj[key], defaultHost, cache, shallow).then(resolved => {
           return obj[key] = resolved;
         })
       }))
+      return obj;
+    } else {
       return obj;
     }
   }
 
   async get(namespace, type, id, host=null) {
-    host = host || namespace === 'core' ? this.hosts.core : this.hosts.primary;
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
     const isTrusted = this.getHost(host.location);
-    const item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
+    let item = await this.request(host, 'get', `/data/${namespace}/${type}/${id}`);
     const cache = {}
     cache[host.location] = item.$ && item.$.cache;
-    await this.resolveRefs(item, host, cache);
+    item = await this.resolveRefs(item, host, cache);
     if (!isTrusted) {
       await this.validateItem(namespace, type, item);
     }
     return item;
   }
 
-  async getACL(namespace, type, id) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+  async getACL(namespace, type, id, host=null) {
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
     let acl = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/acl`);
     // TODO: validate
     return acl;
   }
 
-  async getInfo(namespace, type, id) {
-    let host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
+  async getInfo(namespace, type, id, host=null) {
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
     let info = await this.request(host, 'get', `/data/${namespace}/${type}/${id}/info`);
     // TODO: validate
     return info;
   }
 
-  async list(namespace, type, params={}) {
-    const host = namespace === 'core' ? this.hosts.core : this.hosts.primary;
-    const isTrusted = false; // If using another host, set to false
+  async list(namespace, type, params={}, host=null) {
+    host = host || (namespace === 'core' ? this.hosts.core : this.hosts.primary);
+    const isTrusted = this.getHost(host.location);
     params.skip = params.skip || 0;
     params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
     const page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
+    page.items = await this.resolveRefs(page.items, host, {}, true);
     if (!isTrusted) {
       for (let item of page.items) {
         await this.validateItem(namespace, type, item);
@@ -341,23 +366,48 @@ class Client {
     return page;
   }
 
-  async create(namespace, type, data, id='') {
+  async create(namespace, type, id, data, host=null) {
+    if (typeof id === 'object' && id !== null) {
+      host = data;
+      data = id;
+      id = undefined;
+    }
+    host = host || this.hosts.primary;
     let url = '/data/' + namespace + '/' + type;
     if (id) url += '/' + id;
-    id = await this.request(this.hosts.primary, 'post', url, {}, data);
+    id = await this.request(host, 'post', url, {}, data);
+    await this.broadcast(namespace, type, id, 'create');
     return id;
   }
 
-  async update(namespace, type, id, data) {
-    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}`, {}, data);
+  async update(namespace, type, id, data, host=null) {
+    await this.request(host || this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}`, {}, data);
+    await this.broadcast(namespace, type, id, 'update');
   }
 
-  async destroy(namespace, type, id) {
-    await this.request(this.hosts.primary, 'delete', `/data/${namespace}/${type}/${id}`);
+  async append(namespace, type, id, data, host=null) {
+    await this.request(host || this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/append`, {}, data);
+    await this.broadcast(namespace, type, id, 'update');
   }
 
-  async updateACL(namespace, type, id, acl) {
-    await this.request(this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/acl`, {}, acl);
+  async delete(namespace, type, id, host=null) {
+    await this.request(host || this.hosts.primary, 'delete', `/data/${namespace}/${type}/${id}`);
+    await this.broadcast(namespace, type, id, 'delete');
+  }
+
+  async updateACL(namespace, type, id, acl, host=null) {
+    await this.request(host || this.hosts.primary, 'put', `/data/${namespace}/${type}/${id}/acl`, {}, acl);
+  }
+
+  async broadcast(namespace, type, id, operation) {
+    const path = `/data/${namespace}/${type}/${id}`;
+    const link = `${this.hosts.primary.location}${path}`;
+    let method = 'post';
+    if (operation === 'update') method = 'put';
+    else if (operation === 'delete') method = 'delete';
+    for (let host of this.hosts.broadcast) {
+      await this.request(host, method, path, {}, {$ref: link});
+    }
   }
 }
 
@@ -369,41 +419,46 @@ module.exports = Client;
 /***/ }),
 
 /***/ "../../client/lib/login-form.js":
-/*!********************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/lib/login-form.js ***!
-  \********************************************************/
+/*!*******************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/lib/login-form.js ***!
+  \*******************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
 const DEFAULT_SECONDARY_LOCATION = 'http://localhost:4000';
 
-module.exports = function() {
+function isMultiType(type) {
+  return type === 'secondary' || type === 'broadcast';
+}
+
+module.exports = function(type) {
+  type = type || 'simple';
   var self = this;
   if (typeof window === 'undefined') {
     throw new Error("Tried to get form in non-browser context");
   }
 
   function getInput(type, idx) {
-    var inputID = '_FreeDBHostInput_' + type;
-    if (type === 'secondary') inputID += idx;
+    var inputID = '_OneDBHostInput_' + type;
+    if (isMultiType(type)) inputID += idx;
     return document.getElementById(inputID).value;
   }
 
   function getHost(type, idx) {
     let host = self.hosts[type];
-    if (type === 'secondary') host = host[idx];
+    if (isMultiType(type)) host = host[idx];
     return host;
   }
 
-  window._freeDBHelpers = window._freeDBHelpers || {
+  window._oneDBHelpers = window._oneDBHelpers || {
     showAdvanced: false,
-    addHost: function() {
+    addHost: function(type) {
       var newHost = {location: DEFAULT_SECONDARY_LOCATION};
-      self.hosts.secondary.push(newHost);
+      self.hosts[type].push(newHost);
       self.getUser(newHost);
     },
-    removeHost: function(idx) {
-      self.hosts.secondary = self.hosts.secondary.filter((h, i) => i !== idx);
+    removeHost: function(type, idx) {
+      self.hosts[type] = self.hosts[type].filter((h, i) => i !== idx);
       self.getUser(null);
     },
     updateHost: function(type, idx) {
@@ -411,7 +466,7 @@ module.exports = function() {
       host.location = getInput(type, idx);
     },
     login: function(type, idx) {
-      window._freeDBHelpers.updateHost(type, idx);
+      window._oneDBHelpers.updateHost(type, idx);
       var host = getHost(type, idx);
       if (type !== 'core') self.authorize(host);
     },
@@ -421,9 +476,9 @@ module.exports = function() {
       self.getUser(host);
     },
     toggleAdvancedOptions: function() {
-      var el = document.getElementById('_FreeDBAdvancedOptions');
-      _freeDBHelpers.showAdvanced = !_freeDBHelpers.showAdvanced;
-      if (_freeDBHelpers.showAdvanced) {
+      var el = document.getElementByClassName('_onedb_advanced');
+      _oneDBHelpers.showAdvanced = !_oneDBHelpers.showAdvanced;
+      if (_oneDBHelpers.showAdvanced) {
         el.setAttribute('style', '');
       } else {
         el.setAttribute('style', 'display: none');
@@ -431,14 +486,40 @@ module.exports = function() {
     }
   }
 
-  return `
+  if (type === 'hub_and_spoke' && !self.hosts.broadcast[0]) {
+    window._oneDBHelpers.addHost('broadcast');
+  }
+
+  return TEMPLATES[type].bind(self)();
+}
+
+const TEMPLATES = {
+  simple: function() {
+    return `
+${hostTemplate(this.hosts.primary, 'primary')}
+    `
+  },
+  hub_and_spoke: function() {
+    return `
+<h4>Data Storage</h4>
+<p>This is where your data will be stored.</p>
+${hostTemplate(this.hosts.primary, 'primary')}
+<h4>Community</h4>
+<p>
+  You'll be able to interact with other users who set this instance as their commmunity.
+</p>
+${hostTemplate(this.hosts.broadcast[0], 'broadcast')}
+    `
+  },
+  advanced: function() {
+    return `
 <h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
 ${hostTemplate(this.hosts.primary, 'primary')}
-<a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
-<div id="_FreeDBAdvancedOptions" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
+<a href="javascript:void(0)" onclick="_oneDBHelpers.toggleAdvancedOptions()">Advanced options</a>
+<div class="_onedb_advanced" style="${ _oneDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
-  <h4>Broadcast</h4>
+  <h4>Broadcast Hosts</h4>
   <p>
     Changes to your data will be broadcast to these hosts.
     They won't store your data - they'll
@@ -446,29 +527,38 @@ ${hostTemplate(this.hosts.primary, 'primary')}
   </p>
   <p>
     Note: removing hosts may prevent you from continuing interactions with other users.
-    ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
   </p>
+  ${this.hosts.broadcast.map((host, idx) => hostTemplate(host, 'broadcast', idx)).join('\n')}
   <p>
-    <button class="btn btn-secondary" onclick="_freeDBHelpers.addHost()">Add a broadcast host</button>
+    <button class="btn btn-secondary" onclick="_oneDBHelpers.addHost('broadcast')">Add a broadcast host</button>
   </p>
-  <h4>Core</h4>
+  <h4>Secondary Hosts</h4>
+  <p>
+    Use a secondary host to log into an instance that you might need to read private data from.
+  </p>
+  ${this.hosts.secondary.map((host, idx) => hostTemplate(host, 'secondary', idx)).join('\n')}
+  <p>
+    <button class="btn btn-secondary" onclick="_oneDBHelpers.addHost('secondary')">Add a broadcast host</button>
+  </p>
+  <h4>Core Host</h4>
   <p>
     The Core host contains data schemas and other information.
     Only change this if you know what you're doing.
     ${hostTemplate(this.hosts.core, 'core')}
   </p>
 </div>
-`
+    `
+  },
 }
 
 function hostTemplate(host, type, idx) {
   return `
-<form onsubmit="_freeDBHelpers.login('${type}', ${idx}); return false">
+<form onsubmit="_oneDBHelpers.login('${type}', ${idx}); return false">
   <div class="form-group">
     <div class="input-group">
-      ${type !== 'secondary' ? '' : `
+      ${!isMultiType(type) ? '' : `
         <div class="input-group-prepend">
-          <button class="btn btn-danger" type="button" onclick="_freeDBHelpers.removeHost(${idx})">
+          <button class="btn btn-danger" type="button" onclick="_oneDBHelpers.removeHost('${type}', ${idx})">
             &times;
           </button>
         </div>
@@ -481,12 +571,12 @@ function hostTemplate(host, type, idx) {
       <input
           class="form-control"
           value="${host.location}"
-          id="_FreeDBHostInput_${type}${type === 'secondary' ? idx : ''}"
-          onchange="_freeDBHelpers.updateHost('${type}', ${idx})">
+          id="_OneDBHostInput_${type}${isMultiType(type) ? idx : ''}"
+          onchange="_oneDBHelpers.updateHost('${type}', ${idx})">
       ${host.user ? `
         <div class="input-group-append">
           <button class="btn btn-outline-secondary" type="button"
-                  onclick="_freeDBHelpers.logout('${type}', ${idx})">
+                  onclick="_oneDBHelpers.logout('${type}', ${idx})">
             Log Out
           </button>
         </div>
@@ -507,9 +597,9 @@ function hostTemplate(host, type, idx) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/index.js":
-/*!******************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/index.js ***!
-  \******************************************************************/
+/*!*****************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/index.js ***!
+  \*****************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -518,9 +608,9 @@ module.exports = __webpack_require__(/*! ./lib/axios */ "../../client/node_modul
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/adapters/http.js":
-/*!******************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/adapters/http.js ***!
-  \******************************************************************************/
+/*!*****************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/adapters/http.js ***!
+  \*****************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -767,9 +857,9 @@ module.exports = function httpAdapter(config) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/adapters/xhr.js":
-/*!*****************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/adapters/xhr.js ***!
-  \*****************************************************************************/
+/*!****************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/adapters/xhr.js ***!
+  \****************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -959,9 +1049,9 @@ module.exports = function xhrAdapter(config) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/axios.js":
-/*!**********************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/axios.js ***!
-  \**********************************************************************/
+/*!*********************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/axios.js ***!
+  \*********************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1023,9 +1113,9 @@ module.exports.default = axios;
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/cancel/Cancel.js":
-/*!******************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/cancel/Cancel.js ***!
-  \******************************************************************************/
+/*!*****************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/cancel/Cancel.js ***!
+  \*****************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1054,9 +1144,9 @@ module.exports = Cancel;
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/cancel/CancelToken.js":
-/*!***********************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/cancel/CancelToken.js ***!
-  \***********************************************************************************/
+/*!**********************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/cancel/CancelToken.js ***!
+  \**********************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1123,9 +1213,9 @@ module.exports = CancelToken;
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/cancel/isCancel.js":
-/*!********************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/cancel/isCancel.js ***!
-  \********************************************************************************/
+/*!*******************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/cancel/isCancel.js ***!
+  \*******************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1140,9 +1230,9 @@ module.exports = function isCancel(value) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/core/Axios.js":
-/*!***************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/core/Axios.js ***!
-  \***************************************************************************/
+/*!**************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/core/Axios.js ***!
+  \**************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1231,9 +1321,9 @@ module.exports = Axios;
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/core/InterceptorManager.js":
-/*!****************************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/core/InterceptorManager.js ***!
-  \****************************************************************************************/
+/*!***************************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/core/InterceptorManager.js ***!
+  \***************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1295,9 +1385,9 @@ module.exports = InterceptorManager;
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/core/createError.js":
-/*!*********************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/core/createError.js ***!
-  \*********************************************************************************/
+/*!********************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/core/createError.js ***!
+  \********************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1325,9 +1415,9 @@ module.exports = function createError(message, config, code, request, response) 
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/core/dispatchRequest.js":
-/*!*************************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/core/dispatchRequest.js ***!
-  \*************************************************************************************/
+/*!************************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/core/dispatchRequest.js ***!
+  \************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1423,9 +1513,9 @@ module.exports = function dispatchRequest(config) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/core/enhanceError.js":
-/*!**********************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/core/enhanceError.js ***!
-  \**********************************************************************************/
+/*!*********************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/core/enhanceError.js ***!
+  \*********************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1456,9 +1546,9 @@ module.exports = function enhanceError(error, config, code, request, response) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/core/settle.js":
-/*!****************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/core/settle.js ***!
-  \****************************************************************************/
+/*!***************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/core/settle.js ***!
+  \***************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1494,9 +1584,9 @@ module.exports = function settle(resolve, reject, response) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/core/transformData.js":
-/*!***********************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/core/transformData.js ***!
-  \***********************************************************************************/
+/*!**********************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/core/transformData.js ***!
+  \**********************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1526,9 +1616,9 @@ module.exports = function transformData(data, headers, fns) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/defaults.js":
-/*!*************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/defaults.js ***!
-  \*************************************************************************/
+/*!************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/defaults.js ***!
+  \************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1634,9 +1724,9 @@ module.exports = defaults;
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/bind.js":
-/*!*****************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/bind.js ***!
-  \*****************************************************************************/
+/*!****************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/bind.js ***!
+  \****************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1657,9 +1747,9 @@ module.exports = function bind(fn, thisArg) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/btoa.js":
-/*!*****************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/btoa.js ***!
-  \*****************************************************************************/
+/*!****************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/btoa.js ***!
+  \****************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1705,9 +1795,9 @@ module.exports = btoa;
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/buildURL.js":
-/*!*********************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/buildURL.js ***!
-  \*********************************************************************************/
+/*!********************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/buildURL.js ***!
+  \********************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1783,9 +1873,9 @@ module.exports = function buildURL(url, params, paramsSerializer) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/combineURLs.js":
-/*!************************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/combineURLs.js ***!
-  \************************************************************************************/
+/*!***********************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/combineURLs.js ***!
+  \***********************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1809,9 +1899,9 @@ module.exports = function combineURLs(baseURL, relativeURL) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/cookies.js":
-/*!********************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/cookies.js ***!
-  \********************************************************************************/
+/*!*******************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/cookies.js ***!
+  \*******************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1874,9 +1964,9 @@ module.exports = (
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/isAbsoluteURL.js":
-/*!**************************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/isAbsoluteURL.js ***!
-  \**************************************************************************************/
+/*!*************************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/isAbsoluteURL.js ***!
+  \*************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1900,9 +1990,9 @@ module.exports = function isAbsoluteURL(url) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/isURLSameOrigin.js":
-/*!****************************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/isURLSameOrigin.js ***!
-  \****************************************************************************************/
+/*!***************************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/isURLSameOrigin.js ***!
+  \***************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1980,9 +2070,9 @@ module.exports = (
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/normalizeHeaderName.js":
-/*!********************************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/normalizeHeaderName.js ***!
-  \********************************************************************************************/
+/*!*******************************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/normalizeHeaderName.js ***!
+  \*******************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2004,9 +2094,9 @@ module.exports = function normalizeHeaderName(headers, normalizedName) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/parseHeaders.js":
-/*!*************************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/parseHeaders.js ***!
-  \*************************************************************************************/
+/*!************************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/parseHeaders.js ***!
+  \************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2069,9 +2159,9 @@ module.exports = function parseHeaders(headers) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/helpers/spread.js":
-/*!*******************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/helpers/spread.js ***!
-  \*******************************************************************************/
+/*!******************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/helpers/spread.js ***!
+  \******************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2108,9 +2198,9 @@ module.exports = function spread(callback) {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/lib/utils.js":
-/*!**********************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/lib/utils.js ***!
-  \**********************************************************************/
+/*!*********************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/lib/utils.js ***!
+  \*********************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2423,20 +2513,20 @@ module.exports = {
 /***/ }),
 
 /***/ "../../client/node_modules/axios/package.json":
-/*!**********************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/axios/package.json ***!
-  \**********************************************************************/
-/*! exports provided: _from, _id, _inBundle, _integrity, _location, _phantomChildren, _requested, _requiredBy, _resolved, _shasum, _spec, _where, author, browser, bugs, bundleDependencies, bundlesize, dependencies, deprecated, description, devDependencies, homepage, keywords, license, main, name, repository, scripts, typings, version, default */
+/*!*********************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/axios/package.json ***!
+  \*********************************************************************/
+/*! exports provided: _args, _from, _id, _inBundle, _integrity, _location, _phantomChildren, _requested, _requiredBy, _resolved, _spec, _where, author, browser, bugs, bundlesize, dependencies, description, devDependencies, homepage, keywords, license, main, name, repository, scripts, typings, version, default */
 /***/ (function(module) {
 
-module.exports = {"_from":"axios","_id":"axios@0.18.0","_inBundle":false,"_integrity":"sha1-MtU+SFHv3AoRmTts0AB4nXDAUQI=","_location":"/axios","_phantomChildren":{},"_requested":{"type":"tag","registry":true,"raw":"axios","name":"axios","escapedName":"axios","rawSpec":"","saveSpec":null,"fetchSpec":"latest"},"_requiredBy":["#USER","/"],"_resolved":"https://registry.npmjs.org/axios/-/axios-0.18.0.tgz","_shasum":"32d53e4851efdc0a11993b6cd000789d70c05102","_spec":"axios","_where":"/home/ubuntu/git/freedb/client","author":{"name":"Matt Zabriskie"},"browser":{"./lib/adapters/http.js":"./lib/adapters/xhr.js"},"bugs":{"url":"https://github.com/axios/axios/issues"},"bundleDependencies":false,"bundlesize":[{"path":"./dist/axios.min.js","threshold":"5kB"}],"dependencies":{"follow-redirects":"^1.3.0","is-buffer":"^1.1.5"},"deprecated":false,"description":"Promise based HTTP client for the browser and node.js","devDependencies":{"bundlesize":"^0.5.7","coveralls":"^2.11.9","es6-promise":"^4.0.5","grunt":"^1.0.1","grunt-banner":"^0.6.0","grunt-cli":"^1.2.0","grunt-contrib-clean":"^1.0.0","grunt-contrib-nodeunit":"^1.0.0","grunt-contrib-watch":"^1.0.0","grunt-eslint":"^19.0.0","grunt-karma":"^2.0.0","grunt-ts":"^6.0.0-beta.3","grunt-webpack":"^1.0.18","istanbul-instrumenter-loader":"^1.0.0","jasmine-core":"^2.4.1","karma":"^1.3.0","karma-chrome-launcher":"^2.0.0","karma-coverage":"^1.0.0","karma-firefox-launcher":"^1.0.0","karma-jasmine":"^1.0.2","karma-jasmine-ajax":"^0.1.13","karma-opera-launcher":"^1.0.0","karma-safari-launcher":"^1.0.0","karma-sauce-launcher":"^1.1.0","karma-sinon":"^1.0.5","karma-sourcemap-loader":"^0.3.7","karma-webpack":"^1.7.0","load-grunt-tasks":"^3.5.2","minimist":"^1.2.0","sinon":"^1.17.4","typescript":"^2.0.3","url-search-params":"^0.6.1","webpack":"^1.13.1","webpack-dev-server":"^1.14.1"},"homepage":"https://github.com/axios/axios","keywords":["xhr","http","ajax","promise","node"],"license":"MIT","main":"index.js","name":"axios","repository":{"type":"git","url":"git+https://github.com/axios/axios.git"},"scripts":{"build":"NODE_ENV=production grunt build","coveralls":"cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js","examples":"node ./examples/server.js","postversion":"git push && git push --tags","preversion":"npm test","start":"node ./sandbox/server.js","test":"grunt test && bundlesize","version":"npm run build && grunt version && git add -A dist && git add CHANGELOG.md bower.json package.json"},"typings":"./index.d.ts","version":"0.18.0"};
+module.exports = {"_args":[["axios@0.18.0","/home/ubuntu/git/onedb/client"]],"_from":"axios@0.18.0","_id":"axios@0.18.0","_inBundle":false,"_integrity":"sha1-MtU+SFHv3AoRmTts0AB4nXDAUQI=","_location":"/axios","_phantomChildren":{},"_requested":{"type":"version","registry":true,"raw":"axios@0.18.0","name":"axios","escapedName":"axios","rawSpec":"0.18.0","saveSpec":null,"fetchSpec":"0.18.0"},"_requiredBy":["/"],"_resolved":"https://registry.npmjs.org/axios/-/axios-0.18.0.tgz","_spec":"0.18.0","_where":"/home/ubuntu/git/onedb/client","author":{"name":"Matt Zabriskie"},"browser":{"./lib/adapters/http.js":"./lib/adapters/xhr.js"},"bugs":{"url":"https://github.com/axios/axios/issues"},"bundlesize":[{"path":"./dist/axios.min.js","threshold":"5kB"}],"dependencies":{"follow-redirects":"^1.3.0","is-buffer":"^1.1.5"},"description":"Promise based HTTP client for the browser and node.js","devDependencies":{"bundlesize":"^0.5.7","coveralls":"^2.11.9","es6-promise":"^4.0.5","grunt":"^1.0.1","grunt-banner":"^0.6.0","grunt-cli":"^1.2.0","grunt-contrib-clean":"^1.0.0","grunt-contrib-nodeunit":"^1.0.0","grunt-contrib-watch":"^1.0.0","grunt-eslint":"^19.0.0","grunt-karma":"^2.0.0","grunt-ts":"^6.0.0-beta.3","grunt-webpack":"^1.0.18","istanbul-instrumenter-loader":"^1.0.0","jasmine-core":"^2.4.1","karma":"^1.3.0","karma-chrome-launcher":"^2.0.0","karma-coverage":"^1.0.0","karma-firefox-launcher":"^1.0.0","karma-jasmine":"^1.0.2","karma-jasmine-ajax":"^0.1.13","karma-opera-launcher":"^1.0.0","karma-safari-launcher":"^1.0.0","karma-sauce-launcher":"^1.1.0","karma-sinon":"^1.0.5","karma-sourcemap-loader":"^0.3.7","karma-webpack":"^1.7.0","load-grunt-tasks":"^3.5.2","minimist":"^1.2.0","sinon":"^1.17.4","typescript":"^2.0.3","url-search-params":"^0.6.1","webpack":"^1.13.1","webpack-dev-server":"^1.14.1"},"homepage":"https://github.com/axios/axios","keywords":["xhr","http","ajax","promise","node"],"license":"MIT","main":"index.js","name":"axios","repository":{"type":"git","url":"git+https://github.com/axios/axios.git"},"scripts":{"build":"NODE_ENV=production grunt build","coveralls":"cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js","examples":"node ./examples/server.js","postversion":"git push && git push --tags","preversion":"npm test","start":"node ./sandbox/server.js","test":"grunt test && bundlesize","version":"npm run build && grunt version && git add -A dist && git add CHANGELOG.md bower.json package.json"},"typings":"./index.d.ts","version":"0.18.0"};
 
 /***/ }),
 
 /***/ "../../client/node_modules/follow-redirects/index.js":
-/*!*****************************************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/node_modules/follow-redirects/index.js ***!
-  \*****************************************************************************/
+/*!****************************************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/node_modules/follow-redirects/index.js ***!
+  \****************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -2726,13 +2816,13 @@ module.exports.wrap = wrap;
 /***/ }),
 
 /***/ "../../client/package.json":
-/*!***************************************************!*\
-  !*** /home/ubuntu/git/freedb/client/package.json ***!
-  \***************************************************/
+/*!**************************************************!*\
+  !*** /home/ubuntu/git/onedb/client/package.json ***!
+  \**************************************************/
 /*! exports provided: name, version, description, main, scripts, author, license, devDependencies, dependencies, default */
 /***/ (function(module) {
 
-module.exports = {"name":"freedb-client","version":"0.0.1","description":"","main":"index.js","scripts":{"test":"mocha --exit","build":"webpack -p"},"author":"","license":"MIT","devDependencies":{"babel-core":"^6.26.0","babel-loader":"^7.1.2","babel-preset-env":"^1.6.1","chai":"^4.1.2","mocha":"^5.2.0","mongodb-memory-server":"^1.9.0","webpack":"^3.5.5"},"dependencies":{"ajv":"^6.5.2","axios":"^0.18.0","cryptico":"^1.0.2","jsencrypt":"^3.0.0-rc.1","yargs":"^11.0.0"}};
+module.exports = {"name":"onedb-client","version":"0.0.1","description":"","main":"index.js","scripts":{"test":"mocha --exit","build":"webpack -p"},"author":"","license":"MIT","devDependencies":{"babel-core":"^6.26.0","babel-loader":"^7.1.2","babel-polyfill":"^6.26.0","babel-preset-env":"^1.6.1","chai":"^4.1.2","mocha":"^5.2.0","mongodb-memory-server":"^1.9.0","webpack":"^3.5.5"},"dependencies":{"ajv":"^6.5.2","axios":"^0.18.0","cryptico":"^1.0.2","jsencrypt":"^3.0.0-rc.1","ssl-root-cas":"^1.2.5","yargs":"^11.0.0"}};
 
 /***/ }),
 
@@ -6185,12 +6275,12 @@ var i0 = __webpack_require__(/*! @angular/core */ "@angular/core");
 var i1 = __webpack_require__(/*! ./navbar/navbar.component.ngfactory */ "./src/app/navbar/navbar.component.ngfactory.js");
 var i2 = __webpack_require__(/*! ./navbar/navbar.component */ "./src/app/navbar/navbar.component.ts");
 var i3 = __webpack_require__(/*! @angular/router */ "@angular/router");
-var i4 = __webpack_require__(/*! ./services/freedb.service */ "./src/app/services/freedb.service.ts");
+var i4 = __webpack_require__(/*! ./services/onedb.service */ "./src/app/services/onedb.service.ts");
 var i5 = __webpack_require__(/*! ./app.component */ "./src/app/app.component.ts");
 var styles_AppComponent = [];
 var RenderType_AppComponent = i0.ɵcrt({ encapsulation: 2, styles: styles_AppComponent, data: {} });
 exports.RenderType_AppComponent = RenderType_AppComponent;
-function View_AppComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "navbar", [], null, null, null, i1.View_NavbarComponent_0, i1.RenderType_NavbarComponent)), i0.ɵdid(1, 49152, null, 0, i2.NavbarComponent, [i3.Router, i4.FreeDBService], null, null), (_l()(), i0.ɵeld(2, 0, null, null, 2, "div", [["class", "container"]], null, null, null, null, null)), (_l()(), i0.ɵeld(3, 16777216, null, null, 1, "router-outlet", [], null, null, null, null, null)), i0.ɵdid(4, 212992, null, 0, i3.RouterOutlet, [i3.ChildrenOutletContexts, i0.ViewContainerRef, i0.ComponentFactoryResolver, [8, null], i0.ChangeDetectorRef], null, null)], function (_ck, _v) { _ck(_v, 4, 0); }, null); }
+function View_AppComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "navbar", [], null, null, null, i1.View_NavbarComponent_0, i1.RenderType_NavbarComponent)), i0.ɵdid(1, 49152, null, 0, i2.NavbarComponent, [i3.Router, i4.OneDBService], null, null), (_l()(), i0.ɵeld(2, 0, null, null, 2, "div", [["class", "container"]], null, null, null, null, null)), (_l()(), i0.ɵeld(3, 16777216, null, null, 1, "router-outlet", [], null, null, null, null, null)), i0.ɵdid(4, 212992, null, 0, i3.RouterOutlet, [i3.ChildrenOutletContexts, i0.ViewContainerRef, i0.ComponentFactoryResolver, [8, null], i0.ChangeDetectorRef], null, null)], function (_ck, _v) { _ck(_v, 4, 0); }, null); }
 exports.View_AppComponent_0 = View_AppComponent_0;
 function View_AppComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "app-root", [], null, null, null, View_AppComponent_0, RenderType_AppComponent)), i0.ɵdid(1, 49152, null, 0, i5.AppComponent, [], null, null)], null, null); }
 exports.View_AppComponent_Host_0 = View_AppComponent_Host_0;
@@ -6304,7 +6394,7 @@ var i41 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/timepicker/timepick
 var i42 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/timepicker/ngb-time-adapter */ "@ng-bootstrap/ng-bootstrap/timepicker/ngb-time-adapter");
 var i43 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var i44 = __webpack_require__(/*! ./services/platform.service */ "./src/app/services/platform.service.ts");
-var i45 = __webpack_require__(/*! ./services/freedb.service */ "./src/app/services/freedb.service.ts");
+var i45 = __webpack_require__(/*! ./services/onedb.service */ "./src/app/services/onedb.service.ts");
 var i46 = __webpack_require__(/*! @angular/common/http */ "@angular/common/http");
 var i47 = __webpack_require__(/*! @angular/animations */ "@angular/animations");
 var i48 = __webpack_require__(/*! ./app.module */ "./src/app/app.module.ts");
@@ -6329,7 +6419,7 @@ var i66 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/rating/rating.modul
 var i67 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/tabset/tabset.module */ "@ng-bootstrap/ng-bootstrap/tabset/tabset.module");
 var i68 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/timepicker/timepicker.module */ "@ng-bootstrap/ng-bootstrap/timepicker/timepicker.module");
 var i69 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap */ "@ng-bootstrap/ng-bootstrap");
-var AppServerModuleNgFactory = i0.ɵcmf(i1.AppServerModule, [i2.AppComponent], function (_l) { return i0.ɵmod([i0.ɵmpd(512, i0.ComponentFactoryResolver, i0.ɵCodegenComponentFactoryResolver, [[8, [i3.ɵEmptyOutletComponentNgFactory, i4.NgbAlertNgFactory, i5.NgbTooltipWindowNgFactory, i6.NgbTypeaheadWindowNgFactory, i7.NgbDatepickerNgFactory, i8.NgbModalBackdropNgFactory, i9.NgbModalWindowNgFactory, i10.NgbPopoverWindowNgFactory, i11.HomeComponentNgFactory, i12.NamespaceComponentNgFactory, i13.ItemComponentNgFactory, i14.AppComponentNgFactory]], [3, i0.ComponentFactoryResolver], i0.NgModuleRef]), i0.ɵmpd(5120, i0.LOCALE_ID, i0.ɵangular_packages_core_core_k, [[3, i0.LOCALE_ID]]), i0.ɵmpd(4608, i15.NgLocalization, i15.NgLocaleLocalization, [i0.LOCALE_ID, [2, i15.ɵangular_packages_common_common_a]]), i0.ɵmpd(5120, i0.IterableDiffers, i0.ɵangular_packages_core_core_i, []), i0.ɵmpd(5120, i0.KeyValueDiffers, i0.ɵangular_packages_core_core_j, []), i0.ɵmpd(4608, i16.DomSanitizer, i16.ɵDomSanitizerImpl, [i15.DOCUMENT]), i0.ɵmpd(6144, i0.Sanitizer, null, [i16.DomSanitizer]), i0.ɵmpd(4608, i16.HAMMER_GESTURE_CONFIG, i16.HammerGestureConfig, []), i0.ɵmpd(5120, i16.EVENT_MANAGER_PLUGINS, function (p0_0, p0_1, p0_2, p1_0, p2_0, p2_1, p2_2, p2_3, p3_0) { return [new i16.ɵDomEventsPlugin(p0_0, p0_1, p0_2), new i16.ɵKeyEventsPlugin(p1_0), new i16.ɵHammerGesturesPlugin(p2_0, p2_1, p2_2, p2_3), new i17.ɵangular_packages_platform_server_platform_server_d(p3_0)]; }, [i15.DOCUMENT, i0.NgZone, i0.PLATFORM_ID, i15.DOCUMENT, i15.DOCUMENT, i16.HAMMER_GESTURE_CONFIG, i0.ɵConsole, [2, i16.HAMMER_LOADER], i16.DOCUMENT]), i0.ɵmpd(4608, i16.EventManager, i16.EventManager, [i16.EVENT_MANAGER_PLUGINS, i0.NgZone]), i0.ɵmpd(135680, i16.ɵDomSharedStylesHost, i16.ɵDomSharedStylesHost, [i15.DOCUMENT]), i0.ɵmpd(4608, i16.ɵDomRendererFactory2, i16.ɵDomRendererFactory2, [i16.EventManager, i16.ɵDomSharedStylesHost]), i0.ɵmpd(4608, i17.ɵangular_packages_platform_server_platform_server_c, i17.ɵangular_packages_platform_server_platform_server_c, [i16.DOCUMENT, [2, i16.ɵTRANSITION_ID]]), i0.ɵmpd(6144, i16.ɵSharedStylesHost, null, [i17.ɵangular_packages_platform_server_platform_server_c]), i0.ɵmpd(4608, i17.ɵServerRendererFactory2, i17.ɵServerRendererFactory2, [i16.EventManager, i0.NgZone, i16.DOCUMENT, i16.ɵSharedStylesHost]), i0.ɵmpd(4608, i18.AnimationDriver, i18.ɵNoopAnimationDriver, []), i0.ɵmpd(5120, i18.ɵAnimationStyleNormalizer, i19.ɵangular_packages_platform_browser_animations_animations_c, []), i0.ɵmpd(4608, i18.ɵAnimationEngine, i19.ɵangular_packages_platform_browser_animations_animations_a, [i15.DOCUMENT, i18.AnimationDriver, i18.ɵAnimationStyleNormalizer]), i0.ɵmpd(5120, i0.RendererFactory2, i17.ɵangular_packages_platform_server_platform_server_a, [i17.ɵServerRendererFactory2, i18.ɵAnimationEngine, i0.NgZone]), i0.ɵmpd(4352, i0.Testability, null, []), i0.ɵmpd(4608, i20.BrowserXhr, i17.ɵangular_packages_platform_server_platform_server_e, []), i0.ɵmpd(4608, i20.ResponseOptions, i20.BaseResponseOptions, []), i0.ɵmpd(4608, i20.XSRFStrategy, i17.ɵangular_packages_platform_server_platform_server_f, []), i0.ɵmpd(4608, i20.XHRBackend, i20.XHRBackend, [i20.BrowserXhr, i20.ResponseOptions, i20.XSRFStrategy]), i0.ɵmpd(4608, i20.RequestOptions, i20.BaseRequestOptions, []), i0.ɵmpd(5120, i20.Http, i17.ɵangular_packages_platform_server_platform_server_g, [i20.XHRBackend, i20.RequestOptions]), i0.ɵmpd(4608, i21.ɵangular_packages_forms_forms_i, i21.ɵangular_packages_forms_forms_i, []), i0.ɵmpd(4608, i22.NgbModalStack, i22.NgbModalStack, [i0.ApplicationRef, i0.Injector, i0.ComponentFactoryResolver, i15.DOCUMENT]), i0.ɵmpd(4608, i23.NgbModal, i23.NgbModal, [i0.ComponentFactoryResolver, i0.Injector, i22.NgbModalStack]), i0.ɵmpd(4608, i24.NgbAlertConfig, i24.NgbAlertConfig, []), i0.ɵmpd(4608, i25.NgbProgressbarConfig, i25.NgbProgressbarConfig, []), i0.ɵmpd(4608, i26.NgbTooltipConfig, i26.NgbTooltipConfig, []), i0.ɵmpd(135680, i27.Live, i27.Live, [i15.DOCUMENT, i27.ARIA_LIVE_DELAY]), i0.ɵmpd(4608, i28.NgbTypeaheadConfig, i28.NgbTypeaheadConfig, []), i0.ɵmpd(4608, i29.NgbAccordionConfig, i29.NgbAccordionConfig, []), i0.ɵmpd(4608, i30.NgbCarouselConfig, i30.NgbCarouselConfig, []), i0.ɵmpd(4608, i31.NgbCalendar, i31.NgbCalendarGregorian, []), i0.ɵmpd(4608, i15.DatePipe, i15.DatePipe, [i0.LOCALE_ID]), i0.ɵmpd(4608, i32.NgbDatepickerI18n, i32.NgbDatepickerI18nDefault, [i0.LOCALE_ID, i15.DatePipe]), i0.ɵmpd(4608, i33.NgbDateParserFormatter, i33.NgbDateISOParserFormatter, []), i0.ɵmpd(4608, i34.NgbDateAdapter, i34.NgbDateStructAdapter, []), i0.ɵmpd(4608, i35.NgbDatepickerConfig, i35.NgbDatepickerConfig, []), i0.ɵmpd(4608, i36.NgbDropdownConfig, i36.NgbDropdownConfig, []), i0.ɵmpd(4608, i37.NgbPaginationConfig, i37.NgbPaginationConfig, []), i0.ɵmpd(4608, i38.NgbPopoverConfig, i38.NgbPopoverConfig, []), i0.ɵmpd(4608, i39.NgbRatingConfig, i39.NgbRatingConfig, []), i0.ɵmpd(4608, i40.NgbTabsetConfig, i40.NgbTabsetConfig, []), i0.ɵmpd(4608, i41.NgbTimepickerConfig, i41.NgbTimepickerConfig, []), i0.ɵmpd(4608, i42.NgbTimeAdapter, i42.NgbTimeStructAdapter, []), i0.ɵmpd(5120, i43.ActivatedRoute, i43.ɵangular_packages_router_router_g, [i43.Router]), i0.ɵmpd(4608, i43.NoPreloading, i43.NoPreloading, []), i0.ɵmpd(6144, i43.PreloadingStrategy, null, [i43.NoPreloading]), i0.ɵmpd(135680, i43.RouterPreloader, i43.RouterPreloader, [i43.Router, i0.NgModuleFactoryLoader, i0.Compiler, i0.Injector, i43.PreloadingStrategy]), i0.ɵmpd(4608, i43.PreloadAllModules, i43.PreloadAllModules, []), i0.ɵmpd(4608, i15.ViewportScroller, i15.ɵNullViewportScroller, []), i0.ɵmpd(5120, i43.ɵangular_packages_router_router_n, i43.ɵangular_packages_router_router_c, [i43.Router, i15.ViewportScroller, i43.ROUTER_CONFIGURATION]), i0.ɵmpd(5120, i43.ROUTER_INITIALIZER, i43.ɵangular_packages_router_router_j, [i43.ɵangular_packages_router_router_h]), i0.ɵmpd(5120, i0.APP_BOOTSTRAP_LISTENER, function (p0_0) { return [p0_0]; }, [i43.ROUTER_INITIALIZER]), i0.ɵmpd(4608, i44.PlatformService, i44.PlatformService, [i0.PLATFORM_ID]), i0.ɵmpd(4608, i45.FreeDBService, i45.FreeDBService, [i0.NgZone]), i0.ɵmpd(4608, i46.HttpXsrfTokenExtractor, i46.ɵangular_packages_common_http_http_g, [i15.DOCUMENT, i0.PLATFORM_ID, i46.ɵangular_packages_common_http_http_e]), i0.ɵmpd(4608, i46.ɵangular_packages_common_http_http_h, i46.ɵangular_packages_common_http_http_h, [i46.HttpXsrfTokenExtractor, i46.ɵangular_packages_common_http_http_f]), i0.ɵmpd(5120, i46.HTTP_INTERCEPTORS, function (p0_0) { return [p0_0]; }, [i46.ɵangular_packages_common_http_http_h]), i0.ɵmpd(4608, i46.XhrFactory, i17.ɵangular_packages_platform_server_platform_server_e, []), i0.ɵmpd(4608, i46.HttpXhrBackend, i46.HttpXhrBackend, [i46.XhrFactory]), i0.ɵmpd(6144, i46.HttpBackend, null, [i46.HttpXhrBackend]), i0.ɵmpd(5120, i46.HttpHandler, i17.ɵangular_packages_platform_server_platform_server_h, [i46.HttpBackend, i0.Injector]), i0.ɵmpd(4608, i46.HttpClient, i46.HttpClient, [i46.HttpHandler]), i0.ɵmpd(4608, i46.ɵangular_packages_common_http_http_d, i46.ɵangular_packages_common_http_http_d, []), i0.ɵmpd(4608, i47.AnimationBuilder, i19.ɵBrowserAnimationBuilder, [i0.RendererFactory2, i16.DOCUMENT]), i0.ɵmpd(1073742336, i15.CommonModule, i15.CommonModule, []), i0.ɵmpd(1024, i0.ErrorHandler, i16.ɵangular_packages_platform_browser_platform_browser_a, []), i0.ɵmpd(1024, i0.NgProbeToken, function () { return [i43.ɵangular_packages_router_router_b()]; }, []), i0.ɵmpd(256, i0.APP_ID, "my-app", []), i0.ɵmpd(2048, i16.ɵTRANSITION_ID, null, [i0.APP_ID]), i0.ɵmpd(512, i43.ɵangular_packages_router_router_h, i43.ɵangular_packages_router_router_h, [i0.Injector]), i0.ɵmpd(1024, i0.APP_INITIALIZER, function (p0_0, p1_0, p1_1, p1_2, p2_0) { return [i16.ɵangular_packages_platform_browser_platform_browser_j(p0_0), i16.ɵangular_packages_platform_browser_platform_browser_h(p1_0, p1_1, p1_2), i43.ɵangular_packages_router_router_i(p2_0)]; }, [[2, i0.NgProbeToken], i16.ɵTRANSITION_ID, i15.DOCUMENT, i0.Injector, i43.ɵangular_packages_router_router_h]), i0.ɵmpd(512, i0.ApplicationInitStatus, i0.ApplicationInitStatus, [[2, i0.APP_INITIALIZER]]), i0.ɵmpd(131584, i0.ApplicationRef, i0.ApplicationRef, [i0.NgZone, i0.ɵConsole, i0.Injector, i0.ErrorHandler, i0.ComponentFactoryResolver, i0.ApplicationInitStatus]), i0.ɵmpd(1073742336, i0.ApplicationModule, i0.ApplicationModule, [i0.ApplicationRef]), i0.ɵmpd(1073742336, i16.BrowserModule, i16.BrowserModule, [[3, i16.BrowserModule]]), i0.ɵmpd(1024, i43.ɵangular_packages_router_router_a, i43.ɵangular_packages_router_router_e, [[3, i43.Router]]), i0.ɵmpd(512, i43.UrlSerializer, i43.DefaultUrlSerializer, []), i0.ɵmpd(512, i43.ChildrenOutletContexts, i43.ChildrenOutletContexts, []), i0.ɵmpd(256, i15.APP_BASE_HREF, i48.ɵ0, []), i0.ɵmpd(256, i43.ROUTER_CONFIGURATION, {}, []), i0.ɵmpd(1024, i15.LocationStrategy, i43.ɵangular_packages_router_router_d, [i15.PlatformLocation, [2, i15.APP_BASE_HREF], i43.ROUTER_CONFIGURATION]), i0.ɵmpd(512, i15.Location, i15.Location, [i15.LocationStrategy]), i0.ɵmpd(512, i0.Compiler, i0.Compiler, []), i0.ɵmpd(512, i0.NgModuleFactoryLoader, i49.ModuleMapNgFactoryLoader, [i0.Compiler, i49.MODULE_MAP]), i0.ɵmpd(1024, i43.ROUTES, function () { return [[{ path: "", component: i50.HomeComponent }, { path: "data/:namespace", component: i51.NamespaceComponent }, { path: "data/:namespace/:type/:item_id", component: i52.ItemComponent }, { path: "**", redirectTo: "" }]]; }, []), i0.ɵmpd(1024, i43.Router, i43.ɵangular_packages_router_router_f, [i0.ApplicationRef, i43.UrlSerializer, i43.ChildrenOutletContexts, i15.Location, i0.Injector, i0.NgModuleFactoryLoader, i0.Compiler, i43.ROUTES, i43.ROUTER_CONFIGURATION, [2, i43.UrlHandlingStrategy], [2, i43.RouteReuseStrategy]]), i0.ɵmpd(1073742336, i43.RouterModule, i43.RouterModule, [[2, i43.ɵangular_packages_router_router_a], [2, i43.Router]]), i0.ɵmpd(1073742336, i20.HttpModule, i20.HttpModule, []), i0.ɵmpd(1073742336, i21.ɵangular_packages_forms_forms_bb, i21.ɵangular_packages_forms_forms_bb, []), i0.ɵmpd(1073742336, i21.FormsModule, i21.FormsModule, []), i0.ɵmpd(1073742336, i53.NgbAlertModule, i53.NgbAlertModule, []), i0.ɵmpd(1073742336, i54.NgbButtonsModule, i54.NgbButtonsModule, []), i0.ɵmpd(1073742336, i55.NgbCollapseModule, i55.NgbCollapseModule, []), i0.ɵmpd(1073742336, i56.NgbProgressbarModule, i56.NgbProgressbarModule, []), i0.ɵmpd(1073742336, i57.NgbTooltipModule, i57.NgbTooltipModule, []), i0.ɵmpd(1073742336, i58.NgbTypeaheadModule, i58.NgbTypeaheadModule, []), i0.ɵmpd(1073742336, i59.NgbAccordionModule, i59.NgbAccordionModule, []), i0.ɵmpd(1073742336, i60.NgbCarouselModule, i60.NgbCarouselModule, []), i0.ɵmpd(1073742336, i61.NgbDatepickerModule, i61.NgbDatepickerModule, []), i0.ɵmpd(1073742336, i62.NgbDropdownModule, i62.NgbDropdownModule, []), i0.ɵmpd(1073742336, i63.NgbModalModule, i63.NgbModalModule, []), i0.ɵmpd(1073742336, i64.NgbPaginationModule, i64.NgbPaginationModule, []), i0.ɵmpd(1073742336, i65.NgbPopoverModule, i65.NgbPopoverModule, []), i0.ɵmpd(1073742336, i66.NgbRatingModule, i66.NgbRatingModule, []), i0.ɵmpd(1073742336, i67.NgbTabsetModule, i67.NgbTabsetModule, []), i0.ɵmpd(1073742336, i68.NgbTimepickerModule, i68.NgbTimepickerModule, []), i0.ɵmpd(1073742336, i69.NgbRootModule, i69.NgbRootModule, []), i0.ɵmpd(1073742336, i48.AppModule, i48.AppModule, []), i0.ɵmpd(1073742336, i46.HttpClientXsrfModule, i46.HttpClientXsrfModule, []), i0.ɵmpd(1073742336, i46.HttpClientModule, i46.HttpClientModule, []), i0.ɵmpd(1073742336, i19.NoopAnimationsModule, i19.NoopAnimationsModule, []), i0.ɵmpd(1073742336, i17.ServerModule, i17.ServerModule, []), i0.ɵmpd(1073742336, i49.ModuleMapLoaderModule, i49.ModuleMapLoaderModule, []), i0.ɵmpd(1073742336, i1.AppServerModule, i1.AppServerModule, []), i0.ɵmpd(256, i0.ɵAPP_ROOT, true, []), i0.ɵmpd(256, i27.ARIA_LIVE_DELAY, i27.DEFAULT_ARIA_LIVE_DELAY, []), i0.ɵmpd(256, i46.ɵangular_packages_common_http_http_e, "XSRF-TOKEN", []), i0.ɵmpd(256, i46.ɵangular_packages_common_http_http_f, "X-XSRF-TOKEN", []), i0.ɵmpd(256, i19.ANIMATION_MODULE_TYPE, "NoopAnimations", [])]); });
+var AppServerModuleNgFactory = i0.ɵcmf(i1.AppServerModule, [i2.AppComponent], function (_l) { return i0.ɵmod([i0.ɵmpd(512, i0.ComponentFactoryResolver, i0.ɵCodegenComponentFactoryResolver, [[8, [i3.ɵEmptyOutletComponentNgFactory, i4.NgbAlertNgFactory, i5.NgbTooltipWindowNgFactory, i6.NgbTypeaheadWindowNgFactory, i7.NgbDatepickerNgFactory, i8.NgbModalBackdropNgFactory, i9.NgbModalWindowNgFactory, i10.NgbPopoverWindowNgFactory, i11.HomeComponentNgFactory, i12.NamespaceComponentNgFactory, i13.ItemComponentNgFactory, i14.AppComponentNgFactory]], [3, i0.ComponentFactoryResolver], i0.NgModuleRef]), i0.ɵmpd(5120, i0.LOCALE_ID, i0.ɵangular_packages_core_core_k, [[3, i0.LOCALE_ID]]), i0.ɵmpd(4608, i15.NgLocalization, i15.NgLocaleLocalization, [i0.LOCALE_ID, [2, i15.ɵangular_packages_common_common_a]]), i0.ɵmpd(5120, i0.IterableDiffers, i0.ɵangular_packages_core_core_i, []), i0.ɵmpd(5120, i0.KeyValueDiffers, i0.ɵangular_packages_core_core_j, []), i0.ɵmpd(4608, i16.DomSanitizer, i16.ɵDomSanitizerImpl, [i15.DOCUMENT]), i0.ɵmpd(6144, i0.Sanitizer, null, [i16.DomSanitizer]), i0.ɵmpd(4608, i16.HAMMER_GESTURE_CONFIG, i16.HammerGestureConfig, []), i0.ɵmpd(5120, i16.EVENT_MANAGER_PLUGINS, function (p0_0, p0_1, p0_2, p1_0, p2_0, p2_1, p2_2, p2_3, p3_0) { return [new i16.ɵDomEventsPlugin(p0_0, p0_1, p0_2), new i16.ɵKeyEventsPlugin(p1_0), new i16.ɵHammerGesturesPlugin(p2_0, p2_1, p2_2, p2_3), new i17.ɵangular_packages_platform_server_platform_server_d(p3_0)]; }, [i15.DOCUMENT, i0.NgZone, i0.PLATFORM_ID, i15.DOCUMENT, i15.DOCUMENT, i16.HAMMER_GESTURE_CONFIG, i0.ɵConsole, [2, i16.HAMMER_LOADER], i16.DOCUMENT]), i0.ɵmpd(4608, i16.EventManager, i16.EventManager, [i16.EVENT_MANAGER_PLUGINS, i0.NgZone]), i0.ɵmpd(135680, i16.ɵDomSharedStylesHost, i16.ɵDomSharedStylesHost, [i15.DOCUMENT]), i0.ɵmpd(4608, i16.ɵDomRendererFactory2, i16.ɵDomRendererFactory2, [i16.EventManager, i16.ɵDomSharedStylesHost]), i0.ɵmpd(4608, i17.ɵangular_packages_platform_server_platform_server_c, i17.ɵangular_packages_platform_server_platform_server_c, [i16.DOCUMENT, [2, i16.ɵTRANSITION_ID]]), i0.ɵmpd(6144, i16.ɵSharedStylesHost, null, [i17.ɵangular_packages_platform_server_platform_server_c]), i0.ɵmpd(4608, i17.ɵServerRendererFactory2, i17.ɵServerRendererFactory2, [i16.EventManager, i0.NgZone, i16.DOCUMENT, i16.ɵSharedStylesHost]), i0.ɵmpd(4608, i18.AnimationDriver, i18.ɵNoopAnimationDriver, []), i0.ɵmpd(5120, i18.ɵAnimationStyleNormalizer, i19.ɵangular_packages_platform_browser_animations_animations_c, []), i0.ɵmpd(4608, i18.ɵAnimationEngine, i19.ɵangular_packages_platform_browser_animations_animations_a, [i15.DOCUMENT, i18.AnimationDriver, i18.ɵAnimationStyleNormalizer]), i0.ɵmpd(5120, i0.RendererFactory2, i17.ɵangular_packages_platform_server_platform_server_a, [i17.ɵServerRendererFactory2, i18.ɵAnimationEngine, i0.NgZone]), i0.ɵmpd(4352, i0.Testability, null, []), i0.ɵmpd(4608, i20.BrowserXhr, i17.ɵangular_packages_platform_server_platform_server_e, []), i0.ɵmpd(4608, i20.ResponseOptions, i20.BaseResponseOptions, []), i0.ɵmpd(4608, i20.XSRFStrategy, i17.ɵangular_packages_platform_server_platform_server_f, []), i0.ɵmpd(4608, i20.XHRBackend, i20.XHRBackend, [i20.BrowserXhr, i20.ResponseOptions, i20.XSRFStrategy]), i0.ɵmpd(4608, i20.RequestOptions, i20.BaseRequestOptions, []), i0.ɵmpd(5120, i20.Http, i17.ɵangular_packages_platform_server_platform_server_g, [i20.XHRBackend, i20.RequestOptions]), i0.ɵmpd(4608, i21.ɵangular_packages_forms_forms_i, i21.ɵangular_packages_forms_forms_i, []), i0.ɵmpd(4608, i22.NgbModalStack, i22.NgbModalStack, [i0.ApplicationRef, i0.Injector, i0.ComponentFactoryResolver, i15.DOCUMENT]), i0.ɵmpd(4608, i23.NgbModal, i23.NgbModal, [i0.ComponentFactoryResolver, i0.Injector, i22.NgbModalStack]), i0.ɵmpd(4608, i24.NgbAlertConfig, i24.NgbAlertConfig, []), i0.ɵmpd(4608, i25.NgbProgressbarConfig, i25.NgbProgressbarConfig, []), i0.ɵmpd(4608, i26.NgbTooltipConfig, i26.NgbTooltipConfig, []), i0.ɵmpd(135680, i27.Live, i27.Live, [i15.DOCUMENT, i27.ARIA_LIVE_DELAY]), i0.ɵmpd(4608, i28.NgbTypeaheadConfig, i28.NgbTypeaheadConfig, []), i0.ɵmpd(4608, i29.NgbAccordionConfig, i29.NgbAccordionConfig, []), i0.ɵmpd(4608, i30.NgbCarouselConfig, i30.NgbCarouselConfig, []), i0.ɵmpd(4608, i31.NgbCalendar, i31.NgbCalendarGregorian, []), i0.ɵmpd(4608, i15.DatePipe, i15.DatePipe, [i0.LOCALE_ID]), i0.ɵmpd(4608, i32.NgbDatepickerI18n, i32.NgbDatepickerI18nDefault, [i0.LOCALE_ID, i15.DatePipe]), i0.ɵmpd(4608, i33.NgbDateParserFormatter, i33.NgbDateISOParserFormatter, []), i0.ɵmpd(4608, i34.NgbDateAdapter, i34.NgbDateStructAdapter, []), i0.ɵmpd(4608, i35.NgbDatepickerConfig, i35.NgbDatepickerConfig, []), i0.ɵmpd(4608, i36.NgbDropdownConfig, i36.NgbDropdownConfig, []), i0.ɵmpd(4608, i37.NgbPaginationConfig, i37.NgbPaginationConfig, []), i0.ɵmpd(4608, i38.NgbPopoverConfig, i38.NgbPopoverConfig, []), i0.ɵmpd(4608, i39.NgbRatingConfig, i39.NgbRatingConfig, []), i0.ɵmpd(4608, i40.NgbTabsetConfig, i40.NgbTabsetConfig, []), i0.ɵmpd(4608, i41.NgbTimepickerConfig, i41.NgbTimepickerConfig, []), i0.ɵmpd(4608, i42.NgbTimeAdapter, i42.NgbTimeStructAdapter, []), i0.ɵmpd(5120, i43.ActivatedRoute, i43.ɵangular_packages_router_router_g, [i43.Router]), i0.ɵmpd(4608, i43.NoPreloading, i43.NoPreloading, []), i0.ɵmpd(6144, i43.PreloadingStrategy, null, [i43.NoPreloading]), i0.ɵmpd(135680, i43.RouterPreloader, i43.RouterPreloader, [i43.Router, i0.NgModuleFactoryLoader, i0.Compiler, i0.Injector, i43.PreloadingStrategy]), i0.ɵmpd(4608, i43.PreloadAllModules, i43.PreloadAllModules, []), i0.ɵmpd(4608, i15.ViewportScroller, i15.ɵNullViewportScroller, []), i0.ɵmpd(5120, i43.ɵangular_packages_router_router_n, i43.ɵangular_packages_router_router_c, [i43.Router, i15.ViewportScroller, i43.ROUTER_CONFIGURATION]), i0.ɵmpd(5120, i43.ROUTER_INITIALIZER, i43.ɵangular_packages_router_router_j, [i43.ɵangular_packages_router_router_h]), i0.ɵmpd(5120, i0.APP_BOOTSTRAP_LISTENER, function (p0_0) { return [p0_0]; }, [i43.ROUTER_INITIALIZER]), i0.ɵmpd(4608, i44.PlatformService, i44.PlatformService, [i0.PLATFORM_ID]), i0.ɵmpd(4608, i45.OneDBService, i45.OneDBService, [i0.NgZone]), i0.ɵmpd(4608, i46.HttpXsrfTokenExtractor, i46.ɵangular_packages_common_http_http_g, [i15.DOCUMENT, i0.PLATFORM_ID, i46.ɵangular_packages_common_http_http_e]), i0.ɵmpd(4608, i46.ɵangular_packages_common_http_http_h, i46.ɵangular_packages_common_http_http_h, [i46.HttpXsrfTokenExtractor, i46.ɵangular_packages_common_http_http_f]), i0.ɵmpd(5120, i46.HTTP_INTERCEPTORS, function (p0_0) { return [p0_0]; }, [i46.ɵangular_packages_common_http_http_h]), i0.ɵmpd(4608, i46.XhrFactory, i17.ɵangular_packages_platform_server_platform_server_e, []), i0.ɵmpd(4608, i46.HttpXhrBackend, i46.HttpXhrBackend, [i46.XhrFactory]), i0.ɵmpd(6144, i46.HttpBackend, null, [i46.HttpXhrBackend]), i0.ɵmpd(5120, i46.HttpHandler, i17.ɵangular_packages_platform_server_platform_server_h, [i46.HttpBackend, i0.Injector]), i0.ɵmpd(4608, i46.HttpClient, i46.HttpClient, [i46.HttpHandler]), i0.ɵmpd(4608, i46.ɵangular_packages_common_http_http_d, i46.ɵangular_packages_common_http_http_d, []), i0.ɵmpd(4608, i47.AnimationBuilder, i19.ɵBrowserAnimationBuilder, [i0.RendererFactory2, i16.DOCUMENT]), i0.ɵmpd(1073742336, i15.CommonModule, i15.CommonModule, []), i0.ɵmpd(1024, i0.ErrorHandler, i16.ɵangular_packages_platform_browser_platform_browser_a, []), i0.ɵmpd(1024, i0.NgProbeToken, function () { return [i43.ɵangular_packages_router_router_b()]; }, []), i0.ɵmpd(256, i0.APP_ID, "my-app", []), i0.ɵmpd(2048, i16.ɵTRANSITION_ID, null, [i0.APP_ID]), i0.ɵmpd(512, i43.ɵangular_packages_router_router_h, i43.ɵangular_packages_router_router_h, [i0.Injector]), i0.ɵmpd(1024, i0.APP_INITIALIZER, function (p0_0, p1_0, p1_1, p1_2, p2_0) { return [i16.ɵangular_packages_platform_browser_platform_browser_j(p0_0), i16.ɵangular_packages_platform_browser_platform_browser_h(p1_0, p1_1, p1_2), i43.ɵangular_packages_router_router_i(p2_0)]; }, [[2, i0.NgProbeToken], i16.ɵTRANSITION_ID, i15.DOCUMENT, i0.Injector, i43.ɵangular_packages_router_router_h]), i0.ɵmpd(512, i0.ApplicationInitStatus, i0.ApplicationInitStatus, [[2, i0.APP_INITIALIZER]]), i0.ɵmpd(131584, i0.ApplicationRef, i0.ApplicationRef, [i0.NgZone, i0.ɵConsole, i0.Injector, i0.ErrorHandler, i0.ComponentFactoryResolver, i0.ApplicationInitStatus]), i0.ɵmpd(1073742336, i0.ApplicationModule, i0.ApplicationModule, [i0.ApplicationRef]), i0.ɵmpd(1073742336, i16.BrowserModule, i16.BrowserModule, [[3, i16.BrowserModule]]), i0.ɵmpd(1024, i43.ɵangular_packages_router_router_a, i43.ɵangular_packages_router_router_e, [[3, i43.Router]]), i0.ɵmpd(512, i43.UrlSerializer, i43.DefaultUrlSerializer, []), i0.ɵmpd(512, i43.ChildrenOutletContexts, i43.ChildrenOutletContexts, []), i0.ɵmpd(256, i15.APP_BASE_HREF, i48.ɵ0, []), i0.ɵmpd(256, i43.ROUTER_CONFIGURATION, {}, []), i0.ɵmpd(1024, i15.LocationStrategy, i43.ɵangular_packages_router_router_d, [i15.PlatformLocation, [2, i15.APP_BASE_HREF], i43.ROUTER_CONFIGURATION]), i0.ɵmpd(512, i15.Location, i15.Location, [i15.LocationStrategy]), i0.ɵmpd(512, i0.Compiler, i0.Compiler, []), i0.ɵmpd(512, i0.NgModuleFactoryLoader, i49.ModuleMapNgFactoryLoader, [i0.Compiler, i49.MODULE_MAP]), i0.ɵmpd(1024, i43.ROUTES, function () { return [[{ path: "", component: i50.HomeComponent }, { path: "data/:namespace", component: i51.NamespaceComponent }, { path: "data/:namespace/:type/:item_id", component: i52.ItemComponent }, { path: "**", redirectTo: "" }]]; }, []), i0.ɵmpd(1024, i43.Router, i43.ɵangular_packages_router_router_f, [i0.ApplicationRef, i43.UrlSerializer, i43.ChildrenOutletContexts, i15.Location, i0.Injector, i0.NgModuleFactoryLoader, i0.Compiler, i43.ROUTES, i43.ROUTER_CONFIGURATION, [2, i43.UrlHandlingStrategy], [2, i43.RouteReuseStrategy]]), i0.ɵmpd(1073742336, i43.RouterModule, i43.RouterModule, [[2, i43.ɵangular_packages_router_router_a], [2, i43.Router]]), i0.ɵmpd(1073742336, i20.HttpModule, i20.HttpModule, []), i0.ɵmpd(1073742336, i21.ɵangular_packages_forms_forms_bb, i21.ɵangular_packages_forms_forms_bb, []), i0.ɵmpd(1073742336, i21.FormsModule, i21.FormsModule, []), i0.ɵmpd(1073742336, i53.NgbAlertModule, i53.NgbAlertModule, []), i0.ɵmpd(1073742336, i54.NgbButtonsModule, i54.NgbButtonsModule, []), i0.ɵmpd(1073742336, i55.NgbCollapseModule, i55.NgbCollapseModule, []), i0.ɵmpd(1073742336, i56.NgbProgressbarModule, i56.NgbProgressbarModule, []), i0.ɵmpd(1073742336, i57.NgbTooltipModule, i57.NgbTooltipModule, []), i0.ɵmpd(1073742336, i58.NgbTypeaheadModule, i58.NgbTypeaheadModule, []), i0.ɵmpd(1073742336, i59.NgbAccordionModule, i59.NgbAccordionModule, []), i0.ɵmpd(1073742336, i60.NgbCarouselModule, i60.NgbCarouselModule, []), i0.ɵmpd(1073742336, i61.NgbDatepickerModule, i61.NgbDatepickerModule, []), i0.ɵmpd(1073742336, i62.NgbDropdownModule, i62.NgbDropdownModule, []), i0.ɵmpd(1073742336, i63.NgbModalModule, i63.NgbModalModule, []), i0.ɵmpd(1073742336, i64.NgbPaginationModule, i64.NgbPaginationModule, []), i0.ɵmpd(1073742336, i65.NgbPopoverModule, i65.NgbPopoverModule, []), i0.ɵmpd(1073742336, i66.NgbRatingModule, i66.NgbRatingModule, []), i0.ɵmpd(1073742336, i67.NgbTabsetModule, i67.NgbTabsetModule, []), i0.ɵmpd(1073742336, i68.NgbTimepickerModule, i68.NgbTimepickerModule, []), i0.ɵmpd(1073742336, i69.NgbRootModule, i69.NgbRootModule, []), i0.ɵmpd(1073742336, i48.AppModule, i48.AppModule, []), i0.ɵmpd(1073742336, i46.HttpClientXsrfModule, i46.HttpClientXsrfModule, []), i0.ɵmpd(1073742336, i46.HttpClientModule, i46.HttpClientModule, []), i0.ɵmpd(1073742336, i19.NoopAnimationsModule, i19.NoopAnimationsModule, []), i0.ɵmpd(1073742336, i17.ServerModule, i17.ServerModule, []), i0.ɵmpd(1073742336, i49.ModuleMapLoaderModule, i49.ModuleMapLoaderModule, []), i0.ɵmpd(1073742336, i1.AppServerModule, i1.AppServerModule, []), i0.ɵmpd(256, i0.ɵAPP_ROOT, true, []), i0.ɵmpd(256, i27.ARIA_LIVE_DELAY, i27.DEFAULT_ARIA_LIVE_DELAY, []), i0.ɵmpd(256, i46.ɵangular_packages_common_http_http_e, "XSRF-TOKEN", []), i0.ɵmpd(256, i46.ɵangular_packages_common_http_http_f, "X-XSRF-TOKEN", []), i0.ɵmpd(256, i19.ANIMATION_MODULE_TYPE, "NoopAnimations", [])]); });
 exports.AppServerModuleNgFactory = AppServerModuleNgFactory;
 
 
@@ -6377,7 +6467,7 @@ var i2 = __webpack_require__(/*! @angular/common */ "@angular/common");
 var i3 = __webpack_require__(/*! @angular/forms */ "@angular/forms");
 var i4 = __webpack_require__(/*! ../log-in-modal/log-in-modal.component.ngfactory */ "./src/app/log-in-modal/log-in-modal.component.ngfactory.js");
 var i5 = __webpack_require__(/*! ../log-in-modal/log-in-modal.component */ "./src/app/log-in-modal/log-in-modal.component.ts");
-var i6 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var i6 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var i7 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/modal/modal */ "@ng-bootstrap/ng-bootstrap/modal/modal");
 var i8 = __webpack_require__(/*! @angular/platform-browser */ "@angular/platform-browser");
 var i9 = __webpack_require__(/*! ./home.component */ "./src/app/home/home.component.ts");
@@ -6408,9 +6498,9 @@ function View_HomeComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
         var pd_4 = ((_co.query = $event) !== false);
         ad = (pd_4 && ad);
     } return ad; }, null, null)), i0.ɵdid(11, 16384, null, 0, i3.DefaultValueAccessor, [i0.Renderer2, i0.ElementRef, [2, i3.COMPOSITION_BUFFER_MODE]], null, null), i0.ɵprd(1024, null, i3.NG_VALUE_ACCESSOR, function (p0_0) { return [p0_0]; }, [i3.DefaultValueAccessor]), i0.ɵdid(13, 671744, null, 0, i3.NgModel, [[8, null], [8, null], [8, null], [6, i3.NG_VALUE_ACCESSOR]], { model: [0, "model"] }, { update: "ngModelChange" }), i0.ɵprd(2048, null, i3.NgControl, null, [i3.NgModel]), i0.ɵdid(15, 16384, null, 0, i3.NgControlStatus, [[4, i3.NgControl]], null, null), (_l()(), i0.ɵeld(16, 0, null, null, 2, "ul", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_3)), i0.ɵdid(18, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_8 = _co.query; _ck(_v, 13, 0, currVal_8); var currVal_9 = _co.user.namespaces; _ck(_v, 18, 0, currVal_9); }, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.user.$.id; _ck(_v, 2, 0, currVal_0); var currVal_1 = i0.ɵnov(_v, 15).ngClassUntouched; var currVal_2 = i0.ɵnov(_v, 15).ngClassTouched; var currVal_3 = i0.ɵnov(_v, 15).ngClassPristine; var currVal_4 = i0.ɵnov(_v, 15).ngClassDirty; var currVal_5 = i0.ɵnov(_v, 15).ngClassValid; var currVal_6 = i0.ɵnov(_v, 15).ngClassInvalid; var currVal_7 = i0.ɵnov(_v, 15).ngClassPending; _ck(_v, 10, 0, currVal_1, currVal_2, currVal_3, currVal_4, currVal_5, currVal_6, currVal_7); }); }
-function View_HomeComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { logInModal: 0 }), (_l()(), i0.ɵeld(1, 0, null, null, 1, "log-in-modal", [], null, null, null, i4.View_LogInModalComponent_0, i4.RenderType_LogInModalComponent)), i0.ɵdid(2, 49152, [[1, 4], ["logInModal", 4]], 0, i5.LogInModalComponent, [i6.FreeDBService, i7.NgbModal, i8.DomSanitizer], null, null), (_l()(), i0.ɵeld(3, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["FreeDB Data Viewer"])), (_l()(), i0.ɵeld(5, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["This site allows you to browse, modify, and delete data on your FreeDB accounts."])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_1)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_2)), i0.ɵdid(10, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = !_co.user; _ck(_v, 8, 0, currVal_0); var currVal_1 = _co.user; _ck(_v, 10, 0, currVal_1); }, null); }
+function View_HomeComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { logInModal: 0 }), (_l()(), i0.ɵeld(1, 0, null, null, 1, "log-in-modal", [], null, null, null, i4.View_LogInModalComponent_0, i4.RenderType_LogInModalComponent)), i0.ɵdid(2, 49152, [[1, 4], ["logInModal", 4]], 0, i5.LogInModalComponent, [i6.OneDBService, i7.NgbModal, i8.DomSanitizer], null, null), (_l()(), i0.ɵeld(3, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["OneDB Data Viewer"])), (_l()(), i0.ɵeld(5, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["This site allows you to browse, modify, and delete data on your OneDB accounts."])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_1)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_2)), i0.ɵdid(10, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = !_co.user; _ck(_v, 8, 0, currVal_0); var currVal_1 = _co.user; _ck(_v, 10, 0, currVal_1); }, null); }
 exports.View_HomeComponent_0 = View_HomeComponent_0;
-function View_HomeComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "home", [], null, null, null, View_HomeComponent_0, RenderType_HomeComponent)), i0.ɵdid(1, 49152, null, 0, i9.HomeComponent, [i6.FreeDBService], null, null)], null, null); }
+function View_HomeComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "home", [], null, null, null, View_HomeComponent_0, RenderType_HomeComponent)), i0.ɵdid(1, 49152, null, 0, i9.HomeComponent, [i6.OneDBService], null, null)], null, null); }
 exports.View_HomeComponent_Host_0 = View_HomeComponent_Host_0;
 var HomeComponentNgFactory = i0.ɵccf("home", i9.HomeComponent, View_HomeComponent_Host_0, {}, {}, []);
 exports.HomeComponentNgFactory = HomeComponentNgFactory;
@@ -6428,12 +6518,12 @@ exports.HomeComponentNgFactory = HomeComponentNgFactory;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var freedb_service_1 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var onedb_service_1 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var HomeComponent = /** @class */ (function () {
-    function HomeComponent(freedb) {
+    function HomeComponent(onedb) {
         var _this = this;
-        this.freedb = freedb;
-        this.freedb.onLogin.subscribe(function (user) {
+        this.onedb = onedb;
+        this.onedb.onLogin.subscribe(function (user) {
             _this.user = user.user;
         });
     }
@@ -6465,7 +6555,7 @@ var i1 = __webpack_require__(/*! @angular/common */ "@angular/common");
 var i2 = __webpack_require__(/*! @angular/forms */ "@angular/forms");
 var i3 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var i4 = __webpack_require__(/*! ./item.component */ "./src/app/item/item.component.ts");
-var i5 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var i5 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var styles_ItemComponent = ["ul.info[_ngcontent-%COMP%] {\n        list-style: none;\n        padding-left: 0px;\n      }\n      .info-label[_ngcontent-%COMP%] {\n        display: inline-block;\n        min-width: 150px;\n      }"];
 var RenderType_ItemComponent = i0.ɵcrt({ encapsulation: 0, styles: styles_ItemComponent, data: {} });
 exports.RenderType_ItemComponent = RenderType_ItemComponent;
@@ -6480,7 +6570,7 @@ function View_ItemComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
     } return ad; }, null, null)), (_l()(), i0.ɵeld(6, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Destroy"])), (_l()(), i0.ɵeld(8, 0, null, null, 0, "i", [["class", "fa fa-right fa-trash"]], null, null, null, null, null))], null, null); }
 function View_ItemComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "div", [["class", "alert alert-danger"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.error; _ck(_v, 2, 0, currVal_0); }); }
 function View_ItemComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 7, "div", [["class", "alert alert-warning"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Are you sure? This action cannot be undone."])), (_l()(), i0.ɵeld(3, 0, null, null, 4, "div", [["class", "btn-toolbar"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 1, "a", [["class", "btn btn-link"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
-        var pd_0 = (_co.wrapAsync("destroy") !== false);
+        var pd_0 = (_co.wrapAsync("delete") !== false);
         ad = (pd_0 && ad);
     } return ad; }, null, null)), (_l()(), i0.ɵted(-1, null, ["Destroy this item"])), (_l()(), i0.ɵeld(6, 0, null, null, 1, "a", [["class", "btn btn-link"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
         var pd_0 = ((_co.confirmDestroy = false) !== false);
@@ -6495,7 +6585,7 @@ function View_ItemComponent_10(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0,
         ad = (pd_0 && ad);
     } return ad; }, null, null))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _v.context.$implicit; _ck(_v, 2, 0, currVal_0); var currVal_1 = (_co.acl[_v.context.$implicit][_v.parent.context.$implicit] || i0.ɵEMPTY_ARRAY).join(", "); _ck(_v, 3, 0, currVal_1); }); }
 function View_ItemComponent_9(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 5, "div", [["class", "form-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h4", [["class", "text-capitalize"]], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 2, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_10)), i0.ɵdid(5, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_1 = _co.ACL_TYPES; _ck(_v, 5, 0, currVal_1); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit; _ck(_v, 2, 0, currVal_0); }); }
-function View_ItemComponent_8(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 30, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Use these fields to control who has access to read, write, append to, and destroy your data."])), (_l()(), i0.ɵeld(3, 0, null, null, 25, "ul", [], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The "])), (_l()(), i0.ɵeld(6, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["allow"])), (_l()(), i0.ɵted(-1, null, [" field is a whitelist of users who can perform the given action."])), (_l()(), i0.ɵeld(9, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The "])), (_l()(), i0.ɵeld(11, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["disallow"])), (_l()(), i0.ɵted(-1, null, [" field is a blacklist of users who cannot perform the given action."])), (_l()(), i0.ɵeld(14, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The "])), (_l()(), i0.ɵeld(16, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["modify"])), (_l()(), i0.ɵted(-1, null, [" field is a whitelist of users who can change the allow and disallow fields."])), (_l()(), i0.ɵeld(19, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The user "])), (_l()(), i0.ɵeld(21, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["_owner"])), (_l()(), i0.ɵted(-1, null, [" refers to the owner of this item."])), (_l()(), i0.ɵeld(24, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The user "])), (_l()(), i0.ɵeld(26, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["_all"])), (_l()(), i0.ɵted(-1, null, [" refers to everyone."])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_9)), i0.ɵdid(30, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.ACCESS_TYPES; _ck(_v, 30, 0, currVal_0); }, null); }
+function View_ItemComponent_8(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 30, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Use these fields to control who has access to read, write, append to, and delete your data."])), (_l()(), i0.ɵeld(3, 0, null, null, 25, "ul", [], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The "])), (_l()(), i0.ɵeld(6, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["allow"])), (_l()(), i0.ɵted(-1, null, [" field is a whitelist of users who can perform the given action."])), (_l()(), i0.ɵeld(9, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The "])), (_l()(), i0.ɵeld(11, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["disallow"])), (_l()(), i0.ɵted(-1, null, [" field is a blacklist of users who cannot perform the given action."])), (_l()(), i0.ɵeld(14, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The "])), (_l()(), i0.ɵeld(16, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["modify"])), (_l()(), i0.ɵted(-1, null, [" field is a whitelist of users who can change the allow and disallow fields."])), (_l()(), i0.ɵeld(19, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The user "])), (_l()(), i0.ɵeld(21, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["_owner"])), (_l()(), i0.ɵted(-1, null, [" refers to the owner of this item."])), (_l()(), i0.ɵeld(24, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["The user "])), (_l()(), i0.ɵeld(26, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["_all"])), (_l()(), i0.ɵted(-1, null, [" refers to everyone."])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_9)), i0.ɵdid(30, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.ACCESS_TYPES; _ck(_v, 30, 0, currVal_0); }, null); }
 function View_ItemComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 21, "div", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_2)), i0.ɵdid(2, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(3, 0, null, null, 4, "div", [["class", "form-group"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_3)), i0.ɵdid(5, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_4)), i0.ɵdid(7, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_5)), i0.ɵdid(9, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_6)), i0.ɵdid(11, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_7)), i0.ɵdid(13, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_8)), i0.ɵdid(15, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(16, 0, null, null, 5, "textarea", [["class", "form-control"], ["rows", "20"]], [[2, "ng-untouched", null], [2, "ng-touched", null], [2, "ng-pristine", null], [2, "ng-dirty", null], [2, "ng-valid", null], [2, "ng-invalid", null], [2, "ng-pending", null]], [[null, "ngModelChange"], [null, "input"], [null, "blur"], [null, "compositionstart"], [null, "compositionend"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("input" === en)) {
         var pd_0 = (i0.ɵnov(_v, 17)._handleInput($event.target.value) !== false);
         ad = (pd_0 && ad);
@@ -6517,7 +6607,7 @@ function View_ItemComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
         ad = (pd_0 && ad);
     } return ad; }, null, null)), i0.ɵdid(2, 671744, null, 0, i3.RouterLinkWithHref, [i3.Router, i3.ActivatedRoute, i1.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(3, 2), (_l()(), i0.ɵted(4, null, ["", ""])), (_l()(), i0.ɵeld(5, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(6, null, ["/", "/", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_ItemComponent_1)), i0.ɵdid(8, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = _ck(_v, 3, 0, "/data", _co.namespace); _ck(_v, 2, 0, currVal_2); var currVal_6 = _co.item; _ck(_v, 8, 0, currVal_6); }, function (_ck, _v) { var _co = _v.component; var currVal_0 = i0.ɵnov(_v, 2).target; var currVal_1 = i0.ɵnov(_v, 2).href; _ck(_v, 1, 0, currVal_0, currVal_1); var currVal_3 = _co.namespace; _ck(_v, 4, 0, currVal_3); var currVal_4 = _co.type; var currVal_5 = _co.item_id; _ck(_v, 6, 0, currVal_4, currVal_5); }); }
 exports.View_ItemComponent_0 = View_ItemComponent_0;
-function View_ItemComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "item", [], null, null, null, View_ItemComponent_0, RenderType_ItemComponent)), i0.ɵdid(1, 49152, null, 0, i4.ItemComponent, [i5.FreeDBService, i3.Router, i3.ActivatedRoute], null, null)], null, null); }
+function View_ItemComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "item", [], null, null, null, View_ItemComponent_0, RenderType_ItemComponent)), i0.ɵdid(1, 49152, null, 0, i4.ItemComponent, [i5.OneDBService, i3.Router, i3.ActivatedRoute], null, null)], null, null); }
 exports.View_ItemComponent_Host_0 = View_ItemComponent_Host_0;
 var ItemComponentNgFactory = i0.ɵccf("item", i4.ItemComponent, View_ItemComponent_Host_0, {}, {}, []);
 exports.ItemComponentNgFactory = ItemComponentNgFactory;
@@ -6570,16 +6660,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var freedb_service_1 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var onedb_service_1 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var router_1 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var moment = __webpack_require__(/*! moment */ "moment");
 var ItemComponent = /** @class */ (function () {
-    function ItemComponent(freedb, router, route) {
+    function ItemComponent(onedb, router, route) {
         var _this = this;
-        this.freedb = freedb;
+        this.onedb = onedb;
         this.router = router;
         this.route = route;
-        this.ACCESS_TYPES = ['read', 'write', 'append', 'destroy'];
+        this.ACCESS_TYPES = ['read', 'write', 'append', 'delete'];
         this.ACL_TYPES = ['allow', 'disallow', 'modify'];
         window.item = this;
         this.route.params.subscribe(function (params) { return __awaiter(_this, void 0, void 0, function () {
@@ -6608,11 +6698,11 @@ var ItemComponent = /** @class */ (function () {
                 switch (_c.label) {
                     case 0:
                         _a = this;
-                        return [4 /*yield*/, this.freedb.client.get(this.namespace, this.type, this.item_id)];
+                        return [4 /*yield*/, this.onedb.client.get(this.namespace, this.type, this.item_id)];
                     case 1:
                         _a.item = _c.sent();
                         _b = this;
-                        return [4 /*yield*/, this.freedb.client.getACL(this.namespace, this.type, this.item_id)];
+                        return [4 /*yield*/, this.onedb.client.getACL(this.namespace, this.type, this.item_id)];
                     case 2:
                         _b.acl = _c.sent();
                         this.info = this.item.$.info;
@@ -6660,10 +6750,10 @@ var ItemComponent = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         item = JSON.parse(this.itemString);
-                        return [4 /*yield*/, this.freedb.client.update(this.namespace, this.type, this.item_id, item)];
+                        return [4 /*yield*/, this.onedb.client.update(this.namespace, this.type, this.item_id, item)];
                     case 1:
                         _a.sent();
-                        return [4 /*yield*/, this.freedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl)];
+                        return [4 /*yield*/, this.onedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl)];
                     case 2:
                         _a.sent();
                         this.getData();
@@ -6672,11 +6762,11 @@ var ItemComponent = /** @class */ (function () {
             });
         });
     };
-    ItemComponent.prototype.destroy = function () {
+    ItemComponent.prototype.delete = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.freedb.client.destroy(this.namespace, this.type, this.item_id)];
+                    case 0: return [4 /*yield*/, this.onedb.client.delete(this.namespace, this.type, this.item_id)];
                     case 1:
                         _a.sent();
                         this.router.navigate(['/data', this.namespace]);
@@ -6710,7 +6800,7 @@ exports.ItemComponent = ItemComponent;
 Object.defineProperty(exports, "__esModule", { value: true });
 var i0 = __webpack_require__(/*! @angular/core */ "@angular/core");
 var i1 = __webpack_require__(/*! ./log-in-modal.component */ "./src/app/log-in-modal/log-in-modal.component.ts");
-var i2 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var i2 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var i3 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/modal/modal */ "@ng-bootstrap/ng-bootstrap/modal/modal");
 var i4 = __webpack_require__(/*! @angular/platform-browser */ "@angular/platform-browser");
 var styles_LogInModalComponent = [];
@@ -6719,10 +6809,10 @@ exports.RenderType_LogInModalComponent = RenderType_LogInModalComponent;
 function View_LogInModalComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 5, "div", [["class", "modal-header"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h4", [["class", "modal-title"]], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Manage Accounts"])), (_l()(), i0.ɵeld(3, 0, null, null, 2, "button", [["aria-label", "Close"], ["class", "close close"], ["type", "button"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (_v.context.dismiss("Cross click") !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 1, "span", [["aria-hidden", "true"]], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["\u00D7"])), (_l()(), i0.ɵeld(6, 0, null, null, 8, "div", [["class", "modal-body"]], null, null, null, null, null)), (_l()(), i0.ɵeld(7, 0, null, null, 4, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Open Todo uses FreeDB, so "])), (_l()(), i0.ɵeld(9, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["you"])), (_l()(), i0.ɵted(-1, null, [" get to decide where your data is stored."])), (_l()(), i0.ɵeld(12, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["You can create a free account on alpha.freedb.io to store public data, or\nhost your own server for private storage."])), (_l()(), i0.ɵeld(14, 0, null, null, 0, "div", [], [[8, "innerHTML", 1]], null, null, null, null))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.formContent; _ck(_v, 14, 0, currVal_0); }); }
+    } return ad; }, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 1, "span", [["aria-hidden", "true"]], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["\u00D7"])), (_l()(), i0.ɵeld(6, 0, null, null, 1, "div", [["class", "modal-body"]], null, null, null, null, null)), (_l()(), i0.ɵeld(7, 0, null, null, 0, "div", [], [[8, "innerHTML", 1]], null, null, null, null))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.formContent; _ck(_v, 7, 0, currVal_0); }); }
 function View_LogInModalComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { content: 0 }), (_l()(), i0.ɵand(0, [[1, 2], ["content", 2]], null, 0, null, View_LogInModalComponent_1))], null, null); }
 exports.View_LogInModalComponent_0 = View_LogInModalComponent_0;
-function View_LogInModalComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "log-in-modal", [], null, null, null, View_LogInModalComponent_0, RenderType_LogInModalComponent)), i0.ɵdid(1, 49152, null, 0, i1.LogInModalComponent, [i2.FreeDBService, i3.NgbModal, i4.DomSanitizer], null, null)], null, null); }
+function View_LogInModalComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "log-in-modal", [], null, null, null, View_LogInModalComponent_0, RenderType_LogInModalComponent)), i0.ɵdid(1, 49152, null, 0, i1.LogInModalComponent, [i2.OneDBService, i3.NgbModal, i4.DomSanitizer], null, null)], null, null); }
 exports.View_LogInModalComponent_Host_0 = View_LogInModalComponent_Host_0;
 var LogInModalComponentNgFactory = i0.ɵccf("log-in-modal", i1.LogInModalComponent, View_LogInModalComponent_Host_0, {}, {}, []);
 exports.LogInModalComponentNgFactory = LogInModalComponentNgFactory;
@@ -6740,23 +6830,23 @@ exports.LogInModalComponentNgFactory = LogInModalComponentNgFactory;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var freedb_service_1 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var onedb_service_1 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var ng_bootstrap_1 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap */ "@ng-bootstrap/ng-bootstrap");
 var platform_browser_1 = __webpack_require__(/*! @angular/platform-browser */ "@angular/platform-browser");
 var LogInModalComponent = /** @class */ (function () {
-    function LogInModalComponent(freedb, modals, sanitizer) {
+    function LogInModalComponent(onedb, modals, sanitizer) {
         var _this = this;
-        this.freedb = freedb;
+        this.onedb = onedb;
         this.modals = modals;
         this.sanitizer = sanitizer;
         this.refreshForm();
-        this.freedb.onLogin.subscribe(function (user) { return _this.refreshForm(); });
+        this.onedb.onLogin.subscribe(function (user) { return _this.refreshForm(); });
     }
     LogInModalComponent.prototype.open = function () {
         this.modals.open(this.content);
     };
     LogInModalComponent.prototype.refreshForm = function () {
-        this.formContent = this.sanitizer.bypassSecurityTrustHtml(this.freedb.client.loginForm());
+        this.formContent = this.sanitizer.bypassSecurityTrustHtml(this.onedb.client.loginForm());
     };
     return LogInModalComponent;
 }());
@@ -6785,7 +6875,7 @@ var i0 = __webpack_require__(/*! @angular/core */ "@angular/core");
 var i1 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var i2 = __webpack_require__(/*! @angular/common */ "@angular/common");
 var i3 = __webpack_require__(/*! ./namespace.component */ "./src/app/namespace/namespace.component.ts");
-var i4 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var i4 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var styles_NamespaceComponent = [".space[_ngcontent-%COMP%] {\n        margin-top: 20px;\n      }\n      table[_ngcontent-%COMP%] {\n        margin-bottom: 15px;\n      }\n      table[_ngcontent-%COMP%]   td[_ngcontent-%COMP%] {\n        padding: 4px;\n      }"];
 var RenderType_NamespaceComponent = i0.ɵcrt({ encapsulation: 0, styles: styles_NamespaceComponent, data: {} });
 exports.RenderType_NamespaceComponent = RenderType_NamespaceComponent;
@@ -6803,7 +6893,7 @@ function View_NamespaceComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0
 function View_NamespaceComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 8, "div", [["class", "col space"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h2", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 3, "table", [], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 2, "tbody", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_3)), i0.ɵdid(6, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_5)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var currVal_1 = _v.context.$implicit.dataset.items; _ck(_v, 6, 0, currVal_1); var currVal_2 = _v.context.$implicit.dataset.pages; _ck(_v, 8, 0, currVal_2); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit.type; _ck(_v, 2, 0, currVal_0); }); }
 function View_NamespaceComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_1)), i0.ɵdid(1, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(2, 0, null, null, 2, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_2)), i0.ɵdid(4, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace; _ck(_v, 1, 0, currVal_0); var currVal_1 = _co.data; _ck(_v, 4, 0, currVal_1); }, null); }
 exports.View_NamespaceComponent_0 = View_NamespaceComponent_0;
-function View_NamespaceComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "namespace", [], null, null, null, View_NamespaceComponent_0, RenderType_NamespaceComponent)), i0.ɵdid(1, 49152, null, 0, i3.NamespaceComponent, [i4.FreeDBService, i1.Router, i1.ActivatedRoute], null, null)], null, null); }
+function View_NamespaceComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "namespace", [], null, null, null, View_NamespaceComponent_0, RenderType_NamespaceComponent)), i0.ɵdid(1, 49152, null, 0, i3.NamespaceComponent, [i4.OneDBService, i1.Router, i1.ActivatedRoute], null, null)], null, null); }
 exports.View_NamespaceComponent_Host_0 = View_NamespaceComponent_Host_0;
 var NamespaceComponentNgFactory = i0.ɵccf("namespace", i3.NamespaceComponent, View_NamespaceComponent_Host_0, {}, {}, []);
 exports.NamespaceComponentNgFactory = NamespaceComponentNgFactory;
@@ -6856,12 +6946,12 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var freedb_service_1 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var onedb_service_1 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var router_1 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var NamespaceComponent = /** @class */ (function () {
-    function NamespaceComponent(freedb, router, route) {
+    function NamespaceComponent(onedb, router, route) {
         var _this = this;
-        this.freedb = freedb;
+        this.onedb = onedb;
         this.router = router;
         this.route = route;
         this.route.params.subscribe(function (params) { return __awaiter(_this, void 0, void 0, function () {
@@ -6871,7 +6961,7 @@ var NamespaceComponent = /** @class */ (function () {
                     case 0:
                         if (!params['namespace']) return [3 /*break*/, 2];
                         _a = this.setNamespace;
-                        return [4 /*yield*/, this.freedb.client.get('core', 'namespace', params['namespace'])];
+                        return [4 /*yield*/, this.onedb.client.get('core', 'namespace', params['namespace'])];
                     case 1:
                         _a.apply(this, [_b.sent()]);
                         _b.label = 2;
@@ -6915,8 +7005,8 @@ var NamespaceComponent = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        query = { skip: skip, owner: this.freedb.client.hosts.primary.user.$.id };
-                        return [4 /*yield*/, this.freedb.client.list(this.namespace.$.id, type, query)];
+                        query = { skip: skip, owner: this.onedb.client.hosts.primary.user.$.id };
+                        return [4 /*yield*/, this.onedb.client.list(this.namespace.$.id, type, query)];
                     case 1:
                         dataset = _a.sent();
                         if (dataset.total > dataset.items.length) {
@@ -6988,7 +7078,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var i0 = __webpack_require__(/*! @angular/core */ "@angular/core");
 var i1 = __webpack_require__(/*! ../log-in-modal/log-in-modal.component.ngfactory */ "./src/app/log-in-modal/log-in-modal.component.ngfactory.js");
 var i2 = __webpack_require__(/*! ../log-in-modal/log-in-modal.component */ "./src/app/log-in-modal/log-in-modal.component.ts");
-var i3 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var i3 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var i4 = __webpack_require__(/*! @ng-bootstrap/ng-bootstrap/modal/modal */ "@ng-bootstrap/ng-bootstrap/modal/modal");
 var i5 = __webpack_require__(/*! @angular/platform-browser */ "@angular/platform-browser");
 var i6 = __webpack_require__(/*! @angular/router */ "@angular/router");
@@ -6997,17 +7087,17 @@ var i8 = __webpack_require__(/*! ./navbar.component */ "./src/app/navbar/navbar.
 var styles_NavbarComponent = [];
 var RenderType_NavbarComponent = i0.ɵcrt({ encapsulation: 2, styles: styles_NavbarComponent, data: {} });
 exports.RenderType_NavbarComponent = RenderType_NavbarComponent;
-function View_NavbarComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "span", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.freedb.client.hosts.primary.displayName; _ck(_v, 2, 0, currVal_0); }); }
+function View_NavbarComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "span", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.onedb.client.hosts.primary.displayName; _ck(_v, 2, 0, currVal_0); }); }
 function View_NavbarComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Sign In"]))], null, null); }
-function View_NavbarComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { logInModal: 0 }), (_l()(), i0.ɵeld(1, 0, null, null, 1, "log-in-modal", [], null, null, null, i1.View_LogInModalComponent_0, i1.RenderType_LogInModalComponent)), i0.ɵdid(2, 49152, [[1, 4], ["logInModal", 4]], 0, i2.LogInModalComponent, [i3.FreeDBService, i4.NgbModal, i5.DomSanitizer], null, null), (_l()(), i0.ɵeld(3, 0, null, null, 15, "nav", [["class", "navbar navbar-expand-lg navbar-dark bg-dark"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 14, "div", [["class", "container"]], null, null, null, null, null)), (_l()(), i0.ɵeld(5, 0, null, null, 2, "a", [["class", "navbar-brand"], ["routerLink", "/"]], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
+function View_NavbarComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { logInModal: 0 }), (_l()(), i0.ɵeld(1, 0, null, null, 1, "log-in-modal", [], null, null, null, i1.View_LogInModalComponent_0, i1.RenderType_LogInModalComponent)), i0.ɵdid(2, 49152, [[1, 4], ["logInModal", 4]], 0, i2.LogInModalComponent, [i3.OneDBService, i4.NgbModal, i5.DomSanitizer], null, null), (_l()(), i0.ɵeld(3, 0, null, null, 15, "nav", [["class", "navbar navbar-expand-lg navbar-dark bg-dark"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 14, "div", [["class", "container"]], null, null, null, null, null)), (_l()(), i0.ɵeld(5, 0, null, null, 2, "a", [["class", "navbar-brand"], ["routerLink", "/"]], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 6).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), i0.ɵdid(6, 671744, null, 0, i6.RouterLinkWithHref, [i6.Router, i6.ActivatedRoute, i7.LocationStrategy], { routerLink: [0, "routerLink"] }, null), (_l()(), i0.ɵted(-1, null, ["FreeDB Data Viewer"])), (_l()(), i0.ɵeld(8, 0, null, null, 10, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(9, 0, null, null, 9, "ul", [["class", "navbar-nav ml-auto"]], null, null, null, null, null)), (_l()(), i0.ɵeld(10, 0, null, null, 8, "li", [], null, null, null, null, null)), (_l()(), i0.ɵeld(11, 0, null, null, 7, "a", [["class", "nav-link"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
+    } return ad; }, null, null)), i0.ɵdid(6, 671744, null, 0, i6.RouterLinkWithHref, [i6.Router, i6.ActivatedRoute, i7.LocationStrategy], { routerLink: [0, "routerLink"] }, null), (_l()(), i0.ɵted(-1, null, ["OneDB Data Viewer"])), (_l()(), i0.ɵeld(8, 0, null, null, 10, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(9, 0, null, null, 9, "ul", [["class", "navbar-nav ml-auto"]], null, null, null, null, null)), (_l()(), i0.ɵeld(10, 0, null, null, 8, "li", [], null, null, null, null, null)), (_l()(), i0.ɵeld(11, 0, null, null, 7, "a", [["class", "nav-link"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 2).open() !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), (_l()(), i0.ɵeld(12, 0, null, null, 0, "i", [["class", "fa fa-left fa-users"]], null, null, null, null, null)), (_l()(), i0.ɵeld(13, 0, null, null, 5, "span", [], null, null, null, null, null)), i0.ɵdid(14, 16384, null, 0, i7.NgSwitch, [], { ngSwitch: [0, "ngSwitch"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NavbarComponent_1)), i0.ɵdid(16, 278528, null, 0, i7.NgSwitchCase, [i0.ViewContainerRef, i0.TemplateRef, i7.NgSwitch], { ngSwitchCase: [0, "ngSwitchCase"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NavbarComponent_2)), i0.ɵdid(18, 278528, null, 0, i7.NgSwitchCase, [i0.ViewContainerRef, i0.TemplateRef, i7.NgSwitch], { ngSwitchCase: [0, "ngSwitchCase"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = "/"; _ck(_v, 6, 0, currVal_2); var currVal_3 = !!_co.freedb.client.hosts.primary.user; _ck(_v, 14, 0, currVal_3); var currVal_4 = true; _ck(_v, 16, 0, currVal_4); var currVal_5 = false; _ck(_v, 18, 0, currVal_5); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 6).target; var currVal_1 = i0.ɵnov(_v, 6).href; _ck(_v, 5, 0, currVal_0, currVal_1); }); }
+    } return ad; }, null, null)), (_l()(), i0.ɵeld(12, 0, null, null, 0, "i", [["class", "fa fa-left fa-users"]], null, null, null, null, null)), (_l()(), i0.ɵeld(13, 0, null, null, 5, "span", [], null, null, null, null, null)), i0.ɵdid(14, 16384, null, 0, i7.NgSwitch, [], { ngSwitch: [0, "ngSwitch"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NavbarComponent_1)), i0.ɵdid(16, 278528, null, 0, i7.NgSwitchCase, [i0.ViewContainerRef, i0.TemplateRef, i7.NgSwitch], { ngSwitchCase: [0, "ngSwitchCase"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NavbarComponent_2)), i0.ɵdid(18, 278528, null, 0, i7.NgSwitchCase, [i0.ViewContainerRef, i0.TemplateRef, i7.NgSwitch], { ngSwitchCase: [0, "ngSwitchCase"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = "/"; _ck(_v, 6, 0, currVal_2); var currVal_3 = !!_co.onedb.client.hosts.primary.user; _ck(_v, 14, 0, currVal_3); var currVal_4 = true; _ck(_v, 16, 0, currVal_4); var currVal_5 = false; _ck(_v, 18, 0, currVal_5); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 6).target; var currVal_1 = i0.ɵnov(_v, 6).href; _ck(_v, 5, 0, currVal_0, currVal_1); }); }
 exports.View_NavbarComponent_0 = View_NavbarComponent_0;
-function View_NavbarComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "navbar", [], null, null, null, View_NavbarComponent_0, RenderType_NavbarComponent)), i0.ɵdid(1, 49152, null, 0, i8.NavbarComponent, [i6.Router, i3.FreeDBService], null, null)], null, null); }
+function View_NavbarComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "navbar", [], null, null, null, View_NavbarComponent_0, RenderType_NavbarComponent)), i0.ɵdid(1, 49152, null, 0, i8.NavbarComponent, [i6.Router, i3.OneDBService], null, null)], null, null); }
 exports.View_NavbarComponent_Host_0 = View_NavbarComponent_Host_0;
 var NavbarComponentNgFactory = i0.ɵccf("navbar", i8.NavbarComponent, View_NavbarComponent_Host_0, {}, {}, []);
 exports.NavbarComponentNgFactory = NavbarComponentNgFactory;
@@ -7026,11 +7116,11 @@ exports.NavbarComponentNgFactory = NavbarComponentNgFactory;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var router_1 = __webpack_require__(/*! @angular/router */ "@angular/router");
-var freedb_service_1 = __webpack_require__(/*! ../services/freedb.service */ "./src/app/services/freedb.service.ts");
+var onedb_service_1 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var NavbarComponent = /** @class */ (function () {
-    function NavbarComponent(router, freedb) {
+    function NavbarComponent(router, onedb) {
         this.router = router;
-        this.freedb = freedb;
+        this.onedb = onedb;
     }
     return NavbarComponent;
 }());
@@ -7039,10 +7129,10 @@ exports.NavbarComponent = NavbarComponent;
 
 /***/ }),
 
-/***/ "./src/app/services/freedb.service.ts":
-/*!********************************************!*\
-  !*** ./src/app/services/freedb.service.ts ***!
-  \********************************************/
+/***/ "./src/app/services/onedb.service.ts":
+/*!*******************************************!*\
+  !*** ./src/app/services/onedb.service.ts ***!
+  \*******************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -7089,13 +7179,13 @@ var rxjs_1 = __webpack_require__(/*! rxjs */ "rxjs");
 var Client = __webpack_require__(/*! ../../../../../client */ "../../client/index.js");
 var settings = __webpack_require__(/*! ../../../../../.server-config.json */ "../../.server-config.json");
 var CORE_HOST = settings.host;
-var STORAGE_KEY = 'freedb_auth';
-var FreeDBService = /** @class */ (function () {
-    function FreeDBService(zone) {
+var STORAGE_KEY = 'onedb_auth';
+var OneDBService = /** @class */ (function () {
+    function OneDBService(zone) {
         var _this = this;
         this.zone = zone;
         this.onLogin = new rxjs_1.BehaviorSubject(null);
-        window.freedbService = this;
+        window.onedbService = this;
         this.client = new Client({
             hosts: {
                 core: {
@@ -7117,7 +7207,7 @@ var FreeDBService = /** @class */ (function () {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
         });
     }
-    FreeDBService.prototype.maybeRestore = function () {
+    OneDBService.prototype.maybeRestore = function () {
         return __awaiter(this, void 0, void 0, function () {
             var existing;
             return __generator(this, function (_a) {
@@ -7139,9 +7229,9 @@ var FreeDBService = /** @class */ (function () {
             });
         });
     };
-    return FreeDBService;
+    return OneDBService;
 }());
-exports.FreeDBService = FreeDBService;
+exports.OneDBService = OneDBService;
 
 
 /***/ }),
@@ -7222,7 +7312,7 @@ exports.LAZY_MODULE_MAP = {};
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! /home/ubuntu/git/freedb/apps/data-viewer/src/main.server.ts */"./src/main.server.ts");
+module.exports = __webpack_require__(/*! /home/ubuntu/git/onedb/apps/data-viewer/src/main.server.ts */"./src/main.server.ts");
 
 
 /***/ }),
