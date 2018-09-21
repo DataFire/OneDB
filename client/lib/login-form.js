@@ -4,7 +4,8 @@ function isMultiType(type) {
   return type === 'secondary' || type === 'broadcast';
 }
 
-module.exports = function() {
+module.exports = function(type) {
+  type = type || 'simple';
   var self = this;
   if (typeof window === 'undefined') {
     throw new Error("Tried to get form in non-browser context");
@@ -48,7 +49,7 @@ module.exports = function() {
       self.getUser(host);
     },
     toggleAdvancedOptions: function() {
-      var el = document.getElementById('_FreeDBAdvancedOptions');
+      var el = document.getElementByClassName('_freedb_advanced');
       _freeDBHelpers.showAdvanced = !_freeDBHelpers.showAdvanced;
       if (_freeDBHelpers.showAdvanced) {
         el.setAttribute('style', '');
@@ -58,12 +59,38 @@ module.exports = function() {
     }
   }
 
-  return `
+  if (type === 'hub_and_spoke' && !self.hosts.broadcast[0]) {
+    window._freeDBHelpers.addHost('broadcast');
+  }
+
+  return TEMPLATES[type].bind(self)();
+}
+
+const TEMPLATES = {
+  simple: function() {
+    return `
+${hostTemplate(this.hosts.primary, 'primary')}
+    `
+  },
+  hub_and_spoke: function() {
+    return `
+<h4>Data Storage</h4>
+<p>This is where your data will be stored.</p>
+${hostTemplate(this.hosts.primary, 'primary')}
+<h4>Community</h4>
+<p>
+  You'll be able to interact with other users who set this instance as their commmunity.
+</p>
+${hostTemplate(this.hosts.broadcast[0], 'broadcast')}
+    `
+  },
+  advanced: function() {
+    return `
 <h4>Data Host</h4>
 <p>This is where your data will be stored.</p>
 ${hostTemplate(this.hosts.primary, 'primary')}
 <a href="javascript:void(0)" onclick="_freeDBHelpers.toggleAdvancedOptions()">Advanced options</a>
-<div id="_FreeDBAdvancedOptions" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
+<div class="_freedb_advanced" style="${ _freeDBHelpers.showAdvanced ? '' : 'display: none'}">
   <hr>
   <h4>Broadcast Hosts</h4>
   <p>
@@ -93,7 +120,8 @@ ${hostTemplate(this.hosts.primary, 'primary')}
     ${hostTemplate(this.hosts.core, 'core')}
   </p>
 </div>
-`
+    `
+  },
 }
 
 function hostTemplate(host, type, idx) {
