@@ -95,7 +95,7 @@ module.exports = function(config) {
     if (typeof req.query.code !== 'string' || validate.validators.email(req.query.email)) {
       return res.status(400).send("Invalid email or confirmation code");
     }
-    const collection = req.systemDB.db.collection('core-user_private');
+    const collection = req.systemDB.db.collection('system-user_private');
     const query = {
       'data.email': req.query.email,
       'data.email_confirmation.code': req.query.code,
@@ -117,7 +117,7 @@ module.exports = function(config) {
     if (validate.validators.email(req.query.email)) {
       return res.status(400).send("Must supply an email address");
     }
-    const collection = req.systemDB.db.collection('core-user_private');
+    const collection = req.systemDB.db.collection('system-user_private');
     const userQuery = {'data.email': req.query.email};
     const userPrivate = await collection.findOne(userQuery);
     if (!userPrivate) return res.status(404).send("User " + req.query.email + " not found");
@@ -137,7 +137,7 @@ module.exports = function(config) {
 
   router.post('/reset_password', bodyParser.json(), async (req, res, next) => {
     if (typeof req.body.code !== 'string') return res.status(400).send("Invalid code");
-    const collection = req.systemDB.db.collection('core-user_private');
+    const collection = req.systemDB.db.collection('system-user_private');
     const userPrivate = await collection.findOne({
       'password_reset.code': req.body.code,
       'password_reset.expires': {$gt: moment().toISOString()},

@@ -4,6 +4,7 @@ const moment = require('moment');
 const axios = require('axios');
 const validate = require('./validate');
 const dbUtil = require('./db-util');
+const dbInit = require('./db-init');
 const util = require('./util');
 const fail = require('./fail');
 
@@ -29,7 +30,7 @@ class Database {
     if (this.client) return fail("Database already initialized");
     this.client = await mongodb.MongoClient.connect(this.config.mongodb, {useNewUrlParser: true});
     this.db = this.client.db(DB_NAME);
-    for (let obj of dbUtil.CORE_OBJECTS) {
+    for (let obj of dbInit.CORE_OBJECTS) {
       const coll = this.db.collection(obj.namespace + '-' + obj.type);
       const query = {id: obj.document.id};
       const existing = await coll.find(query).toArray();
@@ -56,7 +57,7 @@ class Database {
 
   async getAvailableUsername(username) {
     if (!username) username = util.randomName();
-    const coll = this.db.collection('core-user');
+    const coll = this.db.collection('system-user');
     const existing = await coll.find({id: username}).toArray();
     return existing.length ? this.getAvailableUsername() : username;
   }
@@ -66,9 +67,9 @@ class Database {
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
-    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
+    const existing = await db.getCollection('system', 'user_private').find({'data.email': email}).toArray();
     if (existing.length) return fail("A user with that email address already exists");
-    const user = await db.create('core', 'user', username, {});
+    const user = await db.create('system', 'user', username, {});
     const creds = await dbUtil.computeCredentials(password);
     creds.email = email;
     creds.id = user.$.id;
@@ -76,7 +77,7 @@ class Database {
       code: confirmation_code,
       expires: moment().add(1, 'days').toISOString()
     };
-    const userPrivate = await db.create('core', 'user_private', creds);
+    const userPrivate = await db.create('system', 'user_private', creds);
     return user;
   }
 
@@ -88,7 +89,7 @@ class Database {
     for (let key in creds) {
       update['data.' + key] = creds[key];
     }
-    const updated = await this.db.collection('core-user_private').update({'data.id': id}, {$set: update});
+    const updated = await this.db.collection('system-user_private').update({'data.id': id}, {$set: update});
     if (updated.result.nModified !== 1) return fail("User not found", 404);
   }
 
@@ -98,10 +99,10 @@ class Database {
     let err = validate.validators.email(email);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
-    const userCol = db.getCollection('core', 'user_private');
+    const userCol = db.getCollection('system', 'user_private');
     const existing = await userCol.findOne({'data.email': email});
     if (!existing) return fail(`User ${email} not found`, 401);
-    await db.create('core', 'authorization_token', {
+    await db.create('system', 'authorization_token', {
       username: existing.data.id,
       token,
       permissions: permissions || undefined,
@@ -114,7 +115,7 @@ class Database {
     let err = validate.validators.email(email) || validate.validators.password(password);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
-    const existing = await db.getCollection('core', 'user_private').find({'data.email': email}).toArray();
+    const existing = await db.getCollection('system', 'user_private').find({'data.email': email}).toArray();
     if (!existing.length) return fail(`User ${email} not found`, 401);
     const user = existing[0].data;
     const isValid = await dbUtil.checkPassword(password, user.hash, user.salt);
@@ -124,11 +125,11 @@ class Database {
 
   async signInWithToken(token) {
     const db = await this.user(dbUtil.USER_KEYS.system);
-    const tokenCol = db.getCollection('core', 'authorization_token');
+    const tokenCol = db.getCollection('system', 'authorization_token');
     const tokenQuery = {'data.token': token, 'data.expires': {$gt: moment().toISOString()}}
     const tokenObj = await tokenCol.findOne(tokenQuery);
     if (!tokenObj) return fail("The provided token is invalid", 401);
-    const userCol = db.getCollection('core', 'user_private');
+    const userCol = db.getCollection('system', 'user_private');
     const userObj = await userCol.findOne({'data.id': tokenObj.data.username});
     if (!userObj) return fail("The provided token is invalid", 401);
     return {id: userObj.data.id, permissions: tokenObj.data.permissions};
@@ -150,7 +151,7 @@ class DatabaseForUser {
   }
 
   async refreshUser() {
-    let users = await this.getCollection('core', 'user').find({id: this.userID}).toArray();
+    let users = await this.getCollection('system', 'user').find({id: this.userID}).toArray();
     if (!users[0]) return fail(`User ${this.userID} not found`);
     if (users.length > 1) return fail("Multiple users found for ID " + this.userID);
     this.user = users[0];
@@ -463,12 +464,14 @@ class DatabaseForUser {
         if (err) return fail(err, 400);
         data.properties = data.properties || {}
         data.properties.$ = {type: 'object'};
-      } else if (type === 'user') {
-        acl.owner = id;
       } else if (type === 'namespace') {
         data.versions = [data.versions[0]];
         data.versions[0].version = '0.0';
         await this.disassembleNamespace(data);
+      }
+    } else if (namespace === 'system') {
+      if (type === 'user') {
+        acl.owner = id;
       }
     }
 
@@ -496,7 +499,7 @@ class DatabaseForUser {
       $inc: {'data.items': 1},
       $addToSet: {'data.namespaces': namespace},
     }
-    const userCol = this.getCollection('core', 'user');
+    const userCol = this.getCollection('system', 'user');
     await userCol.update({id: this.user.id}, userUpdate);
     await this.refreshUser();
     return Object.assign({$: {id, info, acl}}, obj.data);
@@ -606,7 +609,7 @@ class DatabaseForUser {
     const userUpdate = {
       $inc: {'data.items': -1}
     };
-    const userCol = this.getCollection('core', 'user');
+    const userCol = this.getCollection('system', 'user');
     await userCol.update({id: this.user.id}, userUpdate);
     await this.refreshUser();
   }

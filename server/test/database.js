@@ -88,11 +88,15 @@ describe('Database', () => {
   })
 
   it('should have core schemas', async () => {
-    let ns = await systemDB.get('core', 'namespace', 'core');
+    let coreNS = await systemDB.get('core', 'namespace', 'core');
+    let systemNS = await systemDB.get('core', 'namespace', 'system');
+    expect(coreNS.versions.length).to.equal(1);
+    expect(systemNS.versions.length).to.equal(1);
 
-    expect(ns.versions.length).to.equal(1);
-    let types = ns.versions[0].types;
-    expect(Object.keys(types)).to.have.members(['user_private', 'user', 'schema', 'namespace', 'authorization_token']);
+    expect(Object.keys(coreNS.versions[0].types)).to.have.members(['schema', 'namespace']);
+    expect(Object.keys(systemNS.versions[0].types)).to.have.members(['user', 'user_private', 'authorization_token']);
+
+    let types = Object.assign({}, coreNS.versions[0].types, systemNS.versions[0].types);
     expect(types.user_private).to.deep.equal({
       schema: {$ref: '/data/core/schema/user_private'},
       initial_acl: dbUtil.PRIVATE_ACL_SET,
@@ -663,22 +667,22 @@ describe('Database', () => {
   it('should track namespaces and number of items per user', async () => {
     const userDB = await database.user(USERS[2].$.id);
     let thing1 = await userDB.create('foo', 'thing', {message: "test"});
-    let user = await userDB.get('core', 'user', USERS[2].$.id);
+    let user = await userDB.get('system', 'user', USERS[2].$.id);
     expect(user.items).to.equal(1);
     expect(user.namespaces).to.deep.equal(['foo']);
 
     let thing2 = await userDB.create('foo', 'thing', {message: "test"});
-    user = await userDB.get('core', 'user', USERS[2].$.id);
+    user = await userDB.get('system', 'user', USERS[2].$.id);
     expect(user.items).to.equal(2);
     expect(user.namespaces).to.deep.equal(['foo']);
 
     await userDB.create('core', 'schema', {type: 'object'});
-    user = await userDB.get('core', 'user', USERS[2].$.id);
+    user = await userDB.get('system', 'user', USERS[2].$.id);
     expect(user.items).to.equal(3);
     expect(user.namespaces).to.deep.equal(['foo', 'core']);
 
     await userDB.delete('foo', 'thing', thing2.$.id)
-    user = await userDB.get('core', 'user', USERS[2].$.id);
+    user = await userDB.get('system', 'user', USERS[2].$.id);
     expect(user.items).to.equal(2);
     expect(user.namespaces).to.deep.equal(['foo', 'core']);
   });

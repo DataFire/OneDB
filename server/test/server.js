@@ -175,13 +175,13 @@ describe("Server", () => {
     expect(resp.data).to.equal(username);
 
     const userQuery = {'data.email': creds.username}
-    let user = await server.database.db.collection('core-user_private').findOne(userQuery);
+    let user = await server.database.db.collection('system-user_private').findOne(userQuery);
     expect(user.data.email_confirmation.confirmed).to.not.equal(true);
     expect(user.data.email_confirmation.code).to.be.a('string');
     const email = fs.readFileSync(EMAIL_FILE, 'utf8');
     const link = email.match(/href="(http.*)"/)[1];
     resp = await axios.get(link);
-    user = await server.database.db.collection('core-user_private').findOne(userQuery);
+    user = await server.database.db.collection('system-user_private').findOne(userQuery);
     expect(user.data.email_confirmation.confirmed).to.equal(true);
     expect(user.data.email_confirmation.code).to.equal(null);
   });
@@ -279,7 +279,7 @@ describe("Server", () => {
   });
 
   it('should have $refs set with host', async () => {
-    let resp = await axios.get(HOST + '/data/core/namespace/core');
+    let resp = await axios.get(HOST + '/data/core/namespace/system');
     let version = resp.data.versions[0];
     expect(version.types.user.schema.$ref).to.equal('/data/core/schema/user');
   });

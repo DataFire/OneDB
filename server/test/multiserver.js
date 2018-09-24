@@ -26,7 +26,7 @@ const SERVERS = {
         file: __dirname + '/email1.txt',
       },
       namespaces: {
-        allow: ['core'],
+        allow: ['core', 'system'],
       }
     },
   },

@@ -15,21 +15,20 @@ const KEY_REPLACEMENTS = {
 
 const KEY_REGEX = /^(\$|\$ref|\$id|\$comment|\$schema|[A-Za-z]\w*)$/;
 
-const START_TIME = new Date(Date.now());
-
 const USER_KEYS = module.exports.USER_KEYS = {
   all: '_all',
   system: '_system',
   owner: '_owner',
 }
 
-const SYSTEM_INFO = {
+const START_TIME = new Date(Date.now());
+const SYSTEM_INFO = module.exports.SYSTEM_INFO = {
   created: START_TIME,
   updated: START_TIME,
   created_by: USER_KEYS.system,
 }
 
-const OWNER_ACL = {
+const OWNER_ACL = module.exports.OWNER_ACL = {
   read: [USER_KEYS.owner],
   write: [USER_KEYS.owner],
   append: [USER_KEYS.owner],
@@ -64,113 +63,6 @@ const PRIVATE_ACL_SET = module.exports.PRIVATE_ACL_SET = {
   allow: SYSTEM_ACL,
   modify: SYSTEM_ACL,
 }
-
-const CORE_SCHEMAS = module.exports.CORE_SCHEMAS = {
-  namespace:  require('../namespaces/core/namespace'),
-  user: require('../namespaces/core/user'),
-  user_private: require('../namespaces/core/user_private'),
-  schema: require('../namespaces/core/schema'),
-  authorization_token: require('../namespaces/core/authorization_token'),
-}
-for (let key in CORE_SCHEMAS) {
-  let schema = CORE_SCHEMAS[key];
-  if (key === 'schema') schema = schema.oneOf[1];
-  schema.properties.$ = {type: 'object'};
-}
-
-let schemaSchemaCopy = JSON.parse(JSON.stringify(CORE_SCHEMAS.schema));
-delete schemaSchemaCopy.definitions;
-let definitions = Object.assign({
-  schema: schemaSchemaCopy
-}, CORE_SCHEMAS.schema.definitions);
-CORE_SCHEMAS.namespace.definitions = CORE_SCHEMAS.schema.definitions = definitions;
-
-module.exports.CORE_OBJECTS = [];
-for (let key in CORE_SCHEMAS) {
-  module.exports.CORE_OBJECTS.push({
-    namespace: 'core',
-    type: 'schema',
-    document: {
-      id: key,
-      info: SYSTEM_INFO,
-      acl: Object.assign({owner: USER_KEYS.system}, READ_ONLY_ACL_SET),
-      data: CORE_SCHEMAS[key],
-    }
-  })
-}
-
-module.exports.CORE_OBJECTS = module.exports.CORE_OBJECTS.concat([{
-  namespace: 'core',
-  type: 'user',
-  document: {
-    id: USER_KEYS.system,
-    info: SYSTEM_INFO,
-    acl: Object.assign({owner: USER_KEYS.system}, READ_ONLY_ACL_SET),
-    data: {}
-  }
-}, {
-  namespace: 'core',
-  type: 'user',
-  document: {
-    id: USER_KEYS.all,
-    info: SYSTEM_INFO,
-    acl: Object.assign({owner: USER_KEYS.system}, READ_ONLY_ACL_SET),
-    data: {}
-  }
-}, {
-  namespace: 'core',
-  type: 'namespace',
-  document: {
-    id: 'core',
-    info: SYSTEM_INFO,
-    acl: Object.assign({owner: USER_KEYS.system}, READ_ONLY_ACL_SET),
-    data: {
-      versions: [{
-        version: '0',
-        types: {
-          user: {
-            schema: {$ref: '/data/core/schema/user'},
-            initial_acl: {
-              allow: {
-                read: [USER_KEYS.all],
-                write: [USER_KEYS.owner],
-              },
-              modify: SYSTEM_ACL,
-            }
-          },
-          schema: {
-            schema: {$ref: '/data/core/schema/schema'},
-            initial_acl: READ_ONLY_ACL_SET,
-          },
-          namespace: {
-            schema: {$ref: '/data/core/schema/namespace'},
-            initial_acl: {
-              allow: Object.assign({}, READ_ONLY_ACL, {append: ['_owner']}),
-              modify: SYSTEM_ACL,
-            }
-          },
-          user_private: {
-            schema: {$ref: '/data/core/schema/user_private'},
-            initial_acl: PRIVATE_ACL_SET,
-          },
-          authorization_token: {
-            schema: {$ref: '/data/core/schema/authorization_token'},
-            initial_acl: PRIVATE_ACL_SET,
-          },
-        },
-      }],
-    }
-  }
-}, {
-  namespace: 'core',
-  type: 'schema',
-  document: {
-    id: 'schema',
-    info: SYSTEM_INFO,
-    acl: Object.assign({owner: USER_KEYS.system}, READ_ONLY_ACL_SET),
-    data: require('../namespaces/core/schema'),
-  }
-}]);
 
 module.exports.encodeDocument = function(doc) {
   if (typeof doc !== 'object' || doc === null) return doc;
