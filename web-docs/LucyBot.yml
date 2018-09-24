@@ -11,6 +11,8 @@ routes:
         expand: true
         autoselect: true
         children:
+        - title: Quickstart
+          markdownFile: markdown/Quickstart.md
         - title: Hello World
           markdownFile: markdown/Hello_World.md
         - markdownFile: markdown/Data_Models.md
