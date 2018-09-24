@@ -30,6 +30,8 @@ and the existing network of OneDB instances will take care of all the data valid
 Check out the [Hello World documentation](https://docs.one-db.org/Hello_World) or the
 [sample apps](apps) to get started.
 
+If you build an app, let us know and we'll add you to the [list of OneDB apps](Apps.md)
+
 ## Host an Instance
 > The full documentation for hosting an instance is on [docs.one-db.org](https://docs.one-db.org/Host_an_Instance)
 
@@ -37,6 +39,8 @@ Help us expand the OneDB network by hosting an instance. You'll need:
 * A server to host OneDB
 * The OneDB server (this repository)
 * A MongoDB instance
+
+If you hosta public instance, let us know and we'll add you to the [list of known hosts](Hosts.md)
 
 ### Installation and Setup
 Install the server:
