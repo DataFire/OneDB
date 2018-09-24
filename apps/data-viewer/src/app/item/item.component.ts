@@ -18,6 +18,9 @@ const moment = require("moment");
         display: inline-block;
         min-width: 150px;
       }
+      textarea {
+        font-family: monospace;
+      }
     `]
 })
 export class ItemComponent {

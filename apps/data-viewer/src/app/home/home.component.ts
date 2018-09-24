@@ -17,11 +17,6 @@ declare let require:any;
 })
 export class HomeComponent {
   @ViewChild('logInModal') logInModal;
-  user:any;
   error:string;
-  constructor(public onedb:OneDBService) {
-    this.onedb.onLogin.subscribe(user => {
-      this.user = user.user;
-    });
-  }
+  constructor(public onedb:OneDBService) {}
 }

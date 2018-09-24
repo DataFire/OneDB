@@ -22,16 +22,16 @@ div(*ngIf="item")
       button.btn.btn-success.mr-3((click)="wrapAsync('save')")
         span Save
         i.fa.fa-right.fa-cloud-upload
-      button.btn.btn-danger((click)="confirmDestroy = true")
-        span Destroy
+      button.btn.btn-danger((click)="confirmDelete = true")
+        span Delete
         i.fa.fa-right.fa-trash
   .alert.alert-danger(*ngIf="error")
-    p {{error}}
-  .alert.alert-warning(*ngIf="confirmDestroy")
+    span {{error}}
+  .alert.alert-warning(*ngIf="confirmDelete")
     p Are you sure? This action cannot be undone.
     .btn-toolbar
-      a.btn.btn-link((click)="wrapAsync('delete')") Destroy this item
-      a.btn.btn-link((click)="confirmDestroy = false") Cancel
+      a.btn.btn-danger((click)="wrapAsync('delete')") Delete this item
+      a.btn.btn-link((click)="confirmDelete = false") Cancel
   .form-group(*ngIf="acl")
     a((click)="expandACL = !expandACL" href="javascript:void(0)")
       i.fa.fa-left([class.fa-plus-square-o]="!expandACL", [class.fa-minus-square-o]="expandACL")

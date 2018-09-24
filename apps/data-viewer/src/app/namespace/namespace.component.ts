@@ -11,41 +11,64 @@ import { Router, ActivatedRoute } from '@angular/router';
       }
       table {
         margin-bottom: 15px;
+        margin-left: -8px;
       }
-      table td {
-        padding: 4px;
+      table td, table th {
+        padding: 4px 8px;
+        max-width: 200px;
+      }
+      .view-all-form-group label {
+        margin-right: 10px;
       }
     `]
 })
 export class NamespaceComponent {
   namespace:any;
   version:any;
-  data:any[];
+  types:string[];
+  data:any;
+
+  error:string;
+  viewAllData:boolean = false;
+
   constructor(
         public onedb:OneDBService,
         private router:Router,
         private route:ActivatedRoute) {
     this.route.params.subscribe(async params => {
       if (params['namespace']) {
-        this.setNamespace(await this.onedb.client.get('core', 'namespace', params['namespace']))
+        try {
+          this.setNamespace(await this.onedb.client.get('core', 'namespace', params['namespace']))
+        } catch (e) {
+          this.error = e.message;
+        }
       }
     })
   }
 
   async setNamespace(ns) {
     this.namespace = ns;
-    this.data = [];
+    this.data = {};
     this.version = ns.versions[ns.versions.length - 1];
-    const types = Object.keys(this.version.types);
-    for (let type of types) {
+    this.types = Object.keys(this.version.types);
+    for (let type of this.types) {
       let dataset = await this.getDataset(type);
-      this.data.push({type, dataset});
+      this.data[type] = dataset;
     }
   }
 
   async getDataset(type, skip=0) {
-    const query = {skip, owner: this.onedb.client.hosts.primary.user.$.id}
-    const dataset = await this.onedb.client.list(this.namespace.$.id, type, query);
+    const query:any = {skip};
+    if (!this.viewAllData) {
+      query.owner = this.onedb.client.hosts.primary.user.$.id
+    }
+    let dataset = null;
+    try {
+      dataset = await this.onedb.client.list(this.namespace.$.id, type, query);
+    } catch (e) {
+      this.error = e.message;
+      return;
+    }
     if (dataset.total > dataset.items.length) {
       dataset.pages = [];
       const numPages = Math.ceil(dataset.total / dataset.pageSize);
@@ -71,8 +94,12 @@ export class NamespaceComponent {
     return dataset;
   }
 
-  async goToPage(idx, skip) {
-    const datum = this.data[idx];
-    datum.dataset = await this.getDataset(datum.type, skip);
+  async goToPage(type, skip) {
+    this.data[type] = await this.getDataset(type, skip);
+  }
+
+  async setViewAllData(viewAll) {
+    this.viewAllData = viewAll;
+    this.setNamespace(this.namespace);
   }
 }

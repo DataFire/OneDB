@@ -1,16 +1,41 @@
+.alert.alert-danger(*ngIf="error")
+  p {{error}}
+  p Check the namespace ID and refresh the page to try again.
 div(*ngIf="namespace")
   h1 {{ namespace.$.id }}
-  p Below is all your data in the {{ namespace.$.id }} space
+  .form-group.view-all-form-group
+    label Viewing:
+    .btn-group
+      button.btn.btn-dark([class.active]="!viewAllData", (click)="setViewAllData(false)")
+        span My Data
+      button.btn.btn-dark([class.active]="viewAllData", (click)="setViewAllData(true)")
+        span All Data
+  p
+    span Below is all the data
+    b  {{ !viewAllData ? 'you own ' : 'you have permission to see'}}
+    span  in the {{ namespace.$.id }} namespace
 .row
-  .col.space(*ngFor="let datum of data; let idx = index;")
-    h2 {{ datum.type }}
-    table
-      tr.item(*ngFor="let item of datum.dataset.items")
-        td
-          a([routerLink]="['/data', namespace.$.id, datum.type, item.$.id]")
-            span {{ item.$.id }}
-        td
-          span(*ngIf="item.title")  {{ item.title }}
-    ul.pagination(*ngIf="datum.dataset.pages")
-      li.page-item(*ngFor="let page of datum.dataset.pages", [class.active]="page.active")
-        button.page-link((click)="goToPage(idx, page.skip)", [disabled]="page.disabled") {{ page.label }}
+  .col.namespace(*ngFor="let type of types; let idx = index;")
+    h2 {{ type }}
+    p(*ngIf="!data[type]")
+      i.fa.fa-spin.fa-refresh
+    p.text-center(*ngIf="data[type] && !data[type].items.length")
+      span No items found
+    table(*ngIf="data[type]")
+      thead
+        tr
+          th ID
+          th(*ngIf="viewAllData") Owner
+          th Title
+      tbody
+        tr.item(*ngFor="let item of data[type].items")
+          td
+            a([routerLink]="['/data', namespace.$.id, type, item.$.id]")
+              span {{ item.$.id }}
+          td(*ngIf="viewAllData")
+            span {{ item.$.owner }}
+          td
+            span(*ngIf="item.title")  {{ item.title }}
+    ul.pagination(*ngIf="data[type] && data[type].pages")
+      li.page-item(*ngFor="let page of data[type].pages", [class.active]="page.active")
+        button.page-link((click)="goToPage(type, page.skip)", [disabled]="page.disabled") {{ page.label }}

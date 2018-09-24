@@ -12,7 +12,6 @@ const STORAGE_KEY = 'onedb_auth';
 @Injectable()
 export class OneDBService {
   client:any;
-  user:any;
 
   onLogin = new BehaviorSubject(null);
 
@@ -24,13 +23,12 @@ export class OneDBService {
           location: CORE_HOST,
         }
       },
-      onLogin: user => {
-        this.zone.run(_ => this.onLogin.next(user));
+      onLogin: instance => {
+        this.zone.run(_ => this.onLogin.next(instance));
       },
     });
     this.maybeRestore();
-    this.onLogin.subscribe(user => {
-      this.user = user;
+    this.onLogin.subscribe(instance => {
       if (!window.localStorage) return
       const toStore = {
         hosts: this.client.hosts,
