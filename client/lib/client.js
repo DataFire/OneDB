@@ -137,10 +137,11 @@ class Client {
     }
     let response = await axios.request(requestOpts);
     if (response.status >= 300) {
-      let serverMessage = (response.data && response.data.message)
-      let errorMessage = `${response.status} error from ${method.toUpperCase()} ${host.location}${path}`;
-      if (serverMessage) errorMessage += ': ' + serverMessage;
-      const err = new Error(errorMessage);
+      const serverMessage = (response.data && response.data.message)
+      const genericMessage = `${response.status} error from ${method.toUpperCase()} ${host.location}${path}`;
+      const err = new Error(serverMessage || genericMessage);
+      err.serverMessage = serverMessage;
+      err.genericMessage = genericMessage;
       err.statusCode = response.status;
       return Promise.reject(err);
     }
