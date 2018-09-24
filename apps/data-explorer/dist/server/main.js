@@ -240,10 +240,11 @@ class Client {
     }
     let response = await axios.request(requestOpts);
     if (response.status >= 300) {
-      let serverMessage = (response.data && response.data.message)
-      let errorMessage = `${response.status} error from ${method.toUpperCase()} ${host.location}${path}`;
-      if (serverMessage) errorMessage += ': ' + serverMessage;
-      const err = new Error(errorMessage);
+      const serverMessage = (response.data && response.data.message)
+      const genericMessage = `${response.status} error from ${method.toUpperCase()} ${host.location}${path}`;
+      const err = new Error(serverMessage || genericMessage);
+      err.serverMessage = serverMessage;
+      err.genericMessage = genericMessage;
       err.statusCode = response.status;
       return Promise.reject(err);
     }
@@ -6478,27 +6479,31 @@ function View_HomeComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
         var pd_0 = (i0.ɵnov(_v.parent, 2).open() !== false);
         ad = (pd_0 && ad);
     } return ad; }, null, null)), (_l()(), i0.ɵted(-1, null, ["Sign in to get started"]))], null, null); }
-function View_HomeComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 4, "li", [], [[8, "hidden", 0]], null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 3, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
+function View_HomeComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "i", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["You haven't added any data to this OneDB instance yet."]))], null, null); }
+function View_HomeComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 3, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 2).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), i0.ɵdid(2, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(3, 2), (_l()(), i0.ɵted(4, null, ["", ""]))], function (_ck, _v) { var currVal_3 = _ck(_v, 3, 0, "/data", _v.context.$implicit); _ck(_v, 2, 0, currVal_3); }, function (_ck, _v) { var _co = _v.component; var currVal_0 = (_co.query && (_v.context.$implicit.indexOf(_co.query) === (0 - 1))); _ck(_v, 0, 0, currVal_0); var currVal_1 = i0.ɵnov(_v, 2).target; var currVal_2 = i0.ɵnov(_v, 2).href; _ck(_v, 1, 0, currVal_1, currVal_2); var currVal_4 = _v.context.$implicit; _ck(_v, 4, 0, currVal_4); }); }
-function View_HomeComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 18, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["You're logged in as ", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 12, "div", [["class", "form-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 1, "label", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Choose a Space:"])), (_l()(), i0.ɵeld(6, 0, null, null, 9, "div", [["class", "input-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(7, 0, null, null, 2, "div", [["class", "input-group-prepend"]], null, null, null, null, null)), (_l()(), i0.ɵeld(8, 0, null, null, 1, "span", [["class", "input-group-text"]], null, null, null, null, null)), (_l()(), i0.ɵeld(9, 0, null, null, 0, "i", [["class", "fa fa-search"]], null, null, null, null, null)), (_l()(), i0.ɵeld(10, 0, null, null, 5, "input", [["class", "form-control"], ["type", "text"]], [[2, "ng-untouched", null], [2, "ng-touched", null], [2, "ng-pristine", null], [2, "ng-dirty", null], [2, "ng-valid", null], [2, "ng-invalid", null], [2, "ng-pending", null]], [[null, "ngModelChange"], [null, "input"], [null, "blur"], [null, "compositionstart"], [null, "compositionend"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("input" === en)) {
-        var pd_0 = (i0.ɵnov(_v, 11)._handleInput($event.target.value) !== false);
+    } return ad; }, null, null)), i0.ɵdid(2, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(3, 2), (_l()(), i0.ɵted(4, null, ["", ""]))], function (_ck, _v) { var currVal_2 = _ck(_v, 3, 0, "/data", _v.context.$implicit); _ck(_v, 2, 0, currVal_2); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 2).target; var currVal_1 = i0.ɵnov(_v, 2).href; _ck(_v, 1, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit; _ck(_v, 4, 0, currVal_3); }); }
+function View_HomeComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 27, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Below are the namespaces you've already interacted with.\nYou can also enter another namespace you'd like to view."])), (_l()(), i0.ɵeld(3, 0, null, null, 24, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 7, "div", [["class", "col"]], null, null, null, null, null)), (_l()(), i0.ɵeld(5, 0, null, null, 1, "h4", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["My Data"])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_3)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(9, 0, null, null, 2, "ul", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_4)), i0.ɵdid(11, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null), (_l()(), i0.ɵeld(12, 0, null, null, 15, "div", [["class", "col"]], null, null, null, null, null)), (_l()(), i0.ɵeld(13, 0, null, null, 1, "h4", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Other Data"])), (_l()(), i0.ɵeld(15, 0, null, null, 12, "div", [["class", "form-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(16, 0, null, null, 11, "div", [["class", "input-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(17, 0, null, null, 5, "input", [["class", "form-control"], ["type", "text"]], [[2, "ng-untouched", null], [2, "ng-touched", null], [2, "ng-pristine", null], [2, "ng-dirty", null], [2, "ng-valid", null], [2, "ng-invalid", null], [2, "ng-pending", null]], [[null, "ngModelChange"], [null, "input"], [null, "blur"], [null, "compositionstart"], [null, "compositionend"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("input" === en)) {
+        var pd_0 = (i0.ɵnov(_v, 18)._handleInput($event.target.value) !== false);
         ad = (pd_0 && ad);
     } if (("blur" === en)) {
-        var pd_1 = (i0.ɵnov(_v, 11).onTouched() !== false);
+        var pd_1 = (i0.ɵnov(_v, 18).onTouched() !== false);
         ad = (pd_1 && ad);
     } if (("compositionstart" === en)) {
-        var pd_2 = (i0.ɵnov(_v, 11)._compositionStart() !== false);
+        var pd_2 = (i0.ɵnov(_v, 18)._compositionStart() !== false);
         ad = (pd_2 && ad);
     } if (("compositionend" === en)) {
-        var pd_3 = (i0.ɵnov(_v, 11)._compositionEnd($event.target.value) !== false);
+        var pd_3 = (i0.ɵnov(_v, 18)._compositionEnd($event.target.value) !== false);
         ad = (pd_3 && ad);
     } if (("ngModelChange" === en)) {
         var pd_4 = ((_co.query = $event) !== false);
         ad = (pd_4 && ad);
-    } return ad; }, null, null)), i0.ɵdid(11, 16384, null, 0, i3.DefaultValueAccessor, [i0.Renderer2, i0.ElementRef, [2, i3.COMPOSITION_BUFFER_MODE]], null, null), i0.ɵprd(1024, null, i3.NG_VALUE_ACCESSOR, function (p0_0) { return [p0_0]; }, [i3.DefaultValueAccessor]), i0.ɵdid(13, 671744, null, 0, i3.NgModel, [[8, null], [8, null], [8, null], [6, i3.NG_VALUE_ACCESSOR]], { model: [0, "model"] }, { update: "ngModelChange" }), i0.ɵprd(2048, null, i3.NgControl, null, [i3.NgModel]), i0.ɵdid(15, 16384, null, 0, i3.NgControlStatus, [[4, i3.NgControl]], null, null), (_l()(), i0.ɵeld(16, 0, null, null, 2, "ul", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_3)), i0.ɵdid(18, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_8 = _co.query; _ck(_v, 13, 0, currVal_8); var currVal_9 = _co.user.namespaces; _ck(_v, 18, 0, currVal_9); }, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.user.$.id; _ck(_v, 2, 0, currVal_0); var currVal_1 = i0.ɵnov(_v, 15).ngClassUntouched; var currVal_2 = i0.ɵnov(_v, 15).ngClassTouched; var currVal_3 = i0.ɵnov(_v, 15).ngClassPristine; var currVal_4 = i0.ɵnov(_v, 15).ngClassDirty; var currVal_5 = i0.ɵnov(_v, 15).ngClassValid; var currVal_6 = i0.ɵnov(_v, 15).ngClassInvalid; var currVal_7 = i0.ɵnov(_v, 15).ngClassPending; _ck(_v, 10, 0, currVal_1, currVal_2, currVal_3, currVal_4, currVal_5, currVal_6, currVal_7); }); }
-function View_HomeComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { logInModal: 0 }), (_l()(), i0.ɵeld(1, 0, null, null, 1, "log-in-modal", [], null, null, null, i4.View_LogInModalComponent_0, i4.RenderType_LogInModalComponent)), i0.ɵdid(2, 49152, [[1, 4], ["logInModal", 4]], 0, i5.LogInModalComponent, [i6.OneDBService, i7.NgbModal, i8.DomSanitizer], null, null), (_l()(), i0.ɵeld(3, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["OneDB Data Viewer"])), (_l()(), i0.ɵeld(5, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["This site allows you to browse, modify, and delete data on your OneDB accounts."])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_1)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_2)), i0.ɵdid(10, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = !_co.user; _ck(_v, 8, 0, currVal_0); var currVal_1 = _co.user; _ck(_v, 10, 0, currVal_1); }, null); }
+    } return ad; }, null, null)), i0.ɵdid(18, 16384, null, 0, i3.DefaultValueAccessor, [i0.Renderer2, i0.ElementRef, [2, i3.COMPOSITION_BUFFER_MODE]], null, null), i0.ɵprd(1024, null, i3.NG_VALUE_ACCESSOR, function (p0_0) { return [p0_0]; }, [i3.DefaultValueAccessor]), i0.ɵdid(20, 671744, null, 0, i3.NgModel, [[8, null], [8, null], [8, null], [6, i3.NG_VALUE_ACCESSOR]], { model: [0, "model"] }, { update: "ngModelChange" }), i0.ɵprd(2048, null, i3.NgControl, null, [i3.NgModel]), i0.ɵdid(22, 16384, null, 0, i3.NgControlStatus, [[4, i3.NgControl]], null, null), (_l()(), i0.ɵeld(23, 0, null, null, 4, "div", [["class", "input-group-append"]], null, null, null, null, null)), (_l()(), i0.ɵeld(24, 0, null, null, 3, "a", [["class", "btn btn-success"]], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
+        var pd_0 = (i0.ɵnov(_v, 25).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
+        ad = (pd_0 && ad);
+    } return ad; }, null, null)), i0.ɵdid(25, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(26, 2), (_l()(), i0.ɵted(-1, null, ["View Data"]))], function (_ck, _v) { var _co = _v.component; var currVal_0 = !((_co.onedb.client.hosts.primary.user.namespaces == null) ? null : _co.onedb.client.hosts.primary.user.namespaces.length); _ck(_v, 8, 0, currVal_0); var currVal_1 = _co.onedb.client.hosts.primary.user.namespaces; _ck(_v, 11, 0, currVal_1); var currVal_9 = _co.query; _ck(_v, 20, 0, currVal_9); var currVal_12 = _ck(_v, 26, 0, "/data", _co.query); _ck(_v, 25, 0, currVal_12); }, function (_ck, _v) { var currVal_2 = i0.ɵnov(_v, 22).ngClassUntouched; var currVal_3 = i0.ɵnov(_v, 22).ngClassTouched; var currVal_4 = i0.ɵnov(_v, 22).ngClassPristine; var currVal_5 = i0.ɵnov(_v, 22).ngClassDirty; var currVal_6 = i0.ɵnov(_v, 22).ngClassValid; var currVal_7 = i0.ɵnov(_v, 22).ngClassInvalid; var currVal_8 = i0.ɵnov(_v, 22).ngClassPending; _ck(_v, 17, 0, currVal_2, currVal_3, currVal_4, currVal_5, currVal_6, currVal_7, currVal_8); var currVal_10 = i0.ɵnov(_v, 25).target; var currVal_11 = i0.ɵnov(_v, 25).href; _ck(_v, 24, 0, currVal_10, currVal_11); }); }
+function View_HomeComponent_0(_l) { return i0.ɵvid(0, [i0.ɵqud(402653184, 1, { logInModal: 0 }), (_l()(), i0.ɵeld(1, 0, null, null, 1, "log-in-modal", [], null, null, null, i4.View_LogInModalComponent_0, i4.RenderType_LogInModalComponent)), i0.ɵdid(2, 49152, [[1, 4], ["logInModal", 4]], 0, i5.LogInModalComponent, [i6.OneDBService, i7.NgbModal, i8.DomSanitizer], null, null), (_l()(), i0.ɵeld(3, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["OneDB Data Explorer"])), (_l()(), i0.ɵeld(5, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["This site allows you to browse, modify, and delete data on your OneDB accounts."])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_1)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_HomeComponent_2)), i0.ɵdid(10, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = !_co.onedb.client.hosts.primary.user; _ck(_v, 8, 0, currVal_0); var currVal_1 = _co.onedb.client.hosts.primary.user; _ck(_v, 10, 0, currVal_1); }, null); }
 exports.View_HomeComponent_0 = View_HomeComponent_0;
 function View_HomeComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "home", [], null, null, null, View_HomeComponent_0, RenderType_HomeComponent)), i0.ɵdid(1, 49152, null, 0, i9.HomeComponent, [i6.OneDBService], null, null)], null, null); }
 exports.View_HomeComponent_Host_0 = View_HomeComponent_Host_0;
@@ -6521,11 +6526,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var onedb_service_1 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var HomeComponent = /** @class */ (function () {
     function HomeComponent(onedb) {
-        var _this = this;
         this.onedb = onedb;
-        this.onedb.onLogin.subscribe(function (user) {
-            _this.user = user.user;
-        });
     }
     return HomeComponent;
 }());
@@ -6556,7 +6557,7 @@ var i2 = __webpack_require__(/*! @angular/forms */ "@angular/forms");
 var i3 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var i4 = __webpack_require__(/*! ./item.component */ "./src/app/item/item.component.ts");
 var i5 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
-var styles_ItemComponent = ["ul.info[_ngcontent-%COMP%] {\n        list-style: none;\n        padding-left: 0px;\n      }\n      .info-label[_ngcontent-%COMP%] {\n        display: inline-block;\n        min-width: 150px;\n      }"];
+var styles_ItemComponent = ["ul.info[_ngcontent-%COMP%] {\n        list-style: none;\n        padding-left: 0px;\n      }\n      .info-label[_ngcontent-%COMP%] {\n        display: inline-block;\n        min-width: 150px;\n      }\n      textarea[_ngcontent-%COMP%] {\n        font-family: monospace;\n      }"];
 var RenderType_ItemComponent = i0.ɵcrt({ encapsulation: 0, styles: styles_ItemComponent, data: {} });
 exports.RenderType_ItemComponent = RenderType_ItemComponent;
 function View_ItemComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 20, "ul", [["class", "info"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 1, "span", [["class", "info-label"]], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Owned by"])), (_l()(), i0.ɵeld(4, 0, null, null, 1, "span", [["class", "info-data"]], null, null, null, null, null)), (_l()(), i0.ɵted(5, null, ["", ""])), (_l()(), i0.ɵeld(6, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵeld(7, 0, null, null, 1, "span", [["class", "info-label"]], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Created by"])), (_l()(), i0.ɵeld(9, 0, null, null, 1, "span", [["class", "info-data"]], null, null, null, null, null)), (_l()(), i0.ɵted(10, null, ["", ""])), (_l()(), i0.ɵeld(11, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵeld(12, 0, null, null, 1, "span", [["class", "info-label"]], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Created on"])), (_l()(), i0.ɵeld(14, 0, null, null, 1, "span", [["class", "info-data"]], null, null, null, null, null)), (_l()(), i0.ɵted(15, null, ["", ""])), (_l()(), i0.ɵeld(16, 0, null, null, 4, "li", [], null, null, null, null, null)), (_l()(), i0.ɵeld(17, 0, null, null, 1, "span", [["class", "info-label"]], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Last updated"])), (_l()(), i0.ɵeld(19, 0, null, null, 1, "span", [["class", "info-data"]], null, null, null, null, null)), (_l()(), i0.ɵted(20, null, ["", ""]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.acl.owner; _ck(_v, 5, 0, currVal_0); var currVal_1 = _co.info.created_by; _ck(_v, 10, 0, currVal_1); var currVal_2 = _co.datestr(_co.info.created); _ck(_v, 15, 0, currVal_2); var currVal_3 = _co.datestr(_co.info.updated); _ck(_v, 20, 0, currVal_3); }); }
@@ -6565,15 +6566,15 @@ function View_ItemComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
         var pd_0 = (_co.wrapAsync("save") !== false);
         ad = (pd_0 && ad);
     } return ad; }, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Save"])), (_l()(), i0.ɵeld(4, 0, null, null, 0, "i", [["class", "fa fa-right fa-cloud-upload"]], null, null, null, null, null)), (_l()(), i0.ɵeld(5, 0, null, null, 3, "button", [["class", "btn btn-danger"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
-        var pd_0 = ((_co.confirmDestroy = true) !== false);
+        var pd_0 = ((_co.confirmDelete = true) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), (_l()(), i0.ɵeld(6, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Destroy"])), (_l()(), i0.ɵeld(8, 0, null, null, 0, "i", [["class", "fa fa-right fa-trash"]], null, null, null, null, null))], null, null); }
-function View_ItemComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "div", [["class", "alert alert-danger"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.error; _ck(_v, 2, 0, currVal_0); }); }
-function View_ItemComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 7, "div", [["class", "alert alert-warning"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Are you sure? This action cannot be undone."])), (_l()(), i0.ɵeld(3, 0, null, null, 4, "div", [["class", "btn-toolbar"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 1, "a", [["class", "btn btn-link"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
+    } return ad; }, null, null)), (_l()(), i0.ɵeld(6, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Delete"])), (_l()(), i0.ɵeld(8, 0, null, null, 0, "i", [["class", "fa fa-right fa-trash"]], null, null, null, null, null))], null, null); }
+function View_ItemComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "div", [["class", "alert alert-danger"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.error; _ck(_v, 2, 0, currVal_0); }); }
+function View_ItemComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 7, "div", [["class", "alert alert-warning"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Are you sure? This action cannot be undone."])), (_l()(), i0.ɵeld(3, 0, null, null, 4, "div", [["class", "btn-toolbar"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 1, "a", [["class", "btn btn-danger"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
         var pd_0 = (_co.wrapAsync("delete") !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), (_l()(), i0.ɵted(-1, null, ["Destroy this item"])), (_l()(), i0.ɵeld(6, 0, null, null, 1, "a", [["class", "btn btn-link"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
-        var pd_0 = ((_co.confirmDestroy = false) !== false);
+    } return ad; }, null, null)), (_l()(), i0.ɵted(-1, null, ["Delete this item"])), (_l()(), i0.ɵeld(6, 0, null, null, 1, "a", [["class", "btn btn-link"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
+        var pd_0 = ((_co.confirmDelete = false) !== false);
         ad = (pd_0 && ad);
     } return ad; }, null, null)), (_l()(), i0.ɵted(-1, null, ["Cancel"]))], null, null); }
 function View_ItemComponent_7(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 4, "div", [["class", "form-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 3, "a", [["href", "javascript:void(0)"]], null, [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
@@ -6601,7 +6602,7 @@ function View_ItemComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, 
     } if (("ngModelChange" === en)) {
         var pd_4 = ((_co.itemString = $event) !== false);
         ad = (pd_4 && ad);
-    } return ad; }, null, null)), i0.ɵdid(17, 16384, null, 0, i2.DefaultValueAccessor, [i0.Renderer2, i0.ElementRef, [2, i2.COMPOSITION_BUFFER_MODE]], null, null), i0.ɵprd(1024, null, i2.NG_VALUE_ACCESSOR, function (p0_0) { return [p0_0]; }, [i2.DefaultValueAccessor]), i0.ɵdid(19, 671744, null, 0, i2.NgModel, [[8, null], [8, null], [8, null], [6, i2.NG_VALUE_ACCESSOR]], { model: [0, "model"] }, { update: "ngModelChange" }), i0.ɵprd(2048, null, i2.NgControl, null, [i2.NgModel]), i0.ɵdid(21, 16384, null, 0, i2.NgControlStatus, [[4, i2.NgControl]], null, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.info; _ck(_v, 2, 0, currVal_0); var currVal_1 = _co.loading; _ck(_v, 5, 0, currVal_1); var currVal_2 = !_co.loading; _ck(_v, 7, 0, currVal_2); var currVal_3 = _co.error; _ck(_v, 9, 0, currVal_3); var currVal_4 = _co.confirmDestroy; _ck(_v, 11, 0, currVal_4); var currVal_5 = _co.acl; _ck(_v, 13, 0, currVal_5); var currVal_6 = _co.expandACL; _ck(_v, 15, 0, currVal_6); var currVal_14 = _co.itemString; _ck(_v, 19, 0, currVal_14); }, function (_ck, _v) { var currVal_7 = i0.ɵnov(_v, 21).ngClassUntouched; var currVal_8 = i0.ɵnov(_v, 21).ngClassTouched; var currVal_9 = i0.ɵnov(_v, 21).ngClassPristine; var currVal_10 = i0.ɵnov(_v, 21).ngClassDirty; var currVal_11 = i0.ɵnov(_v, 21).ngClassValid; var currVal_12 = i0.ɵnov(_v, 21).ngClassInvalid; var currVal_13 = i0.ɵnov(_v, 21).ngClassPending; _ck(_v, 16, 0, currVal_7, currVal_8, currVal_9, currVal_10, currVal_11, currVal_12, currVal_13); }); }
+    } return ad; }, null, null)), i0.ɵdid(17, 16384, null, 0, i2.DefaultValueAccessor, [i0.Renderer2, i0.ElementRef, [2, i2.COMPOSITION_BUFFER_MODE]], null, null), i0.ɵprd(1024, null, i2.NG_VALUE_ACCESSOR, function (p0_0) { return [p0_0]; }, [i2.DefaultValueAccessor]), i0.ɵdid(19, 671744, null, 0, i2.NgModel, [[8, null], [8, null], [8, null], [6, i2.NG_VALUE_ACCESSOR]], { model: [0, "model"] }, { update: "ngModelChange" }), i0.ɵprd(2048, null, i2.NgControl, null, [i2.NgModel]), i0.ɵdid(21, 16384, null, 0, i2.NgControlStatus, [[4, i2.NgControl]], null, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.info; _ck(_v, 2, 0, currVal_0); var currVal_1 = _co.loading; _ck(_v, 5, 0, currVal_1); var currVal_2 = !_co.loading; _ck(_v, 7, 0, currVal_2); var currVal_3 = _co.error; _ck(_v, 9, 0, currVal_3); var currVal_4 = _co.confirmDelete; _ck(_v, 11, 0, currVal_4); var currVal_5 = _co.acl; _ck(_v, 13, 0, currVal_5); var currVal_6 = _co.expandACL; _ck(_v, 15, 0, currVal_6); var currVal_14 = _co.itemString; _ck(_v, 19, 0, currVal_14); }, function (_ck, _v) { var currVal_7 = i0.ɵnov(_v, 21).ngClassUntouched; var currVal_8 = i0.ɵnov(_v, 21).ngClassTouched; var currVal_9 = i0.ɵnov(_v, 21).ngClassPristine; var currVal_10 = i0.ɵnov(_v, 21).ngClassDirty; var currVal_11 = i0.ɵnov(_v, 21).ngClassValid; var currVal_12 = i0.ɵnov(_v, 21).ngClassInvalid; var currVal_13 = i0.ɵnov(_v, 21).ngClassPending; _ck(_v, 16, 0, currVal_7, currVal_8, currVal_9, currVal_10, currVal_11, currVal_12, currVal_13); }); }
 function View_ItemComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 6, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 3, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 2).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
@@ -6840,10 +6841,17 @@ var LogInModalComponent = /** @class */ (function () {
         this.modals = modals;
         this.sanitizer = sanitizer;
         this.refreshForm();
-        this.onedb.onLogin.subscribe(function (user) { return _this.refreshForm(); });
+        this.onedb.onLogin.subscribe(function (instance) {
+            _this.close();
+            _this.refreshForm();
+        });
     }
     LogInModalComponent.prototype.open = function () {
-        this.modals.open(this.content);
+        this.modalRef = this.modals.open(this.content);
+    };
+    LogInModalComponent.prototype.close = function () {
+        if (this.modalRef)
+            this.modalRef.close();
     };
     LogInModalComponent.prototype.refreshForm = function () {
         this.formContent = this.sanitizer.bypassSecurityTrustHtml(this.onedb.client.loginForm());
@@ -6876,22 +6884,34 @@ var i1 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var i2 = __webpack_require__(/*! @angular/common */ "@angular/common");
 var i3 = __webpack_require__(/*! ./namespace.component */ "./src/app/namespace/namespace.component.ts");
 var i4 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
-var styles_NamespaceComponent = [".space[_ngcontent-%COMP%] {\n        margin-top: 20px;\n      }\n      table[_ngcontent-%COMP%] {\n        margin-bottom: 15px;\n      }\n      table[_ngcontent-%COMP%]   td[_ngcontent-%COMP%] {\n        padding: 4px;\n      }"];
+var styles_NamespaceComponent = [".space[_ngcontent-%COMP%] {\n        margin-top: 20px;\n      }\n      table[_ngcontent-%COMP%] {\n        margin-bottom: 15px;\n        margin-left: -8px;\n      }\n      table[_ngcontent-%COMP%]   td[_ngcontent-%COMP%], table[_ngcontent-%COMP%]   th[_ngcontent-%COMP%] {\n        padding: 4px 8px;\n        max-width: 200px;\n      }\n      .view-all-form-group[_ngcontent-%COMP%]   label[_ngcontent-%COMP%] {\n        margin-right: 10px;\n      }"];
 var RenderType_NamespaceComponent = i0.ɵcrt({ encapsulation: 0, styles: styles_NamespaceComponent, data: {} });
 exports.RenderType_NamespaceComponent = RenderType_NamespaceComponent;
-function View_NamespaceComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 4, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(4, null, ["Below is all your data in the ", " space"]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace.$.id; _ck(_v, 2, 0, currVal_0); var currVal_1 = _co.namespace.$.id; _ck(_v, 4, 0, currVal_1); }); }
-function View_NamespaceComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(1, null, [" ", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.title; _ck(_v, 1, 0, currVal_0); }); }
-function View_NamespaceComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 9, "tr", [["class", "item"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 5, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 4, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
+function View_NamespaceComponent_1(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 4, "div", [["class", "alert alert-danger"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Check the namespace ID and refresh the page to try again."]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.error; _ck(_v, 2, 0, currVal_0); }); }
+function View_NamespaceComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 19, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h1", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 9, "div", [["class", "form-group view-all-form-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 1, "label", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Viewing:"])), (_l()(), i0.ɵeld(6, 0, null, null, 6, "div", [["class", "btn-group"]], null, null, null, null, null)), (_l()(), i0.ɵeld(7, 0, null, null, 2, "button", [["class", "btn btn-dark"]], [[2, "active", null]], [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
+        var pd_0 = (_co.setViewAllData(false) !== false);
+        ad = (pd_0 && ad);
+    } return ad; }, null, null)), (_l()(), i0.ɵeld(8, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["My Data"])), (_l()(), i0.ɵeld(10, 0, null, null, 2, "button", [["class", "btn btn-dark"]], [[2, "active", null]], [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
+        var pd_0 = (_co.setViewAllData(true) !== false);
+        ad = (pd_0 && ad);
+    } return ad; }, null, null)), (_l()(), i0.ɵeld(11, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["All Data"])), (_l()(), i0.ɵeld(13, 0, null, null, 6, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(14, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Below is all the data"])), (_l()(), i0.ɵeld(16, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(17, null, [" ", ""])), (_l()(), i0.ɵeld(18, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(19, null, [" in the ", " namespace"]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace.$.id; _ck(_v, 2, 0, currVal_0); var currVal_1 = !_co.viewAllData; _ck(_v, 7, 0, currVal_1); var currVal_2 = _co.viewAllData; _ck(_v, 10, 0, currVal_2); var currVal_3 = (!_co.viewAllData ? "you own " : "you have permission to see"); _ck(_v, 17, 0, currVal_3); var currVal_4 = _co.namespace.$.id; _ck(_v, 19, 0, currVal_4); }); }
+function View_NamespaceComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 0, "i", [["class", "fa fa-spin fa-refresh"]], null, null, null, null, null))], null, null); }
+function View_NamespaceComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "p", [["class", "text-center"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["No items found"]))], null, null); }
+function View_NamespaceComponent_7(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Owner"]))], null, null); }
+function View_NamespaceComponent_9(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.$.owner; _ck(_v, 2, 0, currVal_0); }); }
+function View_NamespaceComponent_10(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(1, null, [" ", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.title; _ck(_v, 1, 0, currVal_0); }); }
+function View_NamespaceComponent_8(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 11, "tr", [["class", "item"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 5, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 4, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 3).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), i0.ɵdid(3, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(4, 4), (_l()(), i0.ɵeld(5, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(6, null, ["", ""])), (_l()(), i0.ɵeld(7, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_4)), i0.ɵdid(9, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = _ck(_v, 4, 0, "/data", _co.namespace.$.id, _v.parent.context.$implicit.type, _v.context.$implicit.$.id); _ck(_v, 3, 0, currVal_2); var currVal_4 = _v.context.$implicit.title; _ck(_v, 9, 0, currVal_4); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 3).target; var currVal_1 = i0.ɵnov(_v, 3).href; _ck(_v, 2, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit.$.id; _ck(_v, 6, 0, currVal_3); }); }
-function View_NamespaceComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "li", [["class", "page-item"]], [[2, "active", null]], null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "button", [["class", "page-link"]], [[8, "disabled", 0]], [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
-        var pd_0 = (_co.goToPage(_v.parent.parent.context.index, _v.context.$implicit.skip) !== false);
+    } return ad; }, null, null)), i0.ɵdid(3, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(4, 4), (_l()(), i0.ɵeld(5, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(6, null, ["", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_9)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(9, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_10)), i0.ɵdid(11, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = _ck(_v, 4, 0, "/data", _co.namespace.$.id, _v.parent.parent.context.$implicit, _v.context.$implicit.$.id); _ck(_v, 3, 0, currVal_2); var currVal_4 = _co.viewAllData; _ck(_v, 8, 0, currVal_4); var currVal_5 = _v.context.$implicit.title; _ck(_v, 11, 0, currVal_5); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 3).target; var currVal_1 = i0.ɵnov(_v, 3).href; _ck(_v, 2, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit.$.id; _ck(_v, 6, 0, currVal_3); }); }
+function View_NamespaceComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 11, "table", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 7, "thead", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 6, "tr", [], null, null, null, null, null)), (_l()(), i0.ɵeld(3, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["ID"])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_7)), i0.ɵdid(6, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(7, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Title"])), (_l()(), i0.ɵeld(9, 0, null, null, 2, "tbody", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_8)), i0.ɵdid(11, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.viewAllData; _ck(_v, 6, 0, currVal_0); var currVal_1 = _co.data[_v.parent.context.$implicit].items; _ck(_v, 11, 0, currVal_1); }, null); }
+function View_NamespaceComponent_12(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "li", [["class", "page-item"]], [[2, "active", null]], null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "button", [["class", "page-link"]], [[8, "disabled", 0]], [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
+        var pd_0 = (_co.goToPage(_v.parent.parent.context.$implicit, _v.context.$implicit.skip) !== false);
         ad = (pd_0 && ad);
     } return ad; }, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.context.$implicit.active; _ck(_v, 0, 0, currVal_0); var currVal_1 = _v.context.$implicit.disabled; _ck(_v, 1, 0, currVal_1); var currVal_2 = _v.context.$implicit.label; _ck(_v, 2, 0, currVal_2); }); }
-function View_NamespaceComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "ul", [["class", "pagination"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_6)), i0.ɵdid(2, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.dataset.pages; _ck(_v, 2, 0, currVal_0); }, null); }
-function View_NamespaceComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 8, "div", [["class", "col space"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h2", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 3, "table", [], null, null, null, null, null)), (_l()(), i0.ɵeld(4, 0, null, null, 2, "tbody", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_3)), i0.ɵdid(6, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_5)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var currVal_1 = _v.context.$implicit.dataset.items; _ck(_v, 6, 0, currVal_1); var currVal_2 = _v.context.$implicit.dataset.pages; _ck(_v, 8, 0, currVal_2); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit.type; _ck(_v, 2, 0, currVal_0); }); }
-function View_NamespaceComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_1)), i0.ɵdid(1, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(2, 0, null, null, 2, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_2)), i0.ɵdid(4, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace; _ck(_v, 1, 0, currVal_0); var currVal_1 = _co.data; _ck(_v, 4, 0, currVal_1); }, null); }
+function View_NamespaceComponent_11(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "ul", [["class", "pagination"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_12)), i0.ɵdid(2, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.data[_v.parent.context.$implicit].pages; _ck(_v, 2, 0, currVal_0); }, null); }
+function View_NamespaceComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 10, "div", [["class", "col namespace"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h2", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_4)), i0.ɵdid(4, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_5)), i0.ɵdid(6, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_6)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_11)), i0.ɵdid(10, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_1 = !_co.data[_v.context.$implicit]; _ck(_v, 4, 0, currVal_1); var currVal_2 = (_co.data[_v.context.$implicit] && !_co.data[_v.context.$implicit].items.length); _ck(_v, 6, 0, currVal_2); var currVal_3 = _co.data[_v.context.$implicit]; _ck(_v, 8, 0, currVal_3); var currVal_4 = (_co.data[_v.context.$implicit] && _co.data[_v.context.$implicit].pages); _ck(_v, 10, 0, currVal_4); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit; _ck(_v, 2, 0, currVal_0); }); }
+function View_NamespaceComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_1)), i0.ɵdid(1, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_2)), i0.ɵdid(3, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(4, 0, null, null, 2, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_3)), i0.ɵdid(6, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.error; _ck(_v, 1, 0, currVal_0); var currVal_1 = _co.namespace; _ck(_v, 3, 0, currVal_1); var currVal_2 = _co.types; _ck(_v, 6, 0, currVal_2); }, null); }
 exports.View_NamespaceComponent_0 = View_NamespaceComponent_0;
 function View_NamespaceComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "namespace", [], null, null, null, View_NamespaceComponent_0, RenderType_NamespaceComponent)), i0.ɵdid(1, 49152, null, 0, i3.NamespaceComponent, [i4.OneDBService, i1.Router, i1.ActivatedRoute], null, null)], null, null); }
 exports.View_NamespaceComponent_Host_0 = View_NamespaceComponent_Host_0;
@@ -6954,42 +6974,50 @@ var NamespaceComponent = /** @class */ (function () {
         this.onedb = onedb;
         this.router = router;
         this.route = route;
+        this.viewAllData = false;
         this.route.params.subscribe(function (params) { return __awaiter(_this, void 0, void 0, function () {
-            var _a;
+            var _a, e_1;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        if (!params['namespace']) return [3 /*break*/, 2];
+                        if (!params['namespace']) return [3 /*break*/, 4];
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
                         _a = this.setNamespace;
                         return [4 /*yield*/, this.onedb.client.get('core', 'namespace', params['namespace'])];
-                    case 1:
+                    case 2:
                         _a.apply(this, [_b.sent()]);
-                        _b.label = 2;
-                    case 2: return [2 /*return*/];
+                        return [3 /*break*/, 4];
+                    case 3:
+                        e_1 = _b.sent();
+                        this.error = e_1.message;
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
                 }
             });
         }); });
     }
     NamespaceComponent.prototype.setNamespace = function (ns) {
         return __awaiter(this, void 0, void 0, function () {
-            var types, _i, types_1, type, dataset;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var _i, _a, type, dataset;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
                         this.namespace = ns;
-                        this.data = [];
+                        this.data = {};
                         this.version = ns.versions[ns.versions.length - 1];
-                        types = Object.keys(this.version.types);
-                        _i = 0, types_1 = types;
-                        _a.label = 1;
+                        this.types = Object.keys(this.version.types);
+                        _i = 0, _a = this.types;
+                        _b.label = 1;
                     case 1:
-                        if (!(_i < types_1.length)) return [3 /*break*/, 4];
-                        type = types_1[_i];
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        type = _a[_i];
                         return [4 /*yield*/, this.getDataset(type)];
                     case 2:
-                        dataset = _a.sent();
-                        this.data.push({ type: type, dataset: dataset });
-                        _a.label = 3;
+                        dataset = _b.sent();
+                        this.data[type] = dataset;
+                        _b.label = 3;
                     case 3:
                         _i++;
                         return [3 /*break*/, 1];
@@ -7001,14 +7029,27 @@ var NamespaceComponent = /** @class */ (function () {
     NamespaceComponent.prototype.getDataset = function (type, skip) {
         if (skip === void 0) { skip = 0; }
         return __awaiter(this, void 0, void 0, function () {
-            var query, dataset, numPages, curPage, i;
+            var query, dataset, e_2, numPages, curPage, i;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        query = { skip: skip, owner: this.onedb.client.hosts.primary.user.$.id };
-                        return [4 /*yield*/, this.onedb.client.list(this.namespace.$.id, type, query)];
+                        query = { skip: skip };
+                        if (!this.viewAllData) {
+                            query.owner = this.onedb.client.hosts.primary.user.$.id;
+                        }
+                        dataset = null;
+                        _a.label = 1;
                     case 1:
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, this.onedb.client.list(this.namespace.$.id, type, query)];
+                    case 2:
                         dataset = _a.sent();
+                        return [3 /*break*/, 4];
+                    case 3:
+                        e_2 = _a.sent();
+                        this.error = e_2.message;
+                        return [2 /*return*/];
+                    case 4:
                         if (dataset.total > dataset.items.length) {
                             dataset.pages = [];
                             numPages = Math.ceil(dataset.total / dataset.pageSize);
@@ -7036,19 +7077,28 @@ var NamespaceComponent = /** @class */ (function () {
             });
         });
     };
-    NamespaceComponent.prototype.goToPage = function (idx, skip) {
+    NamespaceComponent.prototype.goToPage = function (type, skip) {
         return __awaiter(this, void 0, void 0, function () {
-            var datum, _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
-                        datum = this.data[idx];
-                        _a = datum;
-                        return [4 /*yield*/, this.getDataset(datum.type, skip)];
+                        _a = this.data;
+                        _b = type;
+                        return [4 /*yield*/, this.getDataset(type, skip)];
                     case 1:
-                        _a.dataset = _b.sent();
+                        _a[_b] = _c.sent();
                         return [2 /*return*/];
                 }
+            });
+        });
+    };
+    NamespaceComponent.prototype.setViewAllData = function (viewAll) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                this.viewAllData = viewAll;
+                this.setNamespace(this.namespace);
+                return [2 /*return*/];
             });
         });
     };
@@ -7192,13 +7242,12 @@ var OneDBService = /** @class */ (function () {
                     location: CORE_HOST,
                 }
             },
-            onLogin: function (user) {
-                _this.zone.run(function (_) { return _this.onLogin.next(user); });
+            onLogin: function (instance) {
+                _this.zone.run(function (_) { return _this.onLogin.next(instance); });
             },
         });
         this.maybeRestore();
-        this.onLogin.subscribe(function (user) {
-            _this.user = user;
+        this.onLogin.subscribe(function (instance) {
             if (!window.localStorage)
                 return;
             var toStore = {
@@ -7312,7 +7361,7 @@ exports.LAZY_MODULE_MAP = {};
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! /home/ubuntu/git/onedb/apps/data-viewer/src/main.server.ts */"./src/main.server.ts");
+module.exports = __webpack_require__(/*! /home/ubuntu/git/onedb/apps/data-explorer/src/main.server.ts */"./src/main.server.ts");
 
 
 /***/ }),
