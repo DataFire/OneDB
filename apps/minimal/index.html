@@ -55,7 +55,7 @@
       function setStatus() {
         var status = document.getElementById('StatusInput').value;
         onedb.create('alpha_status', 'status', {status: status})
-            .then(function(statuID) {
+            .then(function(statusID) {
               showLatestStatus();
             })
       }
