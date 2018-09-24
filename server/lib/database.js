@@ -349,6 +349,7 @@ class DatabaseForUser {
       data.$ = {
         id: item.id,
         info: item.info,
+        owner: item.acl.owner,
       }
       if (keepACL) data.$.acl = item.acl;
       return data;

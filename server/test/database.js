@@ -92,6 +92,8 @@ describe('Database', () => {
     let systemNS = await systemDB.get('core', 'namespace', 'system');
     expect(coreNS.versions.length).to.equal(1);
     expect(systemNS.versions.length).to.equal(1);
+    expect(coreNS.$.owner).to.equal('_system');
+    expect(systemNS.$.owner).to.equal('_system');
 
     expect(Object.keys(coreNS.versions[0].types)).to.have.members(['schema', 'namespace']);
     expect(Object.keys(systemNS.versions[0].types)).to.have.members(['user', 'user_private', 'authorization_token']);
