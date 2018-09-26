@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "description": "OneDB is a decentralized backend-as-a-service.",
   "main": "index.js",
-  "dependencies": {
-    "onedb-client": "^0.0.1"
+  "dependencies": {},
+  "devDependencies": {
+    "pug-cli": "^1.0.0-alpha6"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "cd server && npm test ; cd ../client && npm test",
     "build": "npm run build:client && npm run build:apps && npm run build:docs",
     "build:client": "cd client && npm run build",
     "build:apps": "cp client/dist/onedb-client.min.js apps/minimal/ ; cd apps/todo && npm run build ; cd ../data-explorer && npm run build ; cd ../chat && npm run build",
-    "build:docs": "lucybot build --directory ./web/docs --destination docs"
+    "build:docs": "lucybot build --directory ./web/docs --destination docs",
+    "build:homepage": "pug < web/homepage/views/index.pug > web/homepage/index.html"
   },
   "repository": {
     "type": "git",

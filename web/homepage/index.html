@@ -1,0 +1,100 @@
+<!DOCTYPE html><html><head><link rel="icon" type="image/x-icon" href="img/Icon.png"><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css" integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous"><script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script><script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script><style>nav {
+  background-color: #2b3d53;
+}
+nav img {
+  max-height: 50px;
+}
+nav .nav-link.dropdown {
+  margin-left: 40px;
+}
+.navbar-dark .navbar-nav .nav-link,
+.navbar-dark a,
+.navbar-dark .navbar-toggler {
+  color: #fff;
+}
+@media (min-width: 992px) {
+  .nav-item {
+    margin-left: 40px;
+  }
+}
+.btn-lg {
+  min-width: 200px;
+}
+h3 {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+.page-inverse {
+  color: #fff;
+  background-color: #2b3d53;
+}
+.page {
+  padding: 80px 0px;
+}
+.page img {
+  max-width: 100%;
+}
+.page h2 {
+  margin-top: 50px;
+}
+.features ul {
+  list-style: none;
+  padding-left: 30px;
+  padding-right: 30px;
+}
+@media (min-width: 1200px)  {
+  .features ul {
+    padding-left: 80px;
+    padding-right: 80px;
+  }
+}
+@media (max-width: 991px) and (min-width: 850px)  {
+  .features ul {
+    padding-left: 200px;
+    padding-right: 200px;
+  }
+}
+@media (max-width: 849px) and (min-width: 600px)  {
+  .features ul {
+    padding-left: 100px;
+    padding-right: 100px;
+  }
+}
+@media (max-width: 450px) {
+  .features ul {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+}
+
+.features ul li {
+  margin-bottom: 15px;
+  min-height: 100px;
+}
+.features ul li .icon {
+  width: 60px;
+  height: 60px;
+  padding: 5px;
+  padding-top: 6px;
+  font-size: 30px;
+  float: left;
+  border: 1px solid #fff;
+  border-radius: 30px;
+  margin-right: 20px;
+  text-align: center;
+}
+.features ul li span {
+  margin-left: 80px;
+  display: block;
+  padding-top: 5px;
+}
+.btn-primary, .btn-primary:hover, .btn-primary:active {
+  background-color: #2b3d53;
+  border-color: #2b3d53;
+  margin-bottom: 15px;
+}
+footer {
+  padding: 30px 0px;
+}
+</style></head><body><nav class="navbar navbar-expand-md navbar-dark"><div class="container"><a class="navbar-brand" href="#"><img src="img/Logo-white.svg"></a><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#NavbarCollapse" aria-controls="NavbarCollapse" aria-label="Toggle Navigation"><i class="fa fa-bars"></i></button><div class="collapse navbar-collapse" id="NavbarCollapse"><ul class="navbar-nav ml-auto"><li class="nav-item"><a class="nav-link" href="https://docs.one-db.org">Documentation</a></li><li class="nav-item"><a class="nav-link" href="https://github.com/DataFire/OneDB">GitHub</a></li><li class="nav-item dropdown"><a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#">Sample Apps</a><div class="dropdown-menu"><a class="dropdown-item" href="https://chat.one-db.org">OneChat</a><a class="dropdown-item" href="https://todo.one-db.org">To-do</a><a class="dropdown-item" href="https://data.one-db.org">Data Explorer</a></div></li></ul></div></div></nav><div class="page"><div class="container text-center"><img src="img/Logo.svg"><h2>Open source, decentralized Backend-as-a-Service</h2></div></div><div class="page page-inverse"><div class="container-fluid features"><div class="row"><div class="col-12 col-lg-4"><h3>Infinite Scale</h3><ul><li><div class="icon"><i class="fa fa-cloud"></i></div><span>Develop and deploy cloud-enabled applications without worrying about backend infrastructure</span></li><li><div class="icon"><i class="fa fa-database"></i></div><span>Data validation and storage are handled by the growing network of OneDB instances</span></li><li><div class="icon"><i class="fa fa-users"></i></div><span>Users can log in, save their data, and share it with other users in the OneDB network</span></li></ul></div><div class="col-12 col-lg-4"><h3>Zero Cost</h3><ul><li><div class="icon"><i class="fa fa-money-bill"></i></div><span>Deploying an app with OneDB is free for developers, forever, at any scale</span></li><li><div class="icon"><i class="fa fa-plug"></i></div><span>Your frontend can connect to any OneDB instance in the network</span></li><li><div class="icon"><i class="fa fa-server"></i></div><span>Each instance in the network is responsible for paying its own infrastructure costs</span></li><li><div class="icon"><i class="fa fa-hand-holding-usd"></i></div><span>The instance at <code>alpha.onedb.datafire.io</code> allows up to 10MB of free storage per user</span></li></ul></div><div class="col-12 col-lg-4"><h3>Data Liberation</h3><ul><li><div class="icon"><i class="fa fa-helicopter"></i></div><span>OneDB gives users complete ownership of their data</span></li><li><div class="icon"><i class="fa fa-hdd"></i></div><span>Users can store data on their hard drive, inside their company's intranet, or on a cloud provider</span></li><li><div class="icon"><i class="fa fa-user-secret"></i></div><span>Fine-grained permissions give users complete control over their data</span></li></ul></div></div></div></div><div class="page"><div class="container"><div class="row text-center"><div class="col"><a class="btn btn-lg btn-primary" href="https://medium.com">Learn More</a></div><div class="col"><a class="btn btn-lg btn-primary" href="https://github.com/DataFire/OneDB">View on GitHub</a></div></div></div></div><footer class="page-inverse"><div class="text-center">&copy; 2018 DataFire.io</div></footer></body></html>
