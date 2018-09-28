@@ -7,7 +7,17 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="assets/img/Icon.png">
+  <script>
+	(function(){
+	  var redirect = sessionStorage.redirect;
+	  delete sessionStorage.redirect;
+	  if (redirect && redirect != location.href) {
+		history.replaceState(null, null, redirect);
+	  }
+	})();
+  </script>
 <link rel="stylesheet" href="styles.407e68dcbfda11d52008.css"></head>
+</head>
 <body>
   <app-root></app-root>
 <script type="text/javascript" src="runtime.a66f828dca56eeb90e02.js"></script><script type="text/javascript" src="polyfills.0c8a996dbe5dc8a6081a.js"></script><script type="text/javascript" src="scripts.df42bf43cef21311bf2d.js"></script><script type="text/javascript" src="main.89b329ff573b04f435dc.js"></script></body>
