@@ -31,7 +31,7 @@ html
         margin-left: 40px;
       }
       .navbar-dark .navbar-nav .nav-link,
-      .navbar-dark a,
+      .navbar-dark .nav-item > a,
       .navbar-dark .navbar-toggler {
         color: #fff;
       }
@@ -62,7 +62,7 @@ html
       .page img {
         max-width: 100%;
       }
-      .page h2 {
+      .first-page h2 {
         margin-top: 50px;
       }
       .features ul {
@@ -117,6 +117,10 @@ html
         display: block;
         padding-top: 5px;
       }
+
+      .page.cta-page h2 {
+        margin-bottom: 50px;
+      }
       .btn-primary, .btn-primary:hover, .btn-primary:active {
         background-color: #2b3d53;
         border-color: #2b3d53;
@@ -145,7 +149,7 @@ html
                 a.dropdown-item(href="https://chat.one-db.org") OneChat
                 a.dropdown-item(href="https://todo.one-db.org") To-do
                 a.dropdown-item(href="https://data.one-db.org") Data Explorer
-    .page
+    .page.first-page
       .container.text-center
         img(src="img/Logo.svg")
         h2 Open source, decentralized Backend-as-a-Service
@@ -197,11 +201,12 @@ html
                 .icon
                   i.fa.fa-lock
                 span Fine-grained permissions give users complete control over their data
-    .page
+    .page.cta-page
       .container
+        h2.text-center Ready to get started?
         .row.text-center
           .col
-            a.btn.btn-lg.btn-primary(href="https://medium.com") Learn More
+            a.btn.btn-lg.btn-primary(href="https://docs.one-db.org") Read the Docs
           .col
             a.btn.btn-lg.btn-primary(href="https://github.com/DataFire/OneDB") View on GitHub
     footer.page-inverse
