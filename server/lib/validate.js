@@ -163,7 +163,7 @@ module.exports.getRefSchema = (namespace, type) => {
     properties: {
       $ref: {
         type: 'string',
-        pattern: `^(https?:\\/\\/(\\w+\\.)*\\w+(:\\d+)?)?/data/${namespace}/${type}/\\w+$`,
+        pattern: `^(https?:\\/\\/([\\w-]\+\\.)*[\\w-]+(:\\d+)?)?/data/${namespace}/${type}/\\w+$`,
       },
     },
   }

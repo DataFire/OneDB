@@ -7,7 +7,7 @@ const TIMEOUT = 10000;
 const DEFAULT_CORE = 'https://one-db.datafire.io';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
-const HOST_REGEX = /^(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?$/;
+const HOST_REGEX = /^(https?:\/\/(([\w-]+)\.)*([\w-]+)(:\d+)?)(\/.*)?$/;
 const REF_REGEX =  /^(.*)\/data\/(\w+)\/(\w+)\/(\w+)$/;
 const DEFAULT_PAGE_SIZE = 20;
 
