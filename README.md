@@ -1,6 +1,6 @@
 # OneDB
 
-![OneDB Logo](img/Logo.png)
+![OneDB Logo](web/img/Logo.png)
 
 > The documentation for OneDB is at [docs.one-db.org](https://docs.one-db.org)
 
