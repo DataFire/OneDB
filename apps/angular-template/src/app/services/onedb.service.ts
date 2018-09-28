@@ -4,8 +4,7 @@ import {BehaviorSubject} from 'rxjs';
 declare let window:any;
 declare let require:any;
 const Client = require('../../../../../client');
-const settings = require('../../../../../.server-config.json');
-const CORE_HOST = settings.host;
+const CORE_HOST = 'https://one-db.datafire.io';
 
 const STORAGE_KEY = 'onedb_auth';
 

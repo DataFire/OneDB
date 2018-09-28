@@ -71,17 +71,6 @@
 /************************************************************************/
 /******/ ({
 
-/***/ "../../.server-config.json":
-/*!**************************************************!*\
-  !*** /home/ubuntu/git/onedb/.server-config.json ***!
-  \**************************************************/
-/*! exports provided: jwtSecret, mongodb, host, email, default */
-/***/ (function(module) {
-
-module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://localhost:27000","host":"https://alpha.baasket.org","email":{"_SES":{"region":"us-west-2","secretAccessKey":"CVoVbvO1w4UBa0fHjrd/gCRtlPrNI7T+2lRBHTfw","accessKeyId":"AKIAI4PMHIQJG4FF2HDQ"},"from":"no-reply@baasket.org","file":"email.txt"}};
-
-/***/ }),
-
 /***/ "../../client/index.js":
 /*!**********************************************!*\
   !*** /home/ubuntu/git/onedb/client/index.js ***!
@@ -89,7 +78,9 @@ module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://lo
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! ./lib/client */ "../../client/lib/client.js");
+module.exports = {
+  Client: __webpack_require__(/*! ./lib/client */ "../../client/lib/client.js"),
+}
 
 
 /***/ }),
@@ -110,7 +101,7 @@ const TIMEOUT = 10000;
 const DEFAULT_CORE = 'https://one-db.datafire.io';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
-const HOST_REGEX = /^(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?$/;
+const HOST_REGEX = /^(https?:\/\/(([\w-]+)\.)*([\w-]+)(:\d+)?)(\/.*)?$/;
 const REF_REGEX =  /^(.*)\/data\/(\w+)\/(\w+)\/(\w+)$/;
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -2823,7 +2814,7 @@ module.exports.wrap = wrap;
 /*! exports provided: name, version, description, main, scripts, author, license, devDependencies, dependencies, default */
 /***/ (function(module) {
 
-module.exports = {"name":"onedb-client","version":"0.0.1","description":"","main":"index.js","scripts":{"test":"mocha --exit","build":"webpack -p"},"author":"","license":"MIT","devDependencies":{"babel-core":"^6.26.0","babel-loader":"^7.1.2","babel-polyfill":"^6.26.0","babel-preset-env":"^1.6.1","chai":"^4.1.2","mocha":"^5.2.0","mongodb-memory-server":"^1.9.0","webpack":"^3.5.5"},"dependencies":{"ajv":"^6.5.2","axios":"^0.18.0","cryptico":"^1.0.2","jsencrypt":"^3.0.0-rc.1","ssl-root-cas":"^1.2.5","yargs":"^11.0.0"}};
+module.exports = {"name":"onedb-client","version":"0.0.2","description":"","main":"index.js","scripts":{"test":"mocha --exit","build":"webpack -p"},"author":"","license":"MIT","devDependencies":{"babel-core":"^6.26.0","babel-loader":"^7.1.2","babel-polyfill":"^6.26.0","babel-preset-env":"^1.6.1","chai":"^4.1.2","mocha":"^5.2.0","mongodb-memory-server":"^1.9.0","webpack":"^3.5.5"},"dependencies":{"ajv":"^6.5.2","axios":"^0.18.0","cryptico":"^1.0.2","jsencrypt":"^3.0.0-rc.1","ssl-root-cas":"^1.2.5","yargs":"^11.0.0"}};
 
 /***/ }),
 
@@ -7227,8 +7218,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(/*! @angular/core */ "@angular/core");
 var rxjs_1 = __webpack_require__(/*! rxjs */ "rxjs");
 var Client = __webpack_require__(/*! ../../../../../client */ "../../client/index.js");
-var settings = __webpack_require__(/*! ../../../../../.server-config.json */ "../../.server-config.json");
-var CORE_HOST = settings.host;
+var CORE_HOST = 'https://one-db.datafire.io';
 var STORAGE_KEY = 'onedb_auth';
 var OneDBService = /** @class */ (function () {
     function OneDBService(zone) {

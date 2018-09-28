@@ -71,7 +71,7 @@ export class ChatComponent {
     this.error = null;
     this.saving = true;
     try {
-      await this.onedb.client.update('alpha_chat', 'conversation', this.chatID, this.chat);
+      await this.onedb.client.update('chat', 'conversation', this.chatID, this.chat);
     } catch (e) {
       this.error = e;
       this.saving = false;
@@ -91,8 +91,8 @@ export class ChatComponent {
       this.interval = null;
     }
     try {
-      this.chat = await this.onedb.client.get('alpha_chat', 'conversation', id);
-      this.acl = await this.onedb.client.getACL('alpha_chat', 'conversation', id);
+      this.chat = await this.onedb.client.get('chat', 'conversation', id);
+      this.acl = await this.onedb.client.getACL('chat', 'conversation', id);
       this.messages = [];
       this.loadMessages(true);
     } catch (e) {
@@ -111,7 +111,7 @@ export class ChatComponent {
       sort: 'info.created:descending',
       created_before: firstMessage.$.info.created,
     };
-    let newMessages = await this.onedb.client.list('alpha_chat', 'message', query);
+    let newMessages = await this.onedb.client.list('chat', 'message', query);
     this.hasEarlierMessages = newMessages.hasNext;
     this.messages = newMessages.items.reverse().concat(this.messages);
   }
@@ -124,7 +124,7 @@ export class ChatComponent {
     if (lastMessage) {
       query.created_since = lastMessage.$.info.created;
     }
-    let newMessages = await this.onedb.client.list('alpha_chat', 'message', query);
+    let newMessages = await this.onedb.client.list('chat', 'message', query);
     if (!lastMessage) {
       this.hasEarlierMessages = newMessages.hasNext;
     }
@@ -146,7 +146,7 @@ export class ChatComponent {
     this.sendingMessage = true;
     try {
       const message = {message: this.message, conversationID: this.chatID};
-      await this.onedb.client.create('alpha_chat', 'message', message);
+      await this.onedb.client.create('chat', 'message', message);
       await this.loadMessages(true);
     } catch (e) {
       this.error = e.message;

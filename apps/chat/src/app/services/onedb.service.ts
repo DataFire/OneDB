@@ -4,8 +4,7 @@ import {BehaviorSubject} from 'rxjs';
 declare let window:any;
 declare let require:any;
 const Client = require('../../../../../client');
-const settings = require('../../../../../.server-config.json');
-const CORE_HOST = settings.host;
+const CORE_HOST = 'https://one-db.datafire.io';
 
 const STORAGE_KEY = 'onedb_auth';
 
@@ -27,7 +26,7 @@ export class OneDBService {
       onLogin: user => {
         this.zone.run(_ => this.onLogin.next(user));
       },
-      scope: ['alpha_chat:read', 'alpha_chat:create', 'alpha_chat:write', 'alpha_chat:delete', 'alpha_chat:modify_acl', 'alpha_chat:append'],
+      scope: ['chat:read', 'chat:create', 'chat:write', 'chat:delete', 'chat:modify_acl', 'chat:append'],
     });
     this.maybeRestore();
     this.onLogin.subscribe(user => {

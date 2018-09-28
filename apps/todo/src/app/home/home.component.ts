@@ -33,7 +33,7 @@ export class HomeComponent {
   async loadTodoLists() {
     this.error = null;
     try {
-      this.lists = (await this.onedb.client.list('alpha_todo', 'list')).items;
+      this.lists = (await this.onedb.client.list('todo', 'list')).items;
     } catch (e) {
       this.error = e.message;
     }

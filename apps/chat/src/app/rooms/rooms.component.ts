@@ -39,16 +39,16 @@ export class RoomsComponent {
     if (this.listingChats) return setTimeout(this.listChats.bind(this), 100);
     this.listingChats = true;
     const userID = this.onedb.client.hosts.primary.user.$.id;
-    this.publicChats = (await this.onedb.client.list('alpha_chat', 'conversation')).items;
-    this.ownedChats = (await this.onedb.client.list('alpha_chat', 'conversation', {owner: userID})).items;
-    let userMessages = await this.onedb.client.list('alpha_chat', 'message', {owner: userID});
+    this.publicChats = (await this.onedb.client.list('chat', 'conversation')).items;
+    this.ownedChats = (await this.onedb.client.list('chat', 'conversation', {owner: userID})).items;
+    let userMessages = await this.onedb.client.list('chat', 'message', {owner: userID});
     let chatIDs = [];
     for (let message of userMessages.items) {
       if (chatIDs.indexOf(message.conversationID) === -1) {
         chatIDs.push(message.conversationID);
       }
     }
-    this.userChats = await Promise.all(chatIDs.map(id => this.onedb.client.get('alpha_chat', 'conversation', id)))
+    this.userChats = await Promise.all(chatIDs.map(id => this.onedb.client.get('chat', 'conversation', id)))
     this.listingChats = false;
   }
 
@@ -57,7 +57,7 @@ export class RoomsComponent {
     let chatID = this.chatRoomName ? this.chatRoomName.replace(/\W+/g, '_') : undefined;
     try {
       const chat = {title: this.chatRoomName || ''};
-      chatID = await this.onedb.client.create('alpha_chat', 'conversation', chatID, chat);
+      chatID = await this.onedb.client.create('chat', 'conversation', chatID, chat);
     } catch (e) {
       this.error = e.message;
       return;

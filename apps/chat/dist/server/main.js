@@ -71,17 +71,6 @@
 /************************************************************************/
 /******/ ({
 
-/***/ "../../.server-config.json":
-/*!**************************************************!*\
-  !*** /home/ubuntu/git/onedb/.server-config.json ***!
-  \**************************************************/
-/*! exports provided: jwtSecret, mongodb, host, email, default */
-/***/ (function(module) {
-
-module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://localhost:27000","host":"https://alpha.baasket.org","email":{"_SES":{"region":"us-west-2","secretAccessKey":"CVoVbvO1w4UBa0fHjrd/gCRtlPrNI7T+2lRBHTfw","accessKeyId":"AKIAI4PMHIQJG4FF2HDQ"},"from":"no-reply@baasket.org","file":"email.txt"}};
-
-/***/ }),
-
 /***/ "../../client/index.js":
 /*!**********************************************!*\
   !*** /home/ubuntu/git/onedb/client/index.js ***!
@@ -89,7 +78,9 @@ module.exports = {"jwtSecret":"asdjlkjsdafyahfesa6786a7","mongodb":"mongodb://lo
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! ./lib/client */ "../../client/lib/client.js");
+module.exports = {
+  Client: __webpack_require__(/*! ./lib/client */ "../../client/lib/client.js"),
+}
 
 
 /***/ }),
@@ -110,7 +101,7 @@ const TIMEOUT = 10000;
 const DEFAULT_CORE = 'https://one-db.datafire.io';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
-const HOST_REGEX = /^(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?$/;
+const HOST_REGEX = /^(https?:\/\/(([\w-]+)\.)*([\w-]+)(:\d+)?)(\/.*)?$/;
 const REF_REGEX =  /^(.*)\/data\/(\w+)\/(\w+)\/(\w+)$/;
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -2823,7 +2814,7 @@ module.exports.wrap = wrap;
 /*! exports provided: name, version, description, main, scripts, author, license, devDependencies, dependencies, default */
 /***/ (function(module) {
 
-module.exports = {"name":"onedb-client","version":"0.0.1","description":"","main":"index.js","scripts":{"test":"mocha --exit","build":"webpack -p"},"author":"","license":"MIT","devDependencies":{"babel-core":"^6.26.0","babel-loader":"^7.1.2","babel-polyfill":"^6.26.0","babel-preset-env":"^1.6.1","chai":"^4.1.2","mocha":"^5.2.0","mongodb-memory-server":"^1.9.0","webpack":"^3.5.5"},"dependencies":{"ajv":"^6.5.2","axios":"^0.18.0","cryptico":"^1.0.2","jsencrypt":"^3.0.0-rc.1","ssl-root-cas":"^1.2.5","yargs":"^11.0.0"}};
+module.exports = {"name":"onedb-client","version":"0.0.2","description":"","main":"index.js","scripts":{"test":"mocha --exit","build":"webpack -p"},"author":"","license":"MIT","devDependencies":{"babel-core":"^6.26.0","babel-loader":"^7.1.2","babel-polyfill":"^6.26.0","babel-preset-env":"^1.6.1","chai":"^4.1.2","mocha":"^5.2.0","mongodb-memory-server":"^1.9.0","webpack":"^3.5.5"},"dependencies":{"ajv":"^6.5.2","axios":"^0.18.0","cryptico":"^1.0.2","jsencrypt":"^3.0.0-rc.1","ssl-root-cas":"^1.2.5","yargs":"^11.0.0"}};
 
 /***/ }),
 
@@ -6630,7 +6621,7 @@ var ChatComponent = /** @class */ (function () {
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this.onedb.client.update('alpha_chat', 'conversation', this.chatID, this.chat)];
+                        return [4 /*yield*/, this.onedb.client.update('chat', 'conversation', this.chatID, this.chat)];
                     case 2:
                         _a.sent();
                         return [3 /*break*/, 4];
@@ -6666,11 +6657,11 @@ var ChatComponent = /** @class */ (function () {
                     case 1:
                         _c.trys.push([1, 4, , 5]);
                         _a = this;
-                        return [4 /*yield*/, this.onedb.client.get('alpha_chat', 'conversation', id)];
+                        return [4 /*yield*/, this.onedb.client.get('chat', 'conversation', id)];
                     case 2:
                         _a.chat = _c.sent();
                         _b = this;
-                        return [4 /*yield*/, this.onedb.client.getACL('alpha_chat', 'conversation', id)];
+                        return [4 /*yield*/, this.onedb.client.getACL('chat', 'conversation', id)];
                     case 3:
                         _b.acl = _c.sent();
                         this.messages = [];
@@ -6702,7 +6693,7 @@ var ChatComponent = /** @class */ (function () {
                             sort: 'info.created:descending',
                             created_before: firstMessage.$.info.created,
                         };
-                        return [4 /*yield*/, this.onedb.client.list('alpha_chat', 'message', query)];
+                        return [4 /*yield*/, this.onedb.client.list('chat', 'message', query)];
                     case 1:
                         newMessages = _a.sent();
                         this.hasEarlierMessages = newMessages.hasNext;
@@ -6728,7 +6719,7 @@ var ChatComponent = /** @class */ (function () {
                         if (lastMessage) {
                             query.created_since = lastMessage.$.info.created;
                         }
-                        return [4 /*yield*/, this.onedb.client.list('alpha_chat', 'message', query)];
+                        return [4 /*yield*/, this.onedb.client.list('chat', 'message', query)];
                     case 1:
                         newMessages = _a.sent();
                         if (!lastMessage) {
@@ -6762,7 +6753,7 @@ var ChatComponent = /** @class */ (function () {
                     case 1:
                         _a.trys.push([1, 4, , 5]);
                         message = { message: this.message, conversationID: this.chatID };
-                        return [4 /*yield*/, this.onedb.client.create('alpha_chat', 'message', message)];
+                        return [4 /*yield*/, this.onedb.client.create('chat', 'message', message)];
                     case 2:
                         _a.sent();
                         return [4 /*yield*/, this.loadMessages(true)];
@@ -7153,14 +7144,14 @@ var RoomsComponent = /** @class */ (function () {
                         this.listingChats = true;
                         userID = this.onedb.client.hosts.primary.user.$.id;
                         _a = this;
-                        return [4 /*yield*/, this.onedb.client.list('alpha_chat', 'conversation')];
+                        return [4 /*yield*/, this.onedb.client.list('chat', 'conversation')];
                     case 1:
                         _a.publicChats = (_e.sent()).items;
                         _b = this;
-                        return [4 /*yield*/, this.onedb.client.list('alpha_chat', 'conversation', { owner: userID })];
+                        return [4 /*yield*/, this.onedb.client.list('chat', 'conversation', { owner: userID })];
                     case 2:
                         _b.ownedChats = (_e.sent()).items;
-                        return [4 /*yield*/, this.onedb.client.list('alpha_chat', 'message', { owner: userID })];
+                        return [4 /*yield*/, this.onedb.client.list('chat', 'message', { owner: userID })];
                     case 3:
                         userMessages = _e.sent();
                         chatIDs = [];
@@ -7171,7 +7162,7 @@ var RoomsComponent = /** @class */ (function () {
                             }
                         }
                         _d = this;
-                        return [4 /*yield*/, Promise.all(chatIDs.map(function (id) { return _this.onedb.client.get('alpha_chat', 'conversation', id); }))];
+                        return [4 /*yield*/, Promise.all(chatIDs.map(function (id) { return _this.onedb.client.get('chat', 'conversation', id); }))];
                     case 4:
                         _d.userChats = _e.sent();
                         this.listingChats = false;
@@ -7192,7 +7183,7 @@ var RoomsComponent = /** @class */ (function () {
                     case 1:
                         _a.trys.push([1, 3, , 4]);
                         chat = { title: this.chatRoomName || '' };
-                        return [4 /*yield*/, this.onedb.client.create('alpha_chat', 'conversation', chatID, chat)];
+                        return [4 /*yield*/, this.onedb.client.create('chat', 'conversation', chatID, chat)];
                     case 2:
                         chatID = _a.sent();
                         return [3 /*break*/, 4];
@@ -7262,8 +7253,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(/*! @angular/core */ "@angular/core");
 var rxjs_1 = __webpack_require__(/*! rxjs */ "rxjs");
 var Client = __webpack_require__(/*! ../../../../../client */ "../../client/index.js");
-var settings = __webpack_require__(/*! ../../../../../.server-config.json */ "../../.server-config.json");
-var CORE_HOST = settings.host;
+var CORE_HOST = 'https://one-db.datafire.io';
 var STORAGE_KEY = 'onedb_auth';
 var OneDBService = /** @class */ (function () {
     function OneDBService(zone) {
@@ -7280,7 +7270,7 @@ var OneDBService = /** @class */ (function () {
             onLogin: function (user) {
                 _this.zone.run(function (_) { return _this.onLogin.next(user); });
             },
-            scope: ['alpha_chat:read', 'alpha_chat:create', 'alpha_chat:write', 'alpha_chat:delete', 'alpha_chat:modify_acl', 'alpha_chat:append'],
+            scope: ['chat:read', 'chat:create', 'chat:write', 'chat:delete', 'chat:modify_acl', 'chat:append'],
         });
         this.maybeRestore();
         this.onLogin.subscribe(function (user) {

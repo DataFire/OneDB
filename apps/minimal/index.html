@@ -17,8 +17,8 @@
           }
 		},
 		scope: [
-          'alpha_status:read',
-          'alpha_status:create',
+          'status:read',
+          'status:create',
         ],
 	  });
 
@@ -39,7 +39,7 @@
           limit: 1,
           sort: 'info.created:descending',
         }
-        onedb.list('alpha_status', 'status', query)
+        onedb.list('status', 'status', query)
             .then(function(response) {
               var status = '';
               if (response.items.length) {
@@ -54,7 +54,7 @@
 
       function setStatus() {
         var status = document.getElementById('StatusInput').value;
-        onedb.create('alpha_status', 'status', {status: status})
+        onedb.create('status', 'status', {status: status})
             .then(function(statusID) {
               showLatestStatus();
             })
