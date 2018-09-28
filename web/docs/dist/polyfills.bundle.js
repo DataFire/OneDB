@@ -7,7 +7,7 @@ webpackJsonp(["polyfills"],{
 
 
 module.exports = {
-  "favicon": "assets/logo-no-text.png",
+  "favicon": "assets/img/Icon.png",
   "routes": {
     "/": {
       "ui": "documentation",
@@ -87,7 +87,7 @@ module.exports = {
     "workflowDirectory": "workflows"
   },
   "templates": {
-    "navbar": "<nav class=\"navbar navbar-default navbar-fixed-top\">\n  <div class=\"container-fluid\">\n    <div class=\"navbar-header\">\n      <img src=\"https://app.datafire.io/assets/img/logo-no-text.png\">\n      <a class=\"navbar-brand\" routerlink=\"/\" href=\"/\">OneDB</a>\n    </div>\n    <div class=\"navbar-header pull-right\">\n\t  <ul class=\"nav navbar-nav\">\n        <li><a class=\"nav-link\" href=\"https://github.com/DataFire/OneDB\">View on GitHub</a></li>\n\t  </ul>\n    </div>\n  </div>\n</nav>\n",
+    "navbar": "<nav class=\"navbar navbar-default navbar-fixed-top\">\n  <div class=\"container-fluid\">\n    <div class=\"navbar-header\">\n      <a class=\"navbar-brand\" routerlink=\"/\" href=\"/\">\n        <img src=\"assets/img/Logo-white.svg\">\n      </a>\n    </div>\n    <div class=\"navbar-header pull-right\">\n\t  <ul class=\"nav navbar-nav\">\n        <li><a class=\"nav-link\" href=\"https://github.com/DataFire/OneDB\">View on GitHub</a></li>\n\t  </ul>\n    </div>\n  </div>\n</nav>\n",
     "loading": "<style>\n  .loading-screen {\n    min-height: 500px;\n    text-align: center;\n    padding-top: 100px;\n  }\n</style>\n<div id=\"LoadingScreen\" class=\"loading-screen\">\n  <h1><i class=\"fa fa-spin fa-refresh\"></i><h1>\n</div>\n\n",
     "footer": ""
   },

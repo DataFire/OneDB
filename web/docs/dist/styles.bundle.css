@@ -5719,6 +5719,9 @@ schema .description p {
 side-menu .btn {
   border-color: #ddd;
 }
+nav .navbar-brand {
+  padding-top: 3px;
+}
 nav img {
   height: 36px;
   padding-top: 10px;
