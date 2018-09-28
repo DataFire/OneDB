@@ -1,5 +1,7 @@
 # OneDB
 
+![OneDB Logo](img/Logo.png)
+
 > The documentation for OneDB is at [docs.one-db.org](https://docs.one-db.org)
 
 OneDB lets you create cloud-enabled apps without having to worry about or pay for backend
