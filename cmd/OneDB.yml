@@ -1,0 +1,4 @@
+jwtSecret: asdjlkjsdafyahfesa6786a7
+mongodb: mongodb://localhost:27000
+host: https://alpha.baasket.org
+

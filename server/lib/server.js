@@ -25,7 +25,7 @@ class Server {
   constructor(config={}) {
     this.config = Object.assign({}, defaultConfig, config);
     this.config.rateLimit = Object.assign({}, defaultConfig.rateLimit, this.config.rateLimit);
-    if (!this.config.mongodb) throw new Error("config.mongodb specified");
+    if (!this.config.mongodb) throw new Error("config.mongodb not specified");
     if (!this.config.jwtSecret) throw new Error("config.jwtSecret not specified");
     for (let key in this.config.rateLimit) {
       this.config.rateLimit[key].handler = (req, res, next) => {

@@ -1,0 +1,64 @@
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] MongoDB starting : pid=22806 port=27000 dbpath=/newvolume/freedb/db/ 64-bit host=ip-10-0-0-126
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] db version v4.0.0
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] git version: 3b07af3d4f471ae89e8186d33bbb1d5259597d51
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] OpenSSL version: OpenSSL 1.0.2g  1 Mar 2016
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] allocator: tcmalloc
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] modules: none
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] build environment:
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten]     distmod: ubuntu1604
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten]     distarch: x86_64
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten]     target_arch: x86_64
+2018-09-28T19:12:30.596+0000 I CONTROL  [initandlisten] options: { net: { port: 27000 }, processManagement: { fork: true }, storage: { dbPath: "/newvolume/freedb/db/" }, systemLog: { destination: "file", path: "./mongo-log.txt" } }
+2018-09-28T19:12:30.600+0000 I STORAGE  [initandlisten] Detected data files in /newvolume/freedb/db/ created by the 'wiredTiger' storage engine, so setting the active storage engine to 'wiredTiger'.
+2018-09-28T19:12:30.600+0000 I STORAGE  [initandlisten] 
+2018-09-28T19:12:30.600+0000 I STORAGE  [initandlisten] ** WARNING: Using the XFS filesystem is strongly recommended with the WiredTiger storage engine
+2018-09-28T19:12:30.600+0000 I STORAGE  [initandlisten] **          See http://dochub.mongodb.org/core/prodnotes-filesystem
+2018-09-28T19:12:30.600+0000 I STORAGE  [initandlisten] wiredtiger_open config: create,cache_size=1463M,session_max=20000,eviction=(threads_min=4,threads_max=4),config_base=false,statistics=(fast),log=(enabled=true,archive=true,path=journal,compressor=snappy),file_manager=(close_idle_time=100000),statistics_log=(wait=0),verbose=(recovery_progress),
+2018-09-28T19:12:31.462+0000 I STORAGE  [initandlisten] WiredTiger message [1538161951:462290][22806:0x7f76b3c74a00], txn-recover: Main recovery loop: starting at 1/4760704
+2018-09-28T19:12:31.552+0000 I STORAGE  [initandlisten] WiredTiger message [1538161951:552239][22806:0x7f76b3c74a00], txn-recover: Recovering log 1 through 2
+2018-09-28T19:12:31.605+0000 I STORAGE  [initandlisten] WiredTiger message [1538161951:605837][22806:0x7f76b3c74a00], txn-recover: Recovering log 2 through 2
+2018-09-28T19:12:31.651+0000 I STORAGE  [initandlisten] WiredTiger message [1538161951:651217][22806:0x7f76b3c74a00], txn-recover: Set global recovery timestamp: 0
+2018-09-28T19:12:31.691+0000 I RECOVERY [initandlisten] WiredTiger recoveryTimestamp. Ts: Timestamp(0, 0)
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] 
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] ** WARNING: Access control is not enabled for the database.
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **          Read and write access to data and configuration is unrestricted.
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] 
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] ** WARNING: This server is bound to localhost.
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **          Remote systems will be unable to connect to this server. 
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **          Start the server with --bind_ip <address> to specify which IP 
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **          addresses it should serve responses from, or with --bind_ip_all to
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **          bind to all interfaces. If this behavior is desired, start the
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **          server with --bind_ip 127.0.0.1 to disable this warning.
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] 
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] 
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] ** WARNING: /sys/kernel/mm/transparent_hugepage/enabled is 'always'.
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **        We suggest setting it to 'never'
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] 
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] ** WARNING: /sys/kernel/mm/transparent_hugepage/defrag is 'always'.
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] **        We suggest setting it to 'never'
+2018-09-28T19:12:31.725+0000 I CONTROL  [initandlisten] 
+2018-09-28T19:12:31.788+0000 I FTDC     [initandlisten] Initializing full-time diagnostic data capture with directory '/newvolume/freedb/db/diagnostic.data'
+2018-09-28T19:12:31.789+0000 I NETWORK  [initandlisten] waiting for connections on port 27000
+2018-09-28T19:13:04.672+0000 I NETWORK  [listener] connection accepted from 127.0.0.1:34162 #1 (1 connection now open)
+2018-09-28T19:13:04.679+0000 I NETWORK  [conn1] received client metadata from 127.0.0.1:34162 conn1: { driver: { name: "nodejs", version: "3.1.6" }, os: { type: "Linux", name: "linux", architecture: "x64", version: "4.4.0-1066-aws" }, platform: "Node.js v8.11.3, LE, mongodb-core: 3.1.5" }
+2018-09-28T19:13:04.707+0000 I STORAGE  [conn1] createCollection: onedb.core-schema with generated UUID: ef639099-a3fe-45ff-b481-1280f91a4494
+2018-09-28T19:13:04.730+0000 I STORAGE  [conn1] createCollection: onedb.system-user with generated UUID: a5380cb5-107b-4dc5-af4c-e819618ef6e3
+2018-09-28T19:13:04.746+0000 I STORAGE  [conn1] createCollection: onedb.core-namespace with generated UUID: c4c112c6-5a2b-4de0-ac51-e07414b2d05c
+2018-09-28T19:13:04.795+0000 I NETWORK  [conn1] end connection 127.0.0.1:34162 (0 connections now open)
+2018-09-28T19:13:10.830+0000 I NETWORK  [listener] connection accepted from 127.0.0.1:34166 #2 (1 connection now open)
+2018-09-28T19:13:10.836+0000 I NETWORK  [conn2] received client metadata from 127.0.0.1:34166 conn2: { driver: { name: "nodejs", version: "3.1.6" }, os: { type: "Linux", name: "linux", architecture: "x64", version: "4.4.0-1066-aws" }, platform: "Node.js v8.11.3, LE, mongodb-core: 3.1.5" }
+2018-09-28T19:13:17.289+0000 I NETWORK  [conn2] end connection 127.0.0.1:34166 (0 connections now open)
+2018-09-28T19:21:31.208+0000 I NETWORK  [listener] connection accepted from 127.0.0.1:34170 #3 (1 connection now open)
+2018-09-28T19:21:31.214+0000 I NETWORK  [conn3] received client metadata from 127.0.0.1:34170 conn3: { driver: { name: "nodejs", version: "3.1.6" }, os: { type: "Linux", name: "linux", architecture: "x64", version: "4.4.0-1066-aws" }, platform: "Node.js v8.11.3, LE, mongodb-core: 3.1.5" }
+2018-09-28T19:27:49.095+0000 I STORAGE  [conn3] createCollection: onedb.system-user_private with generated UUID: 195e6401-bf0c-4e97-adcc-45942c4c3286
+2018-09-28T19:28:41.171+0000 I NETWORK  [conn3] end connection 127.0.0.1:34170 (0 connections now open)
+2018-09-28T21:47:19.327+0000 I NETWORK  [listener] connection accepted from 127.0.0.1:34210 #4 (1 connection now open)
+2018-09-28T21:47:19.334+0000 I NETWORK  [conn4] received client metadata from 127.0.0.1:34210 conn4: { driver: { name: "nodejs", version: "3.1.6" }, os: { type: "Linux", name: "linux", architecture: "x64", version: "4.4.0-1066-aws" }, platform: "Node.js v8.11.3, LE, mongodb-core: 3.1.5" }
+2018-09-28T21:47:39.736+0000 I NETWORK  [conn4] end connection 127.0.0.1:34210 (0 connections now open)
+2018-09-28T21:48:36.068+0000 I NETWORK  [listener] connection accepted from 127.0.0.1:34220 #5 (1 connection now open)
+2018-09-28T21:48:36.074+0000 I NETWORK  [conn5] received client metadata from 127.0.0.1:34220 conn5: { driver: { name: "nodejs", version: "3.1.6" }, os: { type: "Linux", name: "linux", architecture: "x64", version: "4.4.0-1066-aws" }, platform: "Node.js v8.11.3, LE, mongodb-core: 3.1.5" }
+2018-09-28T21:48:52.948+0000 I STORAGE  [conn5] createCollection: onedb.system-authorization_token with generated UUID: 538a648e-405a-4491-b366-0550022d4570
+2018-09-28T21:49:49.232+0000 I NETWORK  [conn5] end connection 127.0.0.1:34220 (0 connections now open)
+2018-09-28T21:49:51.194+0000 I NETWORK  [listener] connection accepted from 127.0.0.1:34224 #6 (1 connection now open)
+2018-09-28T21:49:51.200+0000 I NETWORK  [conn6] received client metadata from 127.0.0.1:34224 conn6: { driver: { name: "nodejs", version: "3.1.6" }, os: { type: "Linux", name: "linux", architecture: "x64", version: "4.4.0-1066-aws" }, platform: "Node.js v8.11.3, LE, mongodb-core: 3.1.5" }
+2018-09-28T21:50:40.851+0000 I NETWORK  [listener] connection accepted from 127.0.0.1:34232 #7 (2 connections now open)

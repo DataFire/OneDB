@@ -1,0 +1,22 @@
+{
+  "name": "onedb-cli",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --exit",
+    "build": "webpack -p"
+  },
+  "bin": {
+    "onedb": "./bin/onedb"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {
+    "onedb-client": "0.0.1",
+    "onedb-server": "file:../server",
+    "yamljs": "^0.3.0",
+    "yargs": "^12.0.2"
+  }
+}

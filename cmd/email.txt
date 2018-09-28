@@ -1,0 +1,5 @@
+user7@example.com
+Welcome to OneDB! Please confirm your email address
+
+              <a href="https://alpha.baasket.org/users/confirm_email?code=bn5pseezOTvGAeRzCBiz6CSDJjUKhwL1Ikq6t1fqMseCty6HPluUUrfF226RVxHK&email=user7@example.com">Click here</a> to confirm your email address for OneDB
+            
