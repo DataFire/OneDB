@@ -7,12 +7,12 @@ However, in this example, we will use the pre-built `status` data model.
 
 ## Step 1: Add the OneDB Client
 
-You can get the latest OneDB JavaScript client via `npm install onedb`, or use the unpkg CDN:
+You can get the latest OneDB JavaScript client via `npm install onedb-client`, or use the unpkg CDN:
 
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
+    <script src="https://unpkg.com/onedb-client/dist/onedb-client.min.js"></script>
   </head>
 </html>
 ```
@@ -21,15 +21,15 @@ Now let's initialize the client, telling it what data we want access to:
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
+    <script src="https://unpkg.com/onedb-client/dist/onedb-client.min.js"></script>
     <script>
 	  window.onedb = new OneDBClient({
 		onLogin: function(instance) {
 		  startApp();
 		},
 		scope: [
-          'alpha_status:read',
-          'alpha_status:create',
+          'status:read',
+          'status:create',
         ],
 	  });
     </script>
@@ -144,7 +144,7 @@ function showLatestStatus() {
     limit: 1,
     sort: 'info.created:descending',
   }
-  onedb.list('alpha_status', 'status', query)
+  onedb.list('status', 'status', query)
       .then(function(response) {
         var status = '';
         if (response.items.length) {
@@ -162,7 +162,7 @@ Now let's implement `setStatus()` using `onedb.create`:
 ```js
 function setStatus() {
   var status = document.getElementById('StatusInput').value;
-  onedb.create('alpha_status', 'status', {status: status})
+  onedb.create('status', 'status', {status: status})
       .then(function(statuID) {
         showLatestStatus();
       })
@@ -177,7 +177,7 @@ to make requests to OneDB instances. If you're using a transpiler like
 
 ```js
 async function showLatestStatus() {
-  response = await onedb.list('alpha_status', 'list');
+  response = await onedb.list('status', 'list');
   console.log(response.items);
 }
 ```
@@ -205,8 +205,8 @@ That's it! Here's the final code:
           }
 		},
 		scope: [
-          'alpha_status:read',
-          'alpha_status:create',
+          'status:read',
+          'status:create',
         ],
 	  });
 
@@ -227,7 +227,7 @@ That's it! Here's the final code:
           limit: 1,
           sort: 'info.created:descending',
         }
-        onedb.list('alpha_status', 'status', query)
+        onedb.list('status', 'status', query)
             .then(function(response) {
               var status = '';
               if (response.items.length) {
@@ -242,7 +242,7 @@ That's it! Here's the final code:
 
       function setStatus() {
         var status = document.getElementById('StatusInput').value;
-        onedb.create('alpha_status', 'status', {status: status})
+        onedb.create('status', 'status', {status: status})
             .then(function(statuID) {
               showLatestStatus();
             })

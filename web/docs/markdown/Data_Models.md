@@ -53,7 +53,7 @@ Then use the OneDB CLI to register your namespace:
 ```bash
 export ONEDB_USERNAME=me@example.com
 export ONEDB_PASSWORD=thisisasecret
-onedb register --directory ./types --name my_twitter
+onedb namespace --directory ./types --name my_twitter
 # Created namespace my_twitter
 ```
 

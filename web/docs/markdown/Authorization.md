@@ -11,7 +11,7 @@ To generate a bearer token, you can use cURL:
 
 ```
 curl -X POST \
-  https://alpha.onedb.datafire.io/users/authorize?scope=core:read \
+  https://one-db.datafire.io/users/authorize?scope=core:read \
   --user me@example.com:mypassword
 # "eyJhbGciOi.eyJlbWFpb"
 ```
@@ -29,7 +29,7 @@ allows the user to choose their instance.
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
+    <script src="https://unpkg.com/onedb-client/dist/onedb-client.min.js"></script>
   </head>
   <body>
     <div id="LoginForm"></div>
@@ -39,8 +39,8 @@ allows the user to choose their instance.
           console.log(instance);
 		},
 		scope: [
-          'alpha_status:read',
-          'alpha_status:create',
+          'status:read',
+          'status:create',
         ],
 	  });
       document.getElementById('LoginForm').innerHTML = onedb.loginForm();
@@ -57,7 +57,7 @@ the user and the instance they've chosen:
 ```js
 window.onedb = new OneDBClient({
   onLogin: function(instance) {
-    console.log(instance.location); // https://alpha.onedb.datafire.io
+    console.log(instance.location); // https://one-db.datafire.io
     if (!instance.user) {
       console.log("User is logged out")
     } else {

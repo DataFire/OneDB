@@ -7,7 +7,7 @@ To get started with OneDB, you just need to import the JavaScript client into yo
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
+    <script src="https://unpkg.com/onedb-client/dist/onedb-client.min.js"></script>
   </head>
 </html>
 ```
@@ -20,7 +20,7 @@ the user's `alpha_status` data.
 ```html
 <html>
   <head>
-    <script src="https://unpkg.com/onedb/dist/onedb.min.js"></script>
+    <script src="https://unpkg.com/onedb-client/dist/onedb-client.min.js"></script>
   </head>
   <body>
     <div id="LoginForm"></div>

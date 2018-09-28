@@ -11,7 +11,7 @@ These instructions will help you get started.
 ### Installation
 You can download the latest server from npm:
 ```bash
-npm install -g onedb@latest
+npm install -g onedb-cli@latest
 ```
 
 You'll also need to [install MongoDB](https://docs.mongodb.com/manual/installation/), or
