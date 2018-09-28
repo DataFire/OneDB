@@ -107,7 +107,7 @@ const Ajv = __webpack_require__(/*! ajv */ "ajv");
 const loginForm = __webpack_require__(/*! ./login-form */ "../../client/lib/login-form.js");
 
 const TIMEOUT = 10000;
-const DEFAULT_CORE = 'https://alpha.baasket.org';
+const DEFAULT_CORE = 'https://one-db.datafire.io';
 const DEFAULT_PRIMARY = DEFAULT_CORE;
 
 const HOST_REGEX = /^(https?:\/\/((\w+)\.)*(\w+)(:\d+)?)(\/.*)?$/;
