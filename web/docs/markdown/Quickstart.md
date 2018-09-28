@@ -15,7 +15,7 @@ To get started with OneDB, you just need to import the JavaScript client into yo
 ### User Login
 The client comes with a helper function for generating a log in form. When creating the client,
 you'll also need to specify the permissions you're requesting - here we ask to read and create
-the user's `alpha_status` data.
+the user's `status` data.
 
 ```html
 <html>
@@ -30,8 +30,8 @@ the user's `alpha_status` data.
           console.log(instance);
         },
 		scope: [
-          'alpha_status:read',
-          'alpha_status:create',
+          'status:read',
+          'status:create',
         ],
       });
       document.getElementById('LoginForm').innerHTML = onedb.loginForm();
@@ -45,7 +45,7 @@ the user's `alpha_status` data.
 Once the user is logged in, you can start interacting with their data:
 
 ```js
-onedb.create('alpha_status', 'status', {status: "Hello world!"})
+onedb.create('status', 'status', {status: "Hello world!"})
     .then(function(statusID) {
       console.log("Created status");
     })
@@ -57,7 +57,7 @@ var query = {
   limit: 1,
   sort: 'info.created:descending',
 };
-onedb.list('alpha_status', 'status', query)
+onedb.list('status', 'status', query)
     .then(function(response) {
       console.log(response.items[0].status); // "Hello world!"
     })

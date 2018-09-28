@@ -1,13 +1,17 @@
 # OneDB
 
-OneDB is a free, open source Backend-as-a-Service. You can use it to add a database and REST API
-to any frontend application.
+![OneDB Logo](assets/img/Logo.png)
 
-Anyone can host a OneDB instance, and you can allow your users to choose which instance they want to use.
-This gives users complete control over where their data lives. The OneDB Data Explorer also allows them
-to view, modify, and delete their data.
+OneDB lets you create cloud-enabled apps without having to worry about or pay for backend
+infrastructure.
 
-We provide a OneDB instance at alpha.onedb.datafire.io which is free for developers. End-users can
+OneDB is an open-source Backend-as-a-Service, similar to [Firebase](https://firebase.google.com/).
+Anyone can host a OneDB instance, and end-users can decide where to store their data.
+
+This means end-users have complete control and ownership over their data, while developers can
+create cloud-enabled applications for free.
+
+We provide a OneDB instance at `onedb.datafire.io` which is free for developers. End-users can
 store up to 10MB of data before getting charged.
 
 
