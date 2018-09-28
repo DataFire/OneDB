@@ -102,7 +102,7 @@ module.exports = function(config) {
       'data.email_confirmation.expires': {$gt: moment().toISOString()},
     };
     const update = {$set: {'data.email_confirmation.confirmed': true, 'data.email_confirmation.code': null}};
-    const updated = await collection.update(query, update);
+    const updated = await collection.updateOne(query, update);
     if (updated.result.nModified !== 1) {
       return res.status(404).send("Confirmation code is invalid or expired");
     }
@@ -122,7 +122,7 @@ module.exports = function(config) {
     const userPrivate = await collection.findOne(userQuery);
     if (!userPrivate) return res.status(404).send("User " + req.query.email + " not found");
     const code = randomstring.generate(CODE_LENGTH);
-    await collection.update(userQuery, {$set: {
+    await collection.updateOne(userQuery, {$set: {
       'password_reset.code': code,
       'password_reset.expires': moment().add(1, 'days').toISOString(),
     }});

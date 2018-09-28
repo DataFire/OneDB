@@ -41,9 +41,9 @@ class Database {
         data: dbUtil.encodeDocument(JSON.parse(JSON.stringify(obj.document.data))),
       }
       if (existing[0]) {
-        await coll.update(query, {$set: doc});
+        await coll.updateOne(query, {$set: doc});
       } else {
-        await coll.insert(doc);
+        await coll.insertOne(doc);
       }
     }
   }
@@ -89,7 +89,7 @@ class Database {
     for (let key in creds) {
       update['data.' + key] = creds[key];
     }
-    const updated = await this.db.collection('system-user_private').update({'data.id': id}, {$set: update});
+    const updated = await this.db.collection('system-user_private').updateOne({'data.id': id}, {$set: update});
     if (updated.result.nModified !== 1) return fail("User not found", 404);
   }
 
@@ -489,7 +489,7 @@ class DatabaseForUser {
     data = await this.disassemble(namespace, data, schema);
     await this.validate(obj, schema, namespace, type);
     const col = this.getCollection(namespace, type);
-    const result = await col.insert({
+    const result = await col.insertOne({
       id: obj.id,
       info: obj.info,
       acl: obj.acl,
@@ -501,7 +501,7 @@ class DatabaseForUser {
       $addToSet: {'data.namespaces': namespace},
     }
     const userCol = this.getCollection('system', 'user');
-    await userCol.update({id: this.user.id}, userUpdate);
+    await userCol.updateOne({id: this.user.id}, userUpdate);
     await this.refreshUser();
     return Object.assign({$: {id, info, acl}}, obj.data);
   }
@@ -514,7 +514,7 @@ class DatabaseForUser {
     data = await this.disassemble(namespace, data, schema)
     await this.validate({data}, schema, namespace, type);
     const col = this.getCollection(namespace, type);
-    const result = await col.update(query, {
+    const result = await col.updateOne(query, {
       $set: {
         data: dbUtil.encodeDocument(data),
         'info.updated': new Date(Date.now()),
@@ -565,7 +565,7 @@ class DatabaseForUser {
       return fail(`Item ${namespace}/${type}/${id} would exceed the maximum of ${this.config.maxBytesPerItem} bytes`);
     }
 
-    const result = await col.update(query, doc);
+    const result = await col.updateOne(query, doc);
     if (result.result.nModified === 0) {
       return fail(`User ${this.userID} cannot update ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     }
@@ -595,7 +595,7 @@ class DatabaseForUser {
     }
     query = this.buildQuery(namespace, type, query, necessaryPermissions, true);
     const col = this.getCollection(namespace, type);
-    const result = await col.update(query, update);
+    const result = await col.updateOne(query, update);
     if (result.result.n === 0) return fail(`User ${this.userID} cannot update ACL for ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     if (result.result.n > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
   }
@@ -605,13 +605,13 @@ class DatabaseForUser {
     let query = {id};
     query = this.buildQuery(namespace, type, query, 'delete');
     const col = this.getCollection(namespace, type);
-    const result = await col.remove(query, {justOne: true});
+    const result = await col.deleteOne(query, {justOne: true});
     if (result.result.n === 0) return fail(`User ${this.userID} cannot delete ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
     const userUpdate = {
       $inc: {'data.items': -1}
     };
     const userCol = this.getCollection('system', 'user');
-    await userCol.update({id: this.user.id}, userUpdate);
+    await userCol.updateOne({id: this.user.id}, userUpdate);
     await this.refreshUser();
   }
 
