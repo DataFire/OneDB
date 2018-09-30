@@ -8,14 +8,14 @@ two users, Alice and Bob. Both Alice and Bob are very privacy conscious, and hos
 private OneDB instances to store data.
 
 In our example, data will be stored in three places:
-* Alice's messages to Bob will be stored on her instance, at `onedb.alice.com`
-* Bob's messages to Alice will be stored on his instance, at `onedb.bob.com`
-* The conversation (i.e. the order of messages) will be stored on the public instance, at `onedb.datafire.io`
+* Alice's messages to Bob will be stored on her instance, at `one-db.alice.com`
+* Bob's messages to Alice will be stored on his instance, at `one-db.bob.com`
+* The conversation (i.e. the order of messages) will be stored on the public instance, at `one-db.datafire.io`
 
 To make this happen, Alice will need to log in to all three servers:
-1. She will set her Primary Host to `onedb.alice.com`
-2. She will add a Broadcast Host pointing to `onedb.datafire.io`
-3. She will add a Secondary Host pointing to `onedb.bob.com`
+1. She will set her Primary Host to `one-db.alice.com`
+2. She will add a Broadcast Host pointing to `one-db.datafire.io`
+3. She will add a Secondary Host pointing to `one-db.bob.com`
 
 
 ### Creating Data
@@ -29,7 +29,7 @@ onedb.create('chat', 'message', {
 ```
 
 This will do two things:
-1. It will post the message to `onedb.alice.com`. The document will look like
+1. It will post the message to `one-db.alice.com`. The document will look like
 ```json
 {
     "message": "Hi there, Bob!",
@@ -43,10 +43,10 @@ This will do two things:
 }
 ```
 
-2. It will broadcast a reference to the message to `onedb.datafire.io`. The document will look like:
+2. It will broadcast a reference to the message to `one-db.datafire.io`. The document will look like:
 ```json
 {
-    "$ref": "https://onedb.alice.com/data/chat/message/AcS6Si8",
+    "$ref": "https://one-db.alice.com/data/chat/message/AcS6Si8",
     "$": {
       "info": {
         "created_by": "alice",
@@ -62,15 +62,15 @@ when the message was written.
 ### Retrieving Data
 
 When Bob retrieves the conversation, a few things will happen behind the scenes:
-1. The app will pull a list of the latest messages from `onedb.datafire.io`:
+1. The app will pull a list of the latest messages from `one-db.datafire.io`:
 ```js
-client.list('chat', 'message', {
+onedb.list('chat', 'message', {
     "data.conversationID": "alice_and_bob",
     "sort": "info.created_at:descending",
 })
 ```
-2. The client will find the `$ref` pointing to `https://onedb.alice.com/data/chat/message/AcS6Si8`
-3. The client will reach out to `onedb.alice.com`, using Bob's credentials, to download the contents of the `$ref`
+2. The client will find the `$ref` pointing to `https://one-db.alice.com/data/chat/message/AcS6Si8`
+3. The client will reach out to `one-db.alice.com`, using Bob's credentials, to download the contents of the `$ref`
 4. The client will return the resolved set of messages:
 ```json
 [{
@@ -94,7 +94,7 @@ In this case, the client will leave the `$ref` pointers, so your app can display
 The client will return something like this:
 ```js
 [{
-  "$ref": "https://onedb.alice.com/data/chat/message/AcS6Si8",
+  "$ref": "https://one-db.alice.com/data/chat/message/AcS6Si8",
   "$": {
     "info": {
       "created_by": "alice",

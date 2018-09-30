@@ -1,11 +1,13 @@
 ng-template(#content let-c="close" let-d="dismiss")
   .modal-header
-    h4.modal-title Manage Accounts
+    h4.modal-title Log In or Sign Up
     button.close(type="button", class="close", aria-label="Close", (click)="d('Cross click')")
       span(aria-hidden="true") &times;
   .modal-body
     p OneChat uses OneDB, so <b>you</b> get to decide where your data is stored.
     p.
-      We recommend creating a free account on onedb.datafire.io. You can also
-      host your own server for private storage.
+      You can create a free account on one-db.datafire.io
+      <a target="_blank" href="https://docs.one-db.org/Host_an_Instance">
+        host your own instance
+      </a>, or choose another provider.
     div([innerHtml]="formContent")

@@ -11,7 +11,7 @@ Anyone can host a OneDB instance, and end-users can decide where to store their 
 This means end-users have complete control and ownership over their data, while developers can
 create cloud-enabled applications for free.
 
-We provide a OneDB instance at `onedb.datafire.io` which is free for developers. End-users can
+We provide a OneDB instance at `one-db.datafire.io` which is free for developers. End-users can
 store up to 10MB of data before getting charged.
 
 

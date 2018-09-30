@@ -23,7 +23,7 @@ to set your MongoDB location at the least.
 ```yml
 mongodb: "mongodb://localhost:27017"
 jwtSecret: "thisisasecret"
-host: "https://onedb.example.com"
+host: "https://one-db.example.com"
 ```
 
 ### Running
@@ -53,7 +53,7 @@ namespaces:
     - chat
 ```
 
-By default, OneDB will use the core instance at `https://core.onedb.datafire.io` when retrieving
+By default, OneDB will use the core instance at `https://one-db.datafire.io` when retrieving
 schemas for validation purposes. You can disable this by setting:
 ```yaml
 namespaces:
