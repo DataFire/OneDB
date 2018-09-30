@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <script src="https://unpkg.com/onedb-client/dist/onedb-client.min.js"></script>
+    <script>
+      var onedb = new OneDBClient({
+        hosts: {
+          primary: {location: 'https://one-db.datafire.io'},
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="Statuses"></div>
+    <script>
+      onedb.list('status', 'status', {sort: 'info.created:descending'})
+        .then(function(response) {
+          document.getElementById('Statuses').innerHTML =
+              response.items.map(function(item) {
+                var html = '<span>' + item.$.info.created_by + ':</span>';
+                html += '<p>' + item.status + '</p>';
+                return html;
+              }).join('\n')
+        })
+    </script>
+  </body>
+</html>
