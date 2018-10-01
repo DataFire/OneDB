@@ -42,6 +42,7 @@ export class OneDBService {
     if (!existing) return;
     existing = JSON.parse(existing);
     if (!existing || !existing.hosts) return;
-    await this.client.setHosts(existing.hosts);
+    let hosts = Object.assign({}, existing.hosts, {core: {location: CORE_HOST}})
+    await this.client.setHosts(hosts);
   }
 }
