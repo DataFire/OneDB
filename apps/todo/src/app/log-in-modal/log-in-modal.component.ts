@@ -10,17 +10,21 @@ import {DomSanitizer, SafeHtml} from '@angular/platform-browser'
 export class LogInModalComponent {
   @ViewChild('content') content;
   formContent:SafeHtml;
+  modalRef:any;
 
   constructor(
       private onedb:OneDBService,
       private modals: NgbModal,
       private sanitizer:DomSanitizer) {
     this.refreshForm();
-    this.onedb.onLogin.subscribe(host => this.refreshForm())
+    this.onedb.onLogin.subscribe(instance => {
+      this.refreshForm();
+      if (this.modalRef && instance.user) this.modalRef.close();
+    })
   }
 
   open() {
-    this.modals.open(this.content);
+    this.modalRef = this.modals.open(this.content);
   }
 
   refreshForm() {

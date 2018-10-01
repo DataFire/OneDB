@@ -18,17 +18,13 @@ export class LogInModalComponent {
       private sanitizer:DomSanitizer) {
     this.refreshForm();
     this.onedb.onLogin.subscribe(instance => {
-      this.close();
       this.refreshForm();
+      if (this.modalRef && instance.user) this.modalRef.close();
     })
   }
 
   open() {
     this.modalRef = this.modals.open(this.content);
-  }
-
-  close() {
-    if (this.modalRef) this.modalRef.close();
   }
 
   refreshForm() {
