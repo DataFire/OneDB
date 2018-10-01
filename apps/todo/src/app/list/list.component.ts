@@ -71,9 +71,11 @@ export class ListComponent {
     try {
       if (!this.list.$) {
         id = await this.onedb.client.create('todo', 'list', this.list);
+        await this.router.navigate(['/list', id]);
       } else {
         id = this.list.$.id;
         await this.onedb.client.update('todo', 'list', this.list.$.id, this.list);
+        await this.load(this.list.$.id);
       }
     } catch (e) {
       this.error = e.message;
@@ -81,7 +83,6 @@ export class ListComponent {
       return;
     }
     this.saving = false;
-    await this.router.navigate(['/list', id]);
   }
 
   async deleteItem(item) {
