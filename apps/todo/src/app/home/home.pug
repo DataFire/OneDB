@@ -7,7 +7,10 @@ p.
   for cloud storage, which means <b>you</b> get to decide where your data is stored -
   in the cloud, or on your company's servers, or on your local hard drive.
 p(*ngIf="!onedb.client.hosts.primary.user")
-  a((click)="logInModal.open()" href="javascript:void(0)") Get a free account now
+  a((click)="logInModal.open()" href="javascript:void(0)") Sign in
+  span  or 
+  a((click)="logInModal.open()" href="javascript:void(0)") get a free account
+
 .alert.alert-danger(*ngIf="error" role="alert") {{ error }}
 div(*ngIf="onedb.client.hosts.primary.user")
   hr
