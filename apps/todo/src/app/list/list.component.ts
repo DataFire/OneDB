@@ -38,6 +38,7 @@ export class ListComponent {
   @Input() editing:boolean = false;
   error:string;
   saving:boolean;
+  listID:string;
 
   constructor(
         private onedb:OneDBService,
@@ -47,6 +48,15 @@ export class ListComponent {
       if (params['list_id']) {
         this.load(params['list_id'])
       }
+    });
+    this.onedb.onLogin.subscribe(instance => {
+      if (instance === this.onedb.client.hosts.primary) {
+        if (!instance.user) {
+          this.router.navigate(['/']);
+        } else {
+          this.load(this.listID);
+        }
+      }
     })
   }
 
@@ -55,6 +65,7 @@ export class ListComponent {
   }
 
   async load(id:string) {
+    this.listID = id;
     this.list = null;
     this.error = null;
     try {
