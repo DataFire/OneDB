@@ -94,7 +94,7 @@ describe("Server", () => {
   it('should respond with info', async () => {
     let response = await axios.get(HOST + '/info');
     expect(response.status).to.equal(200);
-    expect(response.data).to.deep.equal({version: '0.0.1'});
+    expect(response.data).to.deep.equal({version: '0.0.2'});
   });
 
   it('should respond to ping', async () => {

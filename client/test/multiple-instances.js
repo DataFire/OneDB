@@ -69,6 +69,7 @@ describe("OneDB Client with Multiple Instances", () => {
       instance.server = new Server({
         mongodb: await instance.mongod.getConnectionString(),
         host: instance.host,
+        jwtSecret: 'cecinestpasunesecret',
         namespaces: {
           proxy: {
             core: key === 'core' ? '' : INSTANCES.core.host,

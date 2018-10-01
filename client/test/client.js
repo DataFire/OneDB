@@ -31,7 +31,7 @@ const expectError = function(prom, regex) {
 describe("OneDB Client", () => {
   before(async () => {
     const mongoURI = await mongod.getConnectionString();
-    server = new Server({mongodb: mongoURI, host: HOST});
+    server = new Server({mongodb: mongoURI, host: HOST, jwtSecret: 'thisisnotasecret'});
     return server.listen(PORT);
   });
 
