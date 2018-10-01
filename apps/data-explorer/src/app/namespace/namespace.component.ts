@@ -2,6 +2,8 @@ import {Component} from '@angular/core';
 import {OneDBService} from '../services/onedb.service';
 import { Router, ActivatedRoute } from '@angular/router';
 
+const MAX_PROPERTIES_IN_TABLE = 5;
+
 @Component({
     selector: 'namespace',
     templateUrl: './namespace.pug',
@@ -25,7 +27,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 export class NamespaceComponent {
   namespace:any;
   version:any;
-  types:string[];
+  types:any[];
   data:any;
 
   error:string;
@@ -44,22 +46,33 @@ export class NamespaceComponent {
         }
       }
     })
+    this.onedb.onLogin.subscribe(inst => {
+      if (this.namespace) this.setNamespace(this.namespace)
+    })
   }
 
   async setNamespace(ns) {
     this.namespace = ns;
     this.data = {};
     this.version = ns.versions[ns.versions.length - 1];
-    this.types = Object.keys(this.version.types);
+    this.types = Object.keys(this.version.types).map(id => {
+      let props = this.version.types[id].schema.properties || {};
+      props = Object.keys(props).filter(p => {
+        return props[p].type !== 'object' && props[p].type !== 'array';
+      }).slice(0, MAX_PROPERTIES_IN_TABLE);
+      return {id, properties: props};
+    });
+
     for (let type of this.types) {
-      let dataset = await this.getDataset(type);
-      this.data[type] = dataset;
+      let dataset = await this.getDataset(type.id);
+      this.data[type.id] = dataset;
     }
   }
 
   async getDataset(type, skip=0) {
     const query:any = {skip};
     if (!this.viewAllData) {
+      if (!this.onedb.client.hosts.primary.user) return;
       query.owner = this.onedb.client.hosts.primary.user.$.id
     }
     let dataset = null;
