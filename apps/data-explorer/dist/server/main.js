@@ -4124,8 +4124,8 @@ exports.LogInModalComponent = LogInModalComponent;
  */ 
 Object.defineProperty(exports, "__esModule", { value: true });
 var i0 = __webpack_require__(/*! @angular/core */ "@angular/core");
-var i1 = __webpack_require__(/*! @angular/router */ "@angular/router");
-var i2 = __webpack_require__(/*! @angular/common */ "@angular/common");
+var i1 = __webpack_require__(/*! @angular/common */ "@angular/common");
+var i2 = __webpack_require__(/*! @angular/router */ "@angular/router");
 var i3 = __webpack_require__(/*! ./namespace.component */ "./src/app/namespace/namespace.component.ts");
 var i4 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var styles_NamespaceComponent = [".space[_ngcontent-%COMP%] {\n        margin-top: 20px;\n      }\n      table[_ngcontent-%COMP%] {\n        margin-bottom: 15px;\n        margin-left: -8px;\n      }\n      table[_ngcontent-%COMP%]   td[_ngcontent-%COMP%], table[_ngcontent-%COMP%]   th[_ngcontent-%COMP%] {\n        padding: 4px 8px;\n        max-width: 200px;\n      }\n      .view-all-form-group[_ngcontent-%COMP%]   label[_ngcontent-%COMP%] {\n        margin-right: 10px;\n      }"];
@@ -4139,25 +4139,28 @@ function View_NamespaceComponent_2(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0
         var pd_0 = (_co.setViewAllData(true) !== false);
         ad = (pd_0 && ad);
     } return ad; }, null, null)), (_l()(), i0.ɵeld(11, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["All Data"])), (_l()(), i0.ɵeld(13, 0, null, null, 6, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(14, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Below is all the data"])), (_l()(), i0.ɵeld(16, 0, null, null, 1, "b", [], null, null, null, null, null)), (_l()(), i0.ɵted(17, null, [" ", ""])), (_l()(), i0.ɵeld(18, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(19, null, [" in the ", " namespace"]))], null, function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.namespace.$.id; _ck(_v, 2, 0, currVal_0); var currVal_1 = !_co.viewAllData; _ck(_v, 7, 0, currVal_1); var currVal_2 = _co.viewAllData; _ck(_v, 10, 0, currVal_2); var currVal_3 = (!_co.viewAllData ? "you own " : "you have permission to see"); _ck(_v, 17, 0, currVal_3); var currVal_4 = _co.namespace.$.id; _ck(_v, 19, 0, currVal_4); }); }
-function View_NamespaceComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 0, "i", [["class", "fa fa-spin fa-refresh"]], null, null, null, null, null))], null, null); }
-function View_NamespaceComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["No items found"]))], null, null); }
-function View_NamespaceComponent_7(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Owner"]))], null, null); }
-function View_NamespaceComponent_9(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.$.owner; _ck(_v, 2, 0, currVal_0); }); }
-function View_NamespaceComponent_10(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(1, null, [" ", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.title; _ck(_v, 1, 0, currVal_0); }); }
-function View_NamespaceComponent_8(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 11, "tr", [["class", "item"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 5, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 4, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
+function View_NamespaceComponent_4(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "div", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Please sign in to view your data"]))], null, null); }
+function View_NamespaceComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 0, "i", [["class", "fa fa-spin fa-refresh"]], null, null, null, null, null))], null, null); }
+function View_NamespaceComponent_5(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "div", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_6)), i0.ɵdid(2, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = !_co.data[_v.parent.context.$implicit.id]; _ck(_v, 2, 0, currVal_0); }, null); }
+function View_NamespaceComponent_7(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "p", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["No items found"]))], null, null); }
+function View_NamespaceComponent_9(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Owner"]))], null, null); }
+function View_NamespaceComponent_10(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(1, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.context.$implicit; _ck(_v, 1, 0, currVal_0); }); }
+function View_NamespaceComponent_12(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit.$.owner; _ck(_v, 2, 0, currVal_0); }); }
+function View_NamespaceComponent_13(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.parent.context.$implicit[_v.context.$implicit]; _ck(_v, 2, 0, currVal_0); }); }
+function View_NamespaceComponent_11(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 10, "tr", [["class", "item"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 5, "td", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 4, "a", [], [[1, "target", 0], [8, "href", 4]], [[null, "click"]], function (_v, en, $event) { var ad = true; if (("click" === en)) {
         var pd_0 = (i0.ɵnov(_v, 3).onClick($event.button, $event.ctrlKey, $event.metaKey, $event.shiftKey) !== false);
         ad = (pd_0 && ad);
-    } return ad; }, null, null)), i0.ɵdid(3, 671744, null, 0, i1.RouterLinkWithHref, [i1.Router, i1.ActivatedRoute, i2.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(4, 4), (_l()(), i0.ɵeld(5, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(6, null, ["", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_9)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(9, 0, null, null, 2, "td", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_10)), i0.ɵdid(11, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = _ck(_v, 4, 0, "/data", _co.namespace.$.id, _v.parent.parent.context.$implicit, _v.context.$implicit.$.id); _ck(_v, 3, 0, currVal_2); var currVal_4 = _co.viewAllData; _ck(_v, 8, 0, currVal_4); var currVal_5 = _v.context.$implicit.title; _ck(_v, 11, 0, currVal_5); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 3).target; var currVal_1 = i0.ɵnov(_v, 3).href; _ck(_v, 2, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit.$.id; _ck(_v, 6, 0, currVal_3); }); }
-function View_NamespaceComponent_6(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 11, "table", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 7, "thead", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 6, "tr", [], null, null, null, null, null)), (_l()(), i0.ɵeld(3, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["ID"])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_7)), i0.ɵdid(6, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(7, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["Title"])), (_l()(), i0.ɵeld(9, 0, null, null, 2, "tbody", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_8)), i0.ɵdid(11, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.viewAllData; _ck(_v, 6, 0, currVal_0); var currVal_1 = _co.data[_v.parent.context.$implicit].items; _ck(_v, 11, 0, currVal_1); }, null); }
-function View_NamespaceComponent_12(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "li", [["class", "page-item"]], [[2, "active", null]], null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "button", [["class", "page-link"]], [[8, "disabled", 0]], [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
-        var pd_0 = (_co.goToPage(_v.parent.parent.context.$implicit, _v.context.$implicit.skip) !== false);
+    } return ad; }, null, null)), i0.ɵdid(3, 671744, null, 0, i2.RouterLinkWithHref, [i2.Router, i2.ActivatedRoute, i1.LocationStrategy], { routerLink: [0, "routerLink"] }, null), i0.ɵpad(4, 4), (_l()(), i0.ɵeld(5, 0, null, null, 1, "span", [], null, null, null, null, null)), (_l()(), i0.ɵted(6, null, ["", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_12)), i0.ɵdid(8, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_13)), i0.ɵdid(10, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_2 = _ck(_v, 4, 0, "/data", _co.namespace.$.id, _v.parent.parent.context.$implicit.id, _v.context.$implicit.$.id); _ck(_v, 3, 0, currVal_2); var currVal_4 = _co.viewAllData; _ck(_v, 8, 0, currVal_4); var currVal_5 = _v.parent.parent.context.$implicit.properties; _ck(_v, 10, 0, currVal_5); }, function (_ck, _v) { var currVal_0 = i0.ɵnov(_v, 3).target; var currVal_1 = i0.ɵnov(_v, 3).href; _ck(_v, 2, 0, currVal_0, currVal_1); var currVal_3 = _v.context.$implicit.$.id; _ck(_v, 6, 0, currVal_3); }); }
+function View_NamespaceComponent_8(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 11, "table", [], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 7, "thead", [], null, null, null, null, null)), (_l()(), i0.ɵeld(2, 0, null, null, 6, "tr", [], null, null, null, null, null)), (_l()(), i0.ɵeld(3, 0, null, null, 1, "th", [], null, null, null, null, null)), (_l()(), i0.ɵted(-1, null, ["ID"])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_9)), i0.ɵdid(6, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_10)), i0.ɵdid(8, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null), (_l()(), i0.ɵeld(9, 0, null, null, 2, "tbody", [], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_11)), i0.ɵdid(11, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.viewAllData; _ck(_v, 6, 0, currVal_0); var currVal_1 = _v.parent.context.$implicit.properties; _ck(_v, 8, 0, currVal_1); var currVal_2 = _co.data[_v.parent.context.$implicit.id].items; _ck(_v, 11, 0, currVal_2); }, null); }
+function View_NamespaceComponent_15(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "li", [["class", "page-item"]], [[2, "active", null]], null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "button", [["class", "page-link"]], [[8, "disabled", 0]], [[null, "click"]], function (_v, en, $event) { var ad = true; var _co = _v.component; if (("click" === en)) {
+        var pd_0 = (_co.goToPage(_v.parent.parent.context.$implicit.id, _v.context.$implicit.skip) !== false);
         ad = (pd_0 && ad);
     } return ad; }, null, null)), (_l()(), i0.ɵted(2, null, ["", ""]))], null, function (_ck, _v) { var currVal_0 = _v.context.$implicit.active; _ck(_v, 0, 0, currVal_0); var currVal_1 = _v.context.$implicit.disabled; _ck(_v, 1, 0, currVal_1); var currVal_2 = _v.context.$implicit.label; _ck(_v, 2, 0, currVal_2); }); }
-function View_NamespaceComponent_11(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "ul", [["class", "pagination"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_12)), i0.ɵdid(2, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.data[_v.parent.context.$implicit].pages; _ck(_v, 2, 0, currVal_0); }, null); }
-function View_NamespaceComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 10, "div", [["class", "col namespace"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h2", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_4)), i0.ɵdid(4, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_5)), i0.ɵdid(6, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_6)), i0.ɵdid(8, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_11)), i0.ɵdid(10, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_1 = !_co.data[_v.context.$implicit]; _ck(_v, 4, 0, currVal_1); var currVal_2 = (_co.data[_v.context.$implicit] && !_co.data[_v.context.$implicit].items.length); _ck(_v, 6, 0, currVal_2); var currVal_3 = (_co.data[_v.context.$implicit] && _co.data[_v.context.$implicit].items.length); _ck(_v, 8, 0, currVal_3); var currVal_4 = (_co.data[_v.context.$implicit] && _co.data[_v.context.$implicit].pages); _ck(_v, 10, 0, currVal_4); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit; _ck(_v, 2, 0, currVal_0); }); }
-function View_NamespaceComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_1)), i0.ɵdid(1, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_2)), i0.ɵdid(3, 16384, null, 0, i2.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(4, 0, null, null, 2, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_3)), i0.ɵdid(6, 278528, null, 0, i2.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.error; _ck(_v, 1, 0, currVal_0); var currVal_1 = _co.namespace; _ck(_v, 3, 0, currVal_1); var currVal_2 = _co.types; _ck(_v, 6, 0, currVal_2); }, null); }
+function View_NamespaceComponent_14(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 2, "ul", [["class", "pagination"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_15)), i0.ɵdid(2, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.data[_v.parent.context.$implicit.id].pages; _ck(_v, 2, 0, currVal_0); }, null); }
+function View_NamespaceComponent_3(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 14, "div", [["class", "col namespace"]], null, null, null, null, null)), (_l()(), i0.ɵeld(1, 0, null, null, 1, "h2", [], null, null, null, null, null)), (_l()(), i0.ɵted(2, null, ["", ""])), (_l()(), i0.ɵeld(3, 0, null, null, 5, "div", [], null, null, null, null, null)), i0.ɵdid(4, 16384, null, 0, i1.NgSwitch, [], { ngSwitch: [0, "ngSwitch"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_4)), i0.ɵdid(6, 278528, null, 0, i1.NgSwitchCase, [i0.ViewContainerRef, i0.TemplateRef, i1.NgSwitch], { ngSwitchCase: [0, "ngSwitchCase"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_5)), i0.ɵdid(8, 278528, null, 0, i1.NgSwitchCase, [i0.ViewContainerRef, i0.TemplateRef, i1.NgSwitch], { ngSwitchCase: [0, "ngSwitchCase"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_7)), i0.ɵdid(10, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_8)), i0.ɵdid(12, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_14)), i0.ɵdid(14, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_1 = (!_co.viewAllData && !_co.onedb.client.hosts.primary.user); _ck(_v, 4, 0, currVal_1); var currVal_2 = true; _ck(_v, 6, 0, currVal_2); var currVal_3 = false; _ck(_v, 8, 0, currVal_3); var currVal_4 = (_co.data[_v.context.$implicit.id] && !_co.data[_v.context.$implicit.id].items.length); _ck(_v, 10, 0, currVal_4); var currVal_5 = (_co.data[_v.context.$implicit.id] && _co.data[_v.context.$implicit.id].items.length); _ck(_v, 12, 0, currVal_5); var currVal_6 = (_co.data[_v.context.$implicit.id] && _co.data[_v.context.$implicit.id].pages); _ck(_v, 14, 0, currVal_6); }, function (_ck, _v) { var currVal_0 = _v.context.$implicit.id; _ck(_v, 2, 0, currVal_0); }); }
+function View_NamespaceComponent_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_1)), i0.ɵdid(1, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_2)), i0.ɵdid(3, 16384, null, 0, i1.NgIf, [i0.ViewContainerRef, i0.TemplateRef], { ngIf: [0, "ngIf"] }, null), (_l()(), i0.ɵeld(4, 0, null, null, 2, "div", [["class", "row"]], null, null, null, null, null)), (_l()(), i0.ɵand(16777216, null, null, 1, null, View_NamespaceComponent_3)), i0.ɵdid(6, 278528, null, 0, i1.NgForOf, [i0.ViewContainerRef, i0.TemplateRef, i0.IterableDiffers], { ngForOf: [0, "ngForOf"] }, null)], function (_ck, _v) { var _co = _v.component; var currVal_0 = _co.error; _ck(_v, 1, 0, currVal_0); var currVal_1 = _co.namespace; _ck(_v, 3, 0, currVal_1); var currVal_2 = _co.types; _ck(_v, 6, 0, currVal_2); }, null); }
 exports.View_NamespaceComponent_0 = View_NamespaceComponent_0;
-function View_NamespaceComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "namespace", [], null, null, null, View_NamespaceComponent_0, RenderType_NamespaceComponent)), i0.ɵdid(1, 49152, null, 0, i3.NamespaceComponent, [i4.OneDBService, i1.Router, i1.ActivatedRoute], null, null)], null, null); }
+function View_NamespaceComponent_Host_0(_l) { return i0.ɵvid(0, [(_l()(), i0.ɵeld(0, 0, null, null, 1, "namespace", [], null, null, null, View_NamespaceComponent_0, RenderType_NamespaceComponent)), i0.ɵdid(1, 49152, null, 0, i3.NamespaceComponent, [i4.OneDBService, i2.Router, i2.ActivatedRoute], null, null)], null, null); }
 exports.View_NamespaceComponent_Host_0 = View_NamespaceComponent_Host_0;
 var NamespaceComponentNgFactory = i0.ɵccf("namespace", i3.NamespaceComponent, View_NamespaceComponent_Host_0, {}, {}, []);
 exports.NamespaceComponentNgFactory = NamespaceComponentNgFactory;
@@ -4212,6 +4215,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var onedb_service_1 = __webpack_require__(/*! ../services/onedb.service */ "./src/app/services/onedb.service.ts");
 var router_1 = __webpack_require__(/*! @angular/router */ "@angular/router");
+var MAX_PROPERTIES_IN_TABLE = 5;
 var NamespaceComponent = /** @class */ (function () {
     function NamespaceComponent(onedb, router, route) {
         var _this = this;
@@ -4241,26 +4245,37 @@ var NamespaceComponent = /** @class */ (function () {
                 }
             });
         }); });
+        this.onedb.onLogin.subscribe(function (inst) {
+            if (_this.namespace)
+                _this.setNamespace(_this.namespace);
+        });
     }
     NamespaceComponent.prototype.setNamespace = function (ns) {
         return __awaiter(this, void 0, void 0, function () {
             var _i, _a, type, dataset;
+            var _this = this;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         this.namespace = ns;
                         this.data = {};
                         this.version = ns.versions[ns.versions.length - 1];
-                        this.types = Object.keys(this.version.types);
+                        this.types = Object.keys(this.version.types).map(function (id) {
+                            var props = _this.version.types[id].schema.properties || {};
+                            props = Object.keys(props).filter(function (p) {
+                                return props[p].type !== 'object' && props[p].type !== 'array';
+                            }).slice(0, MAX_PROPERTIES_IN_TABLE);
+                            return { id: id, properties: props };
+                        });
                         _i = 0, _a = this.types;
                         _b.label = 1;
                     case 1:
                         if (!(_i < _a.length)) return [3 /*break*/, 4];
                         type = _a[_i];
-                        return [4 /*yield*/, this.getDataset(type)];
+                        return [4 /*yield*/, this.getDataset(type.id)];
                     case 2:
                         dataset = _b.sent();
-                        this.data[type] = dataset;
+                        this.data[type.id] = dataset;
                         _b.label = 3;
                     case 3:
                         _i++;
@@ -4279,6 +4294,8 @@ var NamespaceComponent = /** @class */ (function () {
                     case 0:
                         query = { skip: skip };
                         if (!this.viewAllData) {
+                            if (!this.onedb.client.hosts.primary.user)
+                                return [2 /*return*/];
                             query.owner = this.onedb.client.hosts.primary.user.$.id;
                         }
                         dataset = null;
@@ -4501,7 +4518,7 @@ var OneDBService = /** @class */ (function () {
     }
     OneDBService.prototype.maybeRestore = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var existing;
+            var existing, hosts;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -4513,7 +4530,8 @@ var OneDBService = /** @class */ (function () {
                         existing = JSON.parse(existing);
                         if (!existing || !existing.hosts)
                             return [2 /*return*/];
-                        return [4 /*yield*/, this.client.setHosts(existing.hosts)];
+                        hosts = Object.assign({}, existing.hosts, { core: { location: CORE_HOST } });
+                        return [4 /*yield*/, this.client.setHosts(hosts)];
                     case 1:
                         _a.sent();
                         return [2 /*return*/];

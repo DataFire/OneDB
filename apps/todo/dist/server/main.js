@@ -4380,7 +4380,7 @@ var OneDBService = /** @class */ (function () {
     }
     OneDBService.prototype.maybeRestore = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var existing;
+            var existing, hosts;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -4392,7 +4392,8 @@ var OneDBService = /** @class */ (function () {
                         existing = JSON.parse(existing);
                         if (!existing || !existing.hosts)
                             return [2 /*return*/];
-                        return [4 /*yield*/, this.client.setHosts(existing.hosts)];
+                        hosts = Object.assign({}, existing.hosts, { core: { location: CORE_HOST } });
+                        return [4 /*yield*/, this.client.setHosts(hosts)];
                     case 1:
                         _a.sent();
                         return [2 /*return*/];
