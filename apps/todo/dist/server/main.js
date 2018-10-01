@@ -4063,29 +4063,32 @@ var ListComponent = /** @class */ (function () {
                         this.saving = true;
                         _a.label = 1;
                     case 1:
-                        _a.trys.push([1, 6, , 7]);
-                        if (!!this.list.$) return [3 /*break*/, 3];
+                        _a.trys.push([1, 8, , 9]);
+                        if (!!this.list.$) return [3 /*break*/, 4];
                         return [4 /*yield*/, this.onedb.client.create('todo', 'list', this.list)];
                     case 2:
                         id = _a.sent();
-                        return [3 /*break*/, 5];
+                        return [4 /*yield*/, this.router.navigate(['/list', id])];
                     case 3:
+                        _a.sent();
+                        return [3 /*break*/, 7];
+                    case 4:
                         id = this.list.$.id;
                         return [4 /*yield*/, this.onedb.client.update('todo', 'list', this.list.$.id, this.list)];
-                    case 4:
+                    case 5:
                         _a.sent();
-                        _a.label = 5;
-                    case 5: return [3 /*break*/, 7];
+                        return [4 /*yield*/, this.load(this.list.$.id)];
                     case 6:
+                        _a.sent();
+                        _a.label = 7;
+                    case 7: return [3 /*break*/, 9];
+                    case 8:
                         e_2 = _a.sent();
                         this.error = e_2.message;
                         this.saving = false;
                         return [2 /*return*/];
-                    case 7:
+                    case 9:
                         this.saving = false;
-                        return [4 /*yield*/, this.router.navigate(['/list', id])];
-                    case 8:
-                        _a.sent();
                         return [2 /*return*/];
                 }
             });
