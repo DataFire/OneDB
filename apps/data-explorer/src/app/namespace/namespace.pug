@@ -19,9 +19,9 @@ div(*ngIf="namespace")
     h2 {{ type }}
     p(*ngIf="!data[type]")
       i.fa.fa-spin.fa-refresh
-    p.text-center(*ngIf="data[type] && !data[type].items.length")
+    p(*ngIf="data[type] && !data[type].items.length")
       span No items found
-    table(*ngIf="data[type]")
+    table(*ngIf="data[type] && data[type].items.length")
       thead
         tr
           th ID
