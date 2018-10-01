@@ -4,6 +4,13 @@ block head
       ul.scope-access-list {
         list-style: disc outside none;
       }
+      .toggle-scope-button {
+        float: right;
+        padding-top: 5px;
+      }
+      .fa-left {
+        margin-right: 8px;
+      }
 
     script.
       var ORIGIN = !{JSON.stringify(query.origin)};
@@ -49,6 +56,21 @@ block head
       function showLogIn() {
         $('#LogInCard').show();
         $('#AuthorizationCard').hide()
+      }
+
+      function toggleScopePermissions(namespace) {
+        console.log(namespace);
+        var nsEl = $('#namespace_' + namespace)
+        var listEl = nsEl.find('.scope-access-list');
+        if (listEl.is(':hidden')) {
+          listEl.show();
+          nsEl.find('i.fa.fa-plus-square-o')
+              .removeClass('fa-plus-square-o').addClass('fa-minus-square-o')
+        } else {
+          listEl.hide();
+          nsEl.find('i.fa.fa-minus-square-o')
+              .removeClass('fa-minus-square-o').addClass('fa-plus-square-o')
+        }
       }
 
       function sendToken(token) {
@@ -144,11 +166,12 @@ block body
         .form-group
           label Email Address
             if signUp
-              small.help-text  - this will only be used to recover your account
+              small.help-text  - this will only be used for login and account recovery
           input.form-control(type="text" name="email")
         if signUp
           .form-group
             label Username
+            small.help-text  - this will be used to identify you to other users
             input.form-control(type="text" name="username")
         .form-group
           label Password
@@ -167,19 +190,28 @@ block body
           span &nbsp;
         #AuthorizationCard.card(style="display: none")
           .card-body
-            h4.card-title #{query.originNoProtocol} would like your permission to access the following data:
+            h4.card-title #{query.originNoProtocol} would like your permission to access the following data.
+            p.
+              With OneDB, <b>you</b> own your data. If you'd like to use #{query.originNoProtocol},
+              click "Allow" to give it permission to access your data. Otherwise, click "Deny" and we'll
+              cancel the login process.
           if scopes
             ul.list-group.list-group-flush.with-scope
               each scopeSet, namespace in scopes
-                li.list-group-item
-                  h5 #{namespace}
-                  ul.scope-access-list
+                li.list-group-item(id="namespace_" + namespace)
+                  h5
+                    span #{namespace}  
+                    small.toggle-scope-button
+                      a(onclick="toggleScopePermissions('" + namespace + "')" href="#")
+                        i.fa.fa-left.fa-plus-square-o
+                        span.toggle-scope-label Permissions
+                  ul.scope-access-list(style="display: none")
                     each scope in scopeSet
-                      li #{scope}
+                      li #{scope.replace('modify_acl', 'modify permissions')}
           else
             ul.list-group.list-group-flush.non-scope
               li.list-group-item
-                span Read, Write, Create, and Destroy ALL your data in OneDB
+                span Read, Write, Create, and Delete ALL your data in OneDB
           .card-body
             .btn-toolbar
               a.btn.btn-lg.btn-success.mr-2(href="#" onclick="authorize()") Allow
