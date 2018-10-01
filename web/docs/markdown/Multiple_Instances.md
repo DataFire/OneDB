@@ -87,7 +87,7 @@ onedb.list('chat', 'message', {
 
 ### Missing Data
 
-But what if Alice's server goes down? Or if Alice delete's her messages?
+But what if Alice's server goes down? Or if Alice deletes her messages?
 Bob will no longer be able to retrieve the contents of Alice's messages.
 
 In this case, the client will leave the `$ref` pointers, so your app can display an error message.

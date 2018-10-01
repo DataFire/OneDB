@@ -19,7 +19,7 @@ curl -X POST \
 ## Authorizing your Users
 The OneDB Authentication process works similar to OAuth 2.0. Your users will be sent
 to the OneDB instance of their choice, and will be shown the list of permissions you're requesting.
-If they accept, you'll recieve an access token that allows you to perform those actions on the
+If they accept, you'll receive an access token that allows you to perform those actions on the
 user's behalf.
 
 
@@ -69,6 +69,7 @@ window.onedb = new OneDBClient({
 ```
 
 Before you start your app, you should make sure the user has logged into their primary instance.
+The primary instance is where the client will store and retrieve data.
 
 ```js
 window.onedb = new OneDBClient({
@@ -82,7 +83,7 @@ window.onedb = new OneDBClient({
 
 ### Saving and Restoring Sessions
 
-You can use `localStorage` or cookies to save your user's session and restore it when the log back in:
+You can use `localStorage` or cookies to save your user's session and restore it when they log back in:
 
 ```js
 var SESSION_KEY = 'session';

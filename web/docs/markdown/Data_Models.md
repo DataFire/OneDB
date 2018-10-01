@@ -116,7 +116,7 @@ readable by everyone. To do this, create `types/tweet.acl.json`:
 }
 ```
 
-Of course, the owner would still be able to modify the ACL to make his tweet private.
+Of course, the owner would still be able to modify the ACL to make the tweet private.
 If you want to disable this, and force all tweets to be public,
 you can remove the owner's ability to change the `read` ACL:
 
@@ -148,7 +148,7 @@ Within each top-level option, the following access types can be set:
 * `delete` - delete the data
 
 ## JSON Schema Support
-OneDB uses a subset of JSON Schema 7. We also enforce a few key contstrains:
+OneDB uses a subset of JSON Schema 7. We also enforce a few key constraints:
 * Top-level schemas must be of type `object`
 * Top-level schemas must have `additionalProperties` set to `false` (or unspecified)
 * Property names must be alphanumeric (including underscores)

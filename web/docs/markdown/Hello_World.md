@@ -91,7 +91,7 @@ We'll add two elements for the app, which will be hidden until the user logs in:
 
 ## Step 4: Start the App
 
-When the user logs in, we'll want to pull their latests status and display it. Notice that when
+When the user logs in, we'll want to pull their latest status and display it. Notice that when
 we initialized the client, we passed in the `onLogin` function, which will get called anytime
 the user logs in or out of a OneDB instance. Let's make it a little more sophisticated:
 
@@ -134,7 +134,7 @@ You'll notice that we've defined two functions above: `showLatestStatus()` and `
 These functions will add and retrieve data from the user's OneDB instance.
 
 `showLatestStatus` uses `onedb.list` to get a list of the user's status messages.
-Since we only care about the latest status, we set `limit=1`, and sort by the creation date.
+Since we only care about the latest status, we set `limit = 1`, and sort by the creation date.
 
 ```js
 function showLatestStatus() {

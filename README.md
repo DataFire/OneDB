@@ -9,9 +9,14 @@ infrastructure.
 
 OneDB is an open-source Backend-as-a-Service, similar to [Firebase](https://firebase.google.com/).
 Anyone can host a OneDB instance, and end-users can decide where to store their data.
+This means end-users have complete control and ownership over their data.
 
-This means end-users have complete control and ownership over their data, while developers can
-create cloud-enabled applications for free.
+OneDB takes care of authentication, data validation,
+and storage, so you can focus on building great user experiences. And by utilizing
+the existing network of OneDB instances, you can deploy your app for free, forever.
+
+We provide a OneDB instance at `one-db.datafire.io` which is free for developers. End-users can
+store up to 10MB of data before getting charged.
 
 You can
 [read more about OneDB](https://medium.com/@bbrennan/announcing-onedb-a-platform-for-federated-apps-bc3cc7ff86e6),
