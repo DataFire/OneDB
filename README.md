@@ -1,5 +1,9 @@
 # OneDB
 
+[![Travis][travis-image]][travis-link]
+[![NPM version][npm-image]][npm-link]
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://www.npmjs.com/package/datafire)
+
 ![OneDB Logo](web/img/Logo.png)
 
 > The documentation for OneDB is at [docs.one-db.org](https://docs.one-db.org)
@@ -74,3 +78,23 @@ or open an issue if there's a feature you'd like to see.
 If you're working on a major change, be sure to let us know ahead of time.
 
 
+
+[downloads-image]: https://img.shields.io/npm/dm/datafire.svg
+[twitter-image]: https://img.shields.io/badge/Share-on%20Twitter-blue.svg
+[twitter-link]: https://twitter.com/intent/tweet?text=OneDB+-+build+cloud+apps+without+worrying+about+backends&url=http%3A%2F%2Fgithub.com%2FDataFire%2FOneDB
+[gitter-image]: https://img.shields.io/badge/Chat-on%20Gitter-blue.svg
+[gitter-link]: https://gitter.im/DataFire/Lobby
+[npm-image]: https://img.shields.io/npm/v/datafire.svg
+[npm-link]: https://npmjs.org/package/onedb-client
+[travis-image]: https://travis-ci.org/DataFire/OneDB.svg?branch=master
+[travis-link]: https://travis-ci.org/DataFire/OneDB
+[climate-image]: https://codeclimate.com/github/DataFire/OneDB.png
+[climate-link]: https://codeclimate.com/github/DataFire/OneDB
+[deps-image]: https://img.shields.io/david/DataFire/OneDB.svg
+[deps-link]: https://david-dm.org/DataFire/OneDB
+[devdeps-image]: https://img.shields.io/david/dev/DataFire/OneDB.svg
+[devdeps-link]: https://david-dm.org/DataFire/OneDB#info=devDependencies
+[blog-image]: https://img.shields.io/badge/Read-on%20Medium-blue.svg
+[blog-link]: https://medium.com/datafire-io
+[mail-image]: https://img.shields.io/badge/Subscribe-on%20MailChimp-blue.svg
+[mail-link]: https://eepurl.com/c3t10T
