@@ -124,7 +124,16 @@ html
       .btn-primary, .btn-primary:hover, .btn-primary:active {
         background-color: #2b3d53;
         border-color: #2b3d53;
+      }
+      .cta-buttons .btn {
         margin-bottom: 15px;
+      }
+
+      .mailing-list {
+        max-width: 500px;
+        margin-top: 100px;
+        margin-left: auto;
+        margin-right: auto;
       }
       footer {
         padding: 30px 0px;
@@ -204,10 +213,28 @@ html
     .page.cta-page
       .container
         h2.text-center Ready to get started?
-        .row.text-center
+        .row.text-center.cta-buttons
           .col
             a.btn.btn-lg.btn-primary(href="https://docs.one-db.org") Build an App
           .col
             a.btn.btn-lg.btn-primary(href="https://github.com/DataFire/OneDB") View on GitHub
+        .mailing-list
+          h4.text-center or sign up for the mailing list
+
+          form.validate(
+              action="https://datafire.us11.list-manage.com/subscribe/post?u=d298de487aed8aae2350ce8f5&amp;id=735418396b",
+              method="post", id="mc-embedded-subscribe-form",
+              name="mc-embedded-subscribe-form",
+              target="_blank", novalidate)
+            .input-group
+              input.form-control(type="email" value="" name="EMAIL" id="mce-EMAIL"
+                    placeholder="Your email address")
+              .input-group-append
+                button.btn.btn-primary(type="submit" name="subscribe") Subscribe
+            div(style="position: absolute; left: -5000px;" aria-hidden="true")
+              input(type="text" name="b_d298de487aed8aae2350ce8f5_735418396b" tabindex="-1" value="")
     footer.page-inverse
-      .text-center &copy; 2018 DataFire.io
+      .text-center
+        p
+          i E Pluribus Unum
+        p &copy; 2018 DataFire.io
