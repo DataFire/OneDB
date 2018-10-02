@@ -53,7 +53,7 @@ export class ListComponent {
       if (instance === this.onedb.client.hosts.primary) {
         if (!instance.user) {
           this.router.navigate(['/']);
-        } else {
+        } else if (this.listID) {
           this.load(this.listID);
         }
       }
