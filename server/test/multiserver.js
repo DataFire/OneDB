@@ -94,11 +94,11 @@ describe("Multiple Servers", () => {
   it('should respond with info', async () => {
     let response = await axios.get(SERVERS.core.config.host + '/info');
     expect(response.status).to.equal(200);
-    expect(response.data).to.deep.equal({version: '0.0.2'});
+    expect(response.data.version).to.be.a('string')
 
     response = await axios.get(SERVERS.alt.config.host + '/info');
     expect(response.status).to.equal(200);
-    expect(response.data).to.deep.equal({version: '0.0.2'});
+    expect(response.data.version).to.be.a('string')
   });
 
   it('should proxy from alt to core', async () => {
