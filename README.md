@@ -2,7 +2,7 @@
 
 [![Travis][travis-image]][travis-link]
 [![NPM version][npm-image]][npm-link]
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://www.npmjs.com/package/datafire)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://www.npmjs.com/package/onedb-cli)
 
 ![OneDB Logo](web/img/Logo.png)
 
@@ -84,8 +84,8 @@ If you're working on a major change, be sure to let us know ahead of time.
 [twitter-link]: https://twitter.com/intent/tweet?text=OneDB+-+build+cloud+apps+without+worrying+about+backends&url=http%3A%2F%2Fgithub.com%2FDataFire%2FOneDB
 [gitter-image]: https://img.shields.io/badge/Chat-on%20Gitter-blue.svg
 [gitter-link]: https://gitter.im/DataFire/Lobby
-[npm-image]: https://img.shields.io/npm/v/datafire.svg
-[npm-link]: https://npmjs.org/package/onedb-client
+[npm-image]: https://img.shields.io/npm/v/onedb-cli.svg
+[npm-link]: https://npmjs.org/package/onedb-cli
 [travis-image]: https://travis-ci.org/DataFire/OneDB.svg?branch=master
 [travis-link]: https://travis-ci.org/DataFire/OneDB
 [climate-image]: https://codeclimate.com/github/DataFire/OneDB.png
