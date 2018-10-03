@@ -1,5 +1,4 @@
 node_modules/
-.server-config.json
 apps/**/dist
 web/docs/dist
 OneDB.yml
