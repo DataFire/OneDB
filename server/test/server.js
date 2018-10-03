@@ -33,7 +33,7 @@ describe("Server", () => {
   beforeEach(async function() {
     mongod = new MongoMemoryServer();
     config.maxBytesPerItem = MAX_BYTES;
-    config.email = {file: EMAIL_FILE};
+    config.email = {file: EMAIL_FILE, from: 'no-reply@example.com'};
     config.host = HOST;
     server = new Server({
       host: HOST,

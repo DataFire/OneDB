@@ -24,6 +24,7 @@ const SERVERS = {
       host: 'http://localhost:3333',
       email: {
         file: __dirname + '/email1.txt',
+        from: 'no-reply@example.com',
       },
       namespaces: {
         allow: ['core', 'system'],
@@ -36,6 +37,7 @@ const SERVERS = {
       host: 'http://localhost:3334',
       email: {
         file: __dirname + '/email2.txt',
+        from: 'no-reply@example.com',
       },
       namespaces: {
         proxy: {

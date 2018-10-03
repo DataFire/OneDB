@@ -36,14 +36,12 @@ block head
         $('button.btn-success i.fa').hide();
       }
 
-      function showSignUp() {
-        $('#SignUp').show()
-        $('#SignIn').hide()
-      }
-
-      function showSignIn() {
-        $('#SignIn').show();
-        $('#SignUp').hide();
+      var VIEWS = ['SignUp', 'SignIn', 'ForgotPassword'];
+      function showView(name) {
+        VIEWS.forEach(view => {
+          if (view === name) $('#' + view).show();
+          else $('#' + view).hide();
+        })
       }
 
       function showAuthorization() {
@@ -140,6 +138,15 @@ block head
         return false;
       }
 
+      function resetPassword() {
+        var email = encodeURIComponent($('#ForgotPassword input[name="email"]').val());
+        window.user = {};
+        sendRequest('POST', '/users/start_reset_password?email=' + email, function(result) {
+          $('#ForgotPassword .alert-success').show();
+        });
+        return false;
+      }
+
       function authorize() {
         var url = '/users/authorize'
         if (SCOPE_STRING) {
@@ -233,10 +240,30 @@ block body
             #SignIn
               h3 Sign in 
                 small
-                  a(onclick="showSignUp()" href="#") or create a new account
+                  a(onclick="showView('SignUp')" href="#") or create a new account
               +user-form()
+              p
+                a(onclick="showView('ForgotPassword')" href="#") Forgot your password?
             #SignUp(style="display: none")
               h3 Sign up 
                 small
-                  a(onclick="showSignIn()" href="#") or use an existing account
+                  a(onclick="showView('SignIn')" href="#") or use an existing account
               +user-form(true)
+            #ForgotPassword(style="display: none")
+              h3 Reset your password 
+                small
+                  a(onclick="showView('SignIn')" href="#") or sign in
+              p.
+                Enter the email address you used to sign up, and we'll send you a link
+                to reset your password. 
+              form(onsubmit="return resetPassword()")
+                .form-group
+                  label Email Address
+                  input.form-control(type="text" name="email")
+                .form-group
+                  button.btn.btn-success(type="submit")
+                    i.fa.fa-spin.fa-refresh(style="display: none")
+                    span Reset password
+                .alert.alert-success(style="display: none")
+                  span An email has been sent to the address above.
+
