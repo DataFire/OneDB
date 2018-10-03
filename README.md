@@ -56,7 +56,7 @@ If you hosta public instance, let us know and we'll add you to the [list of know
 ### Installation and Setup
 Install the server:
 ```bash
-npm install -g onedb
+npm install -g onedb-cli
 ```
 
 Create your settings in `OneDB.yml`:
