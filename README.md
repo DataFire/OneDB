@@ -4,9 +4,9 @@
 [![NPM version][npm-image]][npm-link]
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://www.npmjs.com/package/onedb-cli)
 
-![OneDB Logo](web/img/Logo.png)
-
 > The documentation for OneDB is at [docs.one-db.org](https://docs.one-db.org)
+
+![OneDB Logo](web/img/Logo.svg)
 
 OneDB lets you create cloud-enabled apps without having to worry about or pay for backend
 infrastructure.
@@ -56,7 +56,7 @@ If you hosta public instance, let us know and we'll add you to the [list of know
 ### Installation and Setup
 Install the server:
 ```bash
-npm install -g onedb
+npm install -g onedb-cli
 ```
 
 Create your settings in `OneDB.yml`:
