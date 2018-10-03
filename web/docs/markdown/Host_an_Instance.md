@@ -104,20 +104,22 @@ You can:
 * Send via `sendmail`:
 ```yaml
 email:
-  sendmail: true
-  newline: unix
-  path: '/usr/bin/sendmail'
+    from: no-reply@example.com
+    sendmail: true
+    newline: unix
+    path: '/usr/bin/sendmail'
 ```
 * Send via Amazon's SES:
 ```yaml
 email:
-  SES:
-    region: us-west-2
-    accessKeyId: ABCDE
-    secretAccessKey: FGHIJ
+    from: no-reply@example.com
+    SES:
+      region: us-west-2
+      accessKeyId: ABCDE
+      secretAccessKey: FGHIJ
 ```
 * Write emails to a local file (for testing/debugging):
 ```yaml
 email:
-  file: './email.txt'
+    file: './email.txt'
 ```
