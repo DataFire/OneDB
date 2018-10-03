@@ -151,10 +151,9 @@ class DatabaseForUser {
   }
 
   async refreshUser() {
-    let users = await this.getCollection('system', 'user').find({id: this.userID}).toArray();
-    if (!users[0]) return fail(`User ${this.userID} not found`);
-    if (users.length > 1) return fail("Multiple users found for ID " + this.userID);
-    this.user = users[0];
+    this.user = await this.getCollection('system', 'user').findOne({id: this.userID});
+    if (!this.user) return fail(`User ${this.userID} not found`);
+    this.usage = await this.getCollection('system', 'usage').findOne({id: this.userID});
   }
 
   getCollection(namespace, type) {
@@ -163,8 +162,11 @@ class DatabaseForUser {
     return this.db.collection(collectionName);
   }
 
-  checkNamespace(namespace) {
+  checkNamespace(namespace, readOnly) {
     const [namespaceID, version] = namespace.split('@');
+    if (!readOnly && namespaceID === 'system' && this.user.id !== '_system') {
+      return fail("The system namespace is read-only");
+    }
     let allowed = true;
     if (this.config.namespaces.allow) {
       allowed = allowed && this.config.namespaces.allow.includes(namespaceID);
@@ -339,7 +341,7 @@ class DatabaseForUser {
   }
 
   async getAll(namespace, type, query={}, access='read', sort=DEFAULT_SORT, limit=DEFAULT_PAGE_SIZE, skip=0, keepACL=false) {
-    this.checkNamespace(namespace);
+    this.checkNamespace(namespace, access === 'read');
     if (Object.keys(sort).length !== 1) sort = DEFAULT_SORT;
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(namespace, type, query, access);
@@ -358,7 +360,7 @@ class DatabaseForUser {
   }
 
   async count(namespace, type, query) {
-    this.checkNamespace(namespace);
+    this.checkNamespace(namespace, true);
     const col = this.getCollection(namespace, type);
     query = this.buildQuery(namespace, type, query, 'read');
     let count = await col.find(query).count();
@@ -366,7 +368,7 @@ class DatabaseForUser {
   }
 
   async get(namespace, type, id, access='read') {
-    this.checkNamespace(namespace);
+    this.checkNamespace(namespace, access === 'read');
     const arr = await this.getAll(namespace, type, {id}, access);
     if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     if (!arr.length) return;
@@ -374,7 +376,7 @@ class DatabaseForUser {
   }
 
   async getACL(namespace, type, id) {
-    this.checkNamespace(namespace);
+    this.checkNamespace(namespace, true);
     const arr = await this.getAll(namespace, type, {id}, 'read', DEFAULT_SORT, DEFAULT_PAGE_SIZE, 0, true);
     if (arr.length > 1) return fail(`Multiple items found for ${namespace}/${type}/${id}`);
     if (!arr.length) return;
@@ -382,7 +384,7 @@ class DatabaseForUser {
   }
 
   async list(namespace, type, query={}, sort=DEFAULT_SORT, pageSize, skip) {
-    this.checkNamespace(namespace);
+    this.checkNamespace(namespace, true);
     return this.getAll(namespace, type, query, 'read', sort, pageSize, skip);
   }
 
@@ -445,7 +447,7 @@ class DatabaseForUser {
       id = undefined;
     }
     this.checkNamespace(namespace);
-    if (this.user.data.items >= this.config.maxItemsPerUser) {
+    if (this.usage && this.usage.data.items >= this.config.maxItemsPerUser) {
       return fail(`You have hit your maximum of ${this.config.maxItemsPerUser} items. Please delete something to create a new one`, 403);
     }
     if (!this.checkPermission(namespace, type, 'create')) {
@@ -496,12 +498,13 @@ class DatabaseForUser {
       data: dbUtil.encodeDocument(obj.data),
     });
 
-    const userUpdate = {
+    const usageUpdate = {
+      $set: {'id': this.user.id, 'acl.allow.read': ['_owner'], 'acl.owner': this.user.id},
       $inc: {'data.items': 1},
       $addToSet: {'data.namespaces': namespace},
     }
-    const userCol = this.getCollection('system', 'user');
-    await userCol.updateOne({id: this.user.id}, userUpdate);
+    const userCol = this.getCollection('system', 'usage');
+    await userCol.updateOne({'id': this.user.id}, usageUpdate, {upsert: true});
     await this.refreshUser();
     return Object.assign({$: {id, info, acl}}, obj.data);
   }
@@ -607,11 +610,12 @@ class DatabaseForUser {
     const col = this.getCollection(namespace, type);
     const result = await col.deleteOne(query, {justOne: true});
     if (result.result.n === 0) return fail(`User ${this.userID} cannot delete ${namespace}/${type}/${id}, or ${namespace}/${type}/${id} does not exist`, 401);
-    const userUpdate = {
+    const usageUpdate = {
+      $set: {id: this.user.id, 'acl.allow.read': ['_owner'], 'acl.owner': this.user.id},
       $inc: {'data.items': -1}
     };
-    const userCol = this.getCollection('system', 'user');
-    await userCol.updateOne({id: this.user.id}, userUpdate);
+    const usageCol = this.getCollection('system', 'usage');
+    await usageCol.updateOne({id: this.user.id}, usageUpdate, {upsert: true});
     await this.refreshUser();
   }
 

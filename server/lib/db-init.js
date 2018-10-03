@@ -5,6 +5,7 @@ const CORE_SCHEMAS = module.exports.CORE_SCHEMAS = {
   schema: require('../namespaces/core/schema'),
   authorization_token: require('../namespaces/system/authorization_token'),
   user: require('../namespaces/system/user'),
+  usage: require('../namespaces/system/usage'),
   user_private: require('../namespaces/system/user_private'),
 }
 for (let key in CORE_SCHEMAS) {
@@ -72,6 +73,10 @@ module.exports.CORE_OBJECTS = module.exports.CORE_OBJECTS.concat([{
               },
               modify: dbUtil.SYSTEM_ACL,
             }
+          },
+          usage: {
+            schema: {$ref: '/data/core/schema/usage'},
+            initial_acl: dbUtil.OWNER_ACL_SET,
           },
           user_private: {
             schema: {$ref: '/data/core/schema/user_private'},

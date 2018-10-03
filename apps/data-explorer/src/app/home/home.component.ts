@@ -18,5 +18,18 @@ declare let require:any;
 export class HomeComponent {
   @ViewChild('logInModal') logInModal;
   error:string;
-  constructor(public onedb:OneDBService) {}
+  usage:any;
+  constructor(public onedb:OneDBService) {
+    onedb.onLogin.subscribe(instance => {
+      this.loadUsage();
+    })
+  }
+
+  async loadUsage() {
+    if (!this.onedb.client.hosts.primary.user) {
+      this.usage = null;
+      return;
+    }
+    this.usage = await this.onedb.client.get('system', 'usage', this.onedb.client.hosts.primary.user.$.id);
+  }
 }

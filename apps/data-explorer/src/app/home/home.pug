@@ -11,11 +11,14 @@ div(*ngIf="onedb.client.hosts.primary.user")
   .row
     .col
       h4 My Data
-      p(*ngIf="!onedb.client.hosts.primary.user.namespaces?.length")
-        i You haven't added any data to this OneDB instance yet.
-      ul
-        li(*ngFor="let namespace of onedb.client.hosts.primary.user.namespaces")
-          a([routerLink]="['/data', namespace]") {{namespace}}
+      p(*ngIf="!usage")
+        i Log in to view namespaces you've interacted with.
+      div(*ngIf="usage")
+        p(*ngIf="!usage.namespaces?.length")
+          i You haven't added any data to this OneDB instance yet.
+        ul
+          li(*ngFor="let namespace of usage.namespaces")
+            a([routerLink]="['/data', namespace]") {{namespace}}
     .col
       h4 Other Data
       .form-group

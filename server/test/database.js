@@ -96,7 +96,7 @@ describe('Database', () => {
     expect(systemNS.$.owner).to.equal('_system');
 
     expect(Object.keys(coreNS.versions[0].types)).to.have.members(['schema', 'namespace']);
-    expect(Object.keys(systemNS.versions[0].types)).to.have.members(['user', 'user_private', 'authorization_token']);
+    expect(Object.keys(systemNS.versions[0].types)).to.have.members(['user', 'usage', 'user_private', 'authorization_token']);
 
     let types = Object.assign({}, coreNS.versions[0].types, systemNS.versions[0].types);
     expect(types.user_private).to.deep.equal({
@@ -666,27 +666,54 @@ describe('Database', () => {
     })
   });
 
-  it('should track namespaces and number of items per user', async () => {
+  it('should track usage for each user', async () => {
     const userDB = await database.user(USERS[2].$.id);
     let thing1 = await userDB.create('foo', 'thing', {message: "test"});
-    let user = await userDB.get('system', 'user', USERS[2].$.id);
-    expect(user.items).to.equal(1);
-    expect(user.namespaces).to.deep.equal(['foo']);
+    let usage = await userDB.get('system', 'usage', USERS[2].$.id);
+    expect(usage.items).to.equal(1);
+    expect(usage.namespaces).to.deep.equal(['foo']);
 
     let thing2 = await userDB.create('foo', 'thing', {message: "test"});
-    user = await userDB.get('system', 'user', USERS[2].$.id);
-    expect(user.items).to.equal(2);
-    expect(user.namespaces).to.deep.equal(['foo']);
+    usage = await userDB.get('system', 'usage', USERS[2].$.id);
+    expect(usage.items).to.equal(2);
+    expect(usage.namespaces).to.deep.equal(['foo']);
 
     await userDB.create('core', 'schema', {type: 'object'});
-    user = await userDB.get('system', 'user', USERS[2].$.id);
-    expect(user.items).to.equal(3);
-    expect(user.namespaces).to.deep.equal(['foo', 'core']);
+    usage = await userDB.get('system', 'usage', USERS[2].$.id);
+    expect(usage.items).to.equal(3);
+    expect(usage.namespaces).to.deep.equal(['foo', 'core']);
 
     await userDB.delete('foo', 'thing', thing2.$.id)
-    user = await userDB.get('system', 'user', USERS[2].$.id);
-    expect(user.items).to.equal(2);
-    expect(user.namespaces).to.deep.equal(['foo', 'core']);
+    usage = await userDB.get('system', 'usage', USERS[2].$.id);
+    expect(usage.items).to.equal(2);
+    expect(usage.namespaces).to.deep.equal(['foo', 'core']);
+  });
+
+  it('should not allow other user to view usage', async () => {
+    const user1DB = await database.user(USERS[1].$.id);
+    let thing1 = await user1DB.create('foo', 'thing', {message: "test"});
+    let usage = await user1DB.get('system', 'usage', USERS[1].$.id);
+    expect(usage.items).to.equal(1);
+    expect(usage.namespaces).to.deep.equal(['foo']);
+
+    const user2DB = await database.user(USERS[2].$.id);
+    usage = await user2DB.get('system', 'usage', USERS[1].$.id);
+    expect(usage).to.equal(undefined);
+  });
+
+  it('should not allow user to update usage', async () => {
+    const user1DB = await database.user(USERS[1].$.id);
+    let thing1 = await user1DB.create('foo', 'thing', {message: "test"});
+    let usage = await user1DB.get('system', 'usage', USERS[1].$.id);
+    expect(usage.items).to.equal(1);
+    expect(usage.namespaces).to.deep.equal(['foo']);
+
+    await expectError(user1DB.update('system', 'usage', USERS[1].$.id, {items: 0}), /The system namespace is read-only/);
+    usage = await user1DB.get('system', 'usage', USERS[1].$.id);
+    expect(usage.items).to.equal(1);
+    expect(usage.namespaces).to.deep.equal(['foo']);
+
+    await expectError(user1DB.create('system', 'usage', {items: 0, namespaces: []}), /The system namespace is read-only/);
   });
 
   it('should hit a limit for number of items per user', async () => {
@@ -716,6 +743,12 @@ describe('Database', () => {
     await expectError(userDB.append('foo', 'list', list.$.id, {things: [{message: 'a'}]}), /would exceed the maximum of 1000 bytes/);
     userDB.config.maxBytesPerItem = oldMaxBytes;
   });
+
+  it('should not allow viewing user_private', async function() {
+    const userDB = await database.user(USERS[0].$.id);
+    let priv = await userDB.list('system', 'user_private');
+    expect(priv.length).to.equal(0);
+  })
 
   it('should allow ref to external item', async () => {
     const userDB = await database.user(USERS[0].$.id);

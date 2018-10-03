@@ -132,16 +132,16 @@ describe("Server", () => {
 
   it('should list schemas', async () => {
     let resp = await axios.get(HOST + '/data/core/schema');
-    expect(resp.data.total).to.equal(7);
-    expect(resp.data.items.length).to.equal(7);
+    expect(resp.data.total).to.equal(8);
+    expect(resp.data.items.length).to.equal(8);
 
     resp = await axios.get(HOST + '/data/core/schema?pageSize=4');
-    expect(resp.data.total).to.equal(7);
+    expect(resp.data.total).to.equal(8);
     expect(resp.data.items.length).to.equal(4);
     expect(resp.data.hasNext).to.equal(true);
 
-    resp = await axios.get(HOST + '/data/core/schema?pageSize=4&skip=4');
-    expect(resp.data.total).to.equal(7);
+    resp = await axios.get(HOST + '/data/core/schema?pageSize=4&skip=5');
+    expect(resp.data.total).to.equal(8);
     expect(resp.data.items.length).to.equal(3);
     expect(resp.data.hasNext).to.equal(false);
   })
