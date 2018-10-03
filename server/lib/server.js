@@ -11,6 +11,8 @@ const defaultConfig = require('./config');
 const errorGuard = require('./error-guard');
 const Database = require('./database');
 
+const ONEDB_HOMEPAGE = 'https://one-db.org';
+
 const plugins = [];
 const PLUGIN_DIR = __dirname + '/plugins';
 if (fs.existsSync(PLUGIN_DIR)) {
@@ -53,6 +55,10 @@ class Server {
     for (let plugin of plugins) {
       this.app.use(plugin);
     }
+
+    this.app.get('/', (req, res, next) => {
+      res.redirect(ONEDB_HOMEPAGE);
+    })
 
     this.app.use('/users', new RateLimit(this.config.rateLimit.users), routes.users(this.config));
     this.app.use(middleware.authenticate(this.config));
