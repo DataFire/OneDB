@@ -16,7 +16,7 @@ routes:
         - title: Hello World
           markdownFile: markdown/Hello_World.md
         - markdownFile: markdown/Client_API.md
-        - markdownFile: markdown/Data_Models.md
+        - markdownFile: markdown/Data_Schemas.md
         - title: Authorization
           markdownFile: markdown/Authorization.md
         - title: Multiple Instances
