@@ -189,7 +189,7 @@ That's it! Here's the final code:
 ```html
 <html>
   <head>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
     <script src="./onedb.min.js"></script>
     <script>
 	  window.onedb = new OneDBClient({
@@ -252,6 +252,8 @@ That's it! Here's the final code:
 
   <body>
     <div class="container">
+      <h1>OneDB Status Updates</h1>
+      <p>Log in below to set your status on OneDB</p>
       <div id="LoginForm"></div>
       <script>
         document.getElementById('LoginForm').innerHTML = onedb.loginForm();
