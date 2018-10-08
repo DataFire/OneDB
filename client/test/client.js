@@ -121,12 +121,40 @@ describe("OneDB Client", () => {
     expect(msg.message).to.equal("Hello world!");
   });
 
+  it('should allow getting ACL', async () => {
+    let id = await client.create('messages', 'message', {message: "Hello world!"});
+    let acl = await client.getACL('messages', 'message', id);
+    expect(acl.allow.read).to.deep.equal(['_owner']);
+    expect(acl.allow.write).to.deep.equal(['_owner']);
+    expect(acl.allow.append).to.deep.equal(['_owner']);
+    expect(acl.allow.delete).to.deep.equal(['_owner']);
+    expect(acl.modify.read).to.deep.equal(['_owner']);
+    expect(acl.modify.write).to.deep.equal(['_owner']);
+    expect(acl.modify.append).to.deep.equal(['_owner']);
+    expect(acl.modify.delete).to.deep.equal(['_owner']);
+  });
+
+  it('should allow setting ACL', async () => {
+    let id = await client.create('messages', 'message', {message: "Hello world!"});
+    await client.updateACL('messages', 'message', id, {allow: {read: ['_owner', '_all']}})
+    let acl = await client.getACL('messages', 'message', id);
+    expect(acl.allow.read).to.deep.equal(['_owner', '_all']);
+    expect(acl.allow.write).to.deep.equal(['_owner']);
+    expect(acl.allow.append).to.deep.equal(['_owner']);
+    expect(acl.allow.delete).to.deep.equal(['_owner']);
+    expect(acl.modify.read).to.deep.equal(['_owner']);
+    expect(acl.modify.write).to.deep.equal(['_owner']);
+    expect(acl.modify.append).to.deep.equal(['_owner']);
+    expect(acl.modify.delete).to.deep.equal(['_owner']);
+  })
+
   it('should allow updating message', async () => {
     let id = await client.create('messages', 'message', {message: "Hello world"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
     expect(msg.message).to.equal("Hello world");
-    await client.update('messages', 'message', id, {message: "Hi world"});
+    let result = await client.update('messages', 'message', id, {message: "Hi world"});
+    expect(result).to.equal(undefined);
     msg = await client.get('messages', 'message', id);
     expect(msg.message).to.equal("Hi world");
   });
