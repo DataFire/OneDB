@@ -81,12 +81,15 @@ block head
         window.close();
       }
 
-      function sendRequest(method, url, callback) {
+      function sendRequest(method, url, callback, ignoreErrors) {
+        console.log('send', method, url, ignoreErrors);
         hideError();
         showLoading();
         var headers = {};
-        if (window.user) {
+        if (window.user && window.user.email) {
           headers.Authorization = "Basic " + btoa(window.user.email + ':' + window.user.pass);
+        } else if (window.user && window.user.token) {
+          headers.Authorization = "Bearer " + window.user.token;
         }
         $.ajax({
           type: method,
@@ -98,6 +101,7 @@ block head
           },
           error: function(req, textStatus, error) {
             hideLoading();
+            if (ignoreErrors) return;
             var message = textStatus;
             try {
               message = JSON.parse(req.responseText).message || message;
@@ -108,15 +112,19 @@ block head
         return false;
       }
 
-      function signIn() {
-        window.user = {
-          email: $('#SignIn input[name="email"]').val(),
-          pass: $('#SignIn input[name="password"]').val(),
-        }
+      function signIn(ignoreErrors) {
+        window.user = window.user || {};
+        window.user.email = $('#SignIn input[name="email"]').val();
+        window.user.pass = $('#SignIn input[name="password"]').val();
         sendRequest('GET', '/users/me', function(data) {
+          console.log('GOT', data);
           window.user.$ = data.$;
-          showAuthorization();
-        });
+          sendRequest('POST', '/users/authorize', function(token) {
+            window.user.token = token;
+            if (window.localStorage) window.localStorage.setItem('token', token);
+            showAuthorization();
+          }, ignoreErrors);
+        }, ignoreErrors);
         return false;
       }
 
@@ -132,7 +140,11 @@ block head
         } else {
           sendRequest('POST', '/users/register/' + username, function(data) {
             window.user.$ = {id: data};
-            showAuthorization();
+            sendRequest('POST', '/users/authorize', function(token) {
+              window.user.token = token;
+              if (window.localStorage) window.localStorage.setItem('token', token);
+              showAuthorization();
+            });
           });
         }
         return false;
@@ -158,7 +170,20 @@ block head
         return false;
       }
 
+      function restoreSession() {
+        console.log('restore');
+        if (!window.localStorage) return;
+        var token = window.localStorage.getItem('token');
+        console.log('restore', token);
+        if (token) {
+          window.user = window.user || {};
+          window.user.token = token;
+          signIn(true);
+        }
+      }
+
       $(document).ready(function() {
+        restoreSession();
         sendRequest('get', '/users/register', function(suggestedName) {
           let input = $('input[name="username"]');
           if (!input.val()) {

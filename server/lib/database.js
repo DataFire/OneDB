@@ -132,7 +132,7 @@ class Database {
     const userCol = db.getCollection('system', 'user_private');
     const userObj = await userCol.findOne({'data.id': tokenObj.data.username});
     if (!userObj) return fail("The provided token is invalid", 401);
-    return {id: userObj.data.id, permissions: tokenObj.data.permissions};
+    return {id: userObj.data.id, email: userObj.data.email, permissions: tokenObj.data.permissions};
   }
 }
 
