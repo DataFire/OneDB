@@ -2,7 +2,7 @@
 
 In this minimal example, we'll create an app that lets the user post status updates, similar to Twitter.
 
-Typically, when creating a new OneDB app, you would start by [creating a namespace](/Data_Schemas).
+Typically, when creating a new OneDB app, you would start by [creating a namespace](/Create_an_App/Data_Schemas).
 However, in this example, we will use the pre-built `status` namespace.
 
 ## Step 1: Add the OneDB Client
