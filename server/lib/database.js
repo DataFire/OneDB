@@ -297,16 +297,20 @@ class DatabaseForUser {
       sort[parts[0]] = parts[1] === 'ascending' ? 1 : -1;
     }
     if (params.created_since) {
-      query['info.created'] = {$gt: new Date(params.created_since)}
+      query['info.created'] = query['info.created'] || {};
+      query['info.created'].$gt = new Date(params.created_since)
     }
     if (params.created_before) {
-      query['info.created'] = {$lt: new Date(params.created_before)}
+      query['info.created'] = query['info.created'] || {};
+      query['info.created'].$lt = new Date(params.created_before)
     }
     if (params.updated_since) {
-      query['info.updated'] = {$gt: new Date(params.updated_since)}
+      query['info.updated'] = query['info.updated'] || {};
+      query['info.updated'].$gt = new Date(params.updated_since)
     }
     if (params.updated_before) {
-      query['info.updated'] = {$lt: new Date(params.updated_before)}
+      query['info.updated'] = query['info.updated'] || {};
+      query['info.updated'].$lt = new Date(params.updated_before)
     }
     if (params.owner) {
       query['acl.owner'] = {$eq: params.owner}

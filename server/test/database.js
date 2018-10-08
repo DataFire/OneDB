@@ -478,6 +478,33 @@ describe('Database', () => {
     expect(list).to.deep.equal(['one', 'three', 'four', 'five']);
   });
 
+  it('should allow filtering between two dates', async () => {
+    const user0DB = await database.user(USERS[0].$.id);
+    const user1DB = await database.user(USERS[1].$.id);
+    await user0DB.create('foo', 'thing', 'one', {message: "one"});
+    const midpoint1 = new Date().toISOString();
+    await user0DB.create('foo', 'thing', 'two', {message: "two"});
+    await user0DB.create('foo', 'thing', 'three', {message: "three"});
+    const midpoint2 = new Date().toISOString();
+    await user0DB.create('foo', 'thing', 'four', {message: "four"});
+
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {created_before: midpoint2, created_since: midpoint1})
+    list = (await user0DB.list('foo', 'thing', query, {'info.created': 1})).map(d => d.message);
+    expect(list).to.deep.equal(['two', 'three']);
+
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {updated_before: midpoint2, updated_since: midpoint1})
+    list = (await user0DB.list('foo', 'thing', query, {'info.created': 1})).map(d => d.message);
+    expect(list).to.deep.equal(['two', 'three']);
+
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {created_before: midpoint1, created_since: midpoint2})
+    list = (await user0DB.list('foo', 'thing', query, {'info.created': 1})).map(d => d.message);
+    expect(list).to.deep.equal([])
+
+    var {query} = await user0DB.buildListQuery('foo', 'thing', {updated_before: midpoint1, updated_since: midpoint2})
+    list = (await user0DB.list('foo', 'thing', query, {'info.created': 1})).map(d => d.message);
+    expect(list).to.deep.equal([])
+  })
+
   it('should allow user to delete thing', async () => {
     const userDB = await database.user(USERS[0].$.id);
     await userDB.create('foo', 'thing', 'thing1', {message: "Hello"});
