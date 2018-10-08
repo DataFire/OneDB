@@ -63,7 +63,7 @@ For each namespace, the following permissions are available:
 * `modify_acl` - Ability to change who is allowed to perform the above operations in this namespace
 
 You can see a list of all currently available namespaces at `https://one-db.datafire.io/data/core/namespace`,
-or see [the Data Models page](/Create_an_App/Data_Models) for information on creating a new namespace.
+or see [the Data Schemas page](/Create_an_App/Data_Schemas) for information on creating a new namespace.
 
 ## Responding to Authorization Events
 

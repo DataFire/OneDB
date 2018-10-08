@@ -1,4 +1,4 @@
-# Data Models
+# Data Schemas
 
 ## Schemas
 

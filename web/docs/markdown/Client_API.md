@@ -36,7 +36,7 @@ var onedb = new OneDBClient(options);
 
 where options is an object which can contain any of the following:
 * `hosts` - an object containing OneDB instances to connect to, optionally with credentials. You can use this to restore a previous session. See below for what each `host` should look like.
-* `hosts.core` - the core host, where data models will be pulled from
+* `hosts.core` - the core host, where namespaces and schemas will be pulled from
 * `hosts.primary` - the primary host, where new data will be stored, and data will be pulled by default
 * `hosts.secondary` - a array of alternative read-only data hosts. If the `primary` host returns data that references another host, OneDB will look here for authentication details
 * `hosts.broadcast` - an array of hosts which will be notified of any changes to the primary host
