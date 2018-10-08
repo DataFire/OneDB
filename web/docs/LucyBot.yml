@@ -15,6 +15,7 @@ routes:
           markdownFile: markdown/Quickstart.md
         - title: Hello World
           markdownFile: markdown/Hello_World.md
+        - markdownFile: markdown/Client_API.md
         - markdownFile: markdown/Data_Models.md
         - title: Authorization
           markdownFile: markdown/Authorization.md

@@ -49,6 +49,22 @@ allows the user to choose their instance.
 </html>
 ```
 
+## Scopes
+You need to request permission for each namespace you want to interact with. Above,
+we asked for `read` and `create` permission for the `status` namespace.
+
+For each namespace, the following permissions are available:
+
+* `read` - Ability to view data in this namespace
+* `create` - Ability to create new data in this namespace
+* `write` - Ability to modify data in this namespace
+* `append` - Ability to add new items to arrays in this namespace
+* `delete` - Ability to permanently delete data in this namespace
+* `modify_acl` - Ability to change who is allowed to perform the above operations in this namespace
+
+You can see a list of all currently available namespaces at `https://one-db.datafire.io/data/core/namespace`,
+or see [the Data Models page](/Create_an_App/Data_Models) for information on creating a new namespace.
+
 ## Responding to Authorization Events
 
 When a user logs in, the `onLogin` function will be called with information about
