@@ -45,6 +45,12 @@ code {
 .first-page h2 {
   margin-top: 50px;
 }
+.first-page p {
+  max-width: 771px;
+  text-align: justify;
+  margin-left: auto;
+  margin-right: auto;
+}
 .features ul {
   list-style: none;
   padding-left: 30px;
