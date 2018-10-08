@@ -98,7 +98,7 @@ out into their own `pet` documents. When an `owner` is retrieved from OneDB, the
 OneDB client will populate the `pets` array.
 
 However, if the data is unavailable, the client will leave the `$ref` there.
-Learn more about [hosting data across multiple instances](/Multiple_Instances.md)
+Learn more about [hosting data across multiple instances](/Create_an_App/Multiple_Instances.md)
 
 ## Access Control
 

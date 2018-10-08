@@ -37,7 +37,7 @@ Now let's initialize the client, telling it what data we want access to:
 </html>
 ```
 
-[Read more](/Authorization) about authorization and data access.
+[Read more](/Create_an_App/Authorization) about authorization and data access.
 
 
 ## Step 2: Add a Login Form

@@ -4,7 +4,7 @@ In this quickstart example, we'll display the latest status updates that have be
 posted to the OneDB instance at `one-db.datafire.io`.
 
 For a more in-depth example, including instructions for authentication, see
-[the Hello World page](/Hello_World).
+[the Hello World page](/Create_an_App/Hello_World).
 
 The full code for this tutorial is at the bottom of the page.
 
