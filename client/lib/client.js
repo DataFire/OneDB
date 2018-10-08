@@ -254,6 +254,11 @@ class Client {
     const isTrusted = this.getHost(host.location);
     params.skip = params.skip || 0;
     params.pageSize = params.pageSize || DEFAULT_PAGE_SIZE;
+    for (let key in params) {
+      if (params[key] instanceof Date) {
+        params[key] = params[key].toISOString();
+      }
+    }
     const page = await this.request(host, 'get', `/data/${namespace}/${type}`, params);
     page.items = await this.resolveRefs(page.items, host, {}, true);
     if (!isTrusted) {

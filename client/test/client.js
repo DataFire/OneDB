@@ -152,6 +152,25 @@ describe("OneDB Client", () => {
     expect(conversationBack).to.deep.equal({messages: [message]});
   })
 
+  it('should allow both date and ISO string for list parameters', async () => {
+    await client.create('messages', 'message', {message: '0'});
+    let timeStart = new Date();
+    await client.create('messages', 'message', {message: '1'});
+    await client.create('messages', 'message', {message: '2'});
+    let  timeEnd = new Date();
+    await client.create('messages', 'message', {message: '3'});
+
+    let list1 = await client.list('messages', 'message', {created_since: timeStart, created_before: timeEnd});
+    expect(list1.total).to.equal(2);
+    expect(list1.items[0].message).to.equal('2');
+    expect(list1.items[1].message).to.equal('1');
+
+    let list2 = await client.list('messages', 'message', {created_since: timeStart.toISOString(), created_before: timeEnd.toISOString()});
+    expect(list2.total).to.equal(2);
+    expect(list2.items[0].message).to.equal('2');
+    expect(list2.items[1].message).to.equal('1');
+  })
+
   it('should allow pagination', async function() {
     this.timeout(5000);
     let timeStart = new Date().toISOString();
