@@ -31,5 +31,10 @@ export class HomeComponent {
       return;
     }
     this.usage = await this.onedb.client.get('system', 'usage', this.onedb.client.hosts.primary.user.$.id);
+
+    // TODO: remove this block - just for a few legacy users
+    if (!this.usage && this.onedb.client.hosts.primary.user.namespaces) {
+      this.usage = this.onedb.client.hosts.primary.user;
+    }
   }
 }
