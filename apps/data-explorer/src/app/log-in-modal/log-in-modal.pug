@@ -1,6 +1,8 @@
 ng-template(#content let-c="close" let-d="dismiss")
   .modal-header
-    h4.modal-title Manage Accounts
+    h4.modal-title
+      span(*ngIf="!onedb.client.hosts.primary.user") Log In or Sign Up
+      span(*ngIf="onedb.client.hosts.primary.user") Log Out or Switch Accounts
     button.close(type="button", class="close", aria-label="Close", (click)="d('Cross click')")
       span(aria-hidden="true") &times;
   .modal-body
