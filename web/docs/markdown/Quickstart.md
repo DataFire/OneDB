@@ -67,7 +67,9 @@ See the [Hello World](/Create_an_App/Hello_World) example for more details.
         .then(function(response) {
           document.getElementById('Statuses').innerHTML =
               response.items.map(function(item) {
-                var html = '<h4>' + item.$.info.created_by + '<small> wrote:</small></h4>';
+                var html = '<h4>' + item.$.info.created_by;
+                html += '<small> wrote on ' + new Date(item.$.info.created).toDateString();
+                html += '</small></h4>';
                 html += '<p>' + item.status + '</p>';
                 return html;
               }).join('\n')
@@ -76,3 +78,10 @@ See the [Hello World](/Create_an_App/Hello_World) example for more details.
   </body>
 </html>
 ```
+
+### Results
+
+If you copy/paste the code above, you should see something like this:
+
+![Quickstart Results](assets/img/quickstart_screenshot.png)
+

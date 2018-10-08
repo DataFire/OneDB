@@ -17,7 +17,9 @@
         .then(function(response) {
           document.getElementById('Statuses').innerHTML =
               response.items.map(function(item) {
-                var html = '<h4>' + item.$.info.created_by + '<small> wrote:</small></h4>';
+                var html = '<h4>' + item.$.info.created_by;
+                html += '<small> wrote on ' + new Date(item.$.info.created).toDateString();
+                html += '</small></h4>';
                 html += '<p>' + item.status + '</p>';
                 return html;
               }).join('\n')
