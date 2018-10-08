@@ -8,8 +8,9 @@ const MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
 const PORT = 3333;
 const HOST = 'http://localhost:' + PORT;
 
-const mongod = new MongoMemoryServer();
+let mongod = null;
 let server = null;
+
 const client = new Client({
   hosts: {
     core: {location: HOST},
@@ -29,62 +30,27 @@ const expectError = function(prom, regex) {
 }
 
 describe("OneDB Client", () => {
-  before(async () => {
+  beforeEach(async () => {
+    delete client.hosts.primary.token;
+    delete client.hosts.primary.username;
+    delete client.hosts.primary.password;
+    mongod = new MongoMemoryServer();
     const mongoURI = await mongod.getConnectionString();
-    server = new Server({mongodb: mongoURI, host: HOST, jwtSecret: 'thisisnotasecret'});
-    return server.listen(PORT);
-  });
-
-  after(() => {
-    server.close();
-  })
-
-  it('should work', async () => {
-    let resp = await client.request(client.hosts.core, 'get', '/ping');
-    expect(resp).to.equal('pong');
-  });
-
-  it('should retrieve core types without login', async () => {
-    let item = await client.get('core', 'schema', 'user');
-    expect(item.$.id).to.equal('user');
-    delete item.$;
-    expect(item).to.deep.equal({
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        $: {type: 'object'},
-        publicKey: {type: 'string'},
+    server = new Server({
+      mongodb: mongoURI,
+      host: HOST,
+      jwtSecret: 'thisisnotasecret',
+      rateLimit: {
+        createUser: {
+          windowMs: 1000,
+          max: 1500,
+          delayMs: 3 * 1000,
+          delayAfter: 10,
+        },
       }
-    })
-  });
-
-  it('should not allow create without login', async () => {
-    await expectError(client.create('core', 'schema', {type: 'string'}), /You need to log in to do that/);
-  });
-
-  it('should allow creating user', async () => {
+    });
+    await server.listen(PORT);
     await client.createUser(client.hosts.primary, 'user1@example.com', 'password');
-    let token = await client.request(client.hosts.primary, 'post', '/users/authorize')
-    client.hosts.primary.token = token;
-  })
-
-  it('should allow creating type after login', async () => {
-    let schema = {
-      type: 'object',
-      properties: {
-        message: {type: 'string'},
-      }
-    }
-    await client.create('core', 'schema', 'message', schema);
-    let item = await client.get('core', 'schema', 'message');
-    expect(item.$.id).to.equal('message');
-    delete item.$;
-    schema.properties.$ = {type: 'object'};
-    schema.additionalProperties = false;
-    expect(item).to.deep.equal(schema);
-  });
-
-  it('should allow creating namespace', async () => {
     const ns = {
       versions: [{
         version: '0',
@@ -112,16 +78,78 @@ describe("OneDB Client", () => {
       }]
     }
     await client.create('core', 'namespace', 'messages', ns);
+    delete client.hosts.primary.token;
+    delete client.hosts.primary.username;
+    delete client.hosts.primary.password;
+  });
+
+  afterEach(async () => {
+    await mongod.stop();
+    await server.close();
+  })
+
+  async function logIn() {
+    client.hosts.primary.username = 'user1@example.com';
+    client.hosts.primary.password = 'password';
+    let token = await client.request(client.hosts.primary, 'post', '/users/authorize')
+    client.hosts.primary.token = token;
+  }
+
+  it('should work', async () => {
+    let resp = await client.request(client.hosts.core, 'get', '/ping');
+    expect(resp).to.equal('pong');
+  });
+
+  it('should retrieve core types without login', async () => {
+    let item = await client.get('core', 'schema', 'user');
+    expect(item.$.id).to.equal('user');
+    delete item.$;
+    expect(item).to.deep.equal({
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        $: {type: 'object'},
+        publicKey: {type: 'string'},
+      }
+    })
+  });
+
+  it('should not allow create without login', async () => {
+    await expectError(client.create('core', 'schema', {type: 'object'}), /You need to log in to do that/);
+  });
+
+  it('should allow creating user', async () => {
+    await client.createUser(client.hosts.primary, 'user2@example.com', 'password');
+  })
+
+  it('should allow creating type after login', async () => {
+    await logIn();
+    let schema = {
+      type: 'object',
+      properties: {
+        message: {type: 'string'},
+      }
+    }
+    await client.create('core', 'schema', 'message', schema);
+    let item = await client.get('core', 'schema', 'message');
+    expect(item.$.id).to.equal('message');
+    delete item.$;
+    schema.properties.$ = {type: 'object'};
+    schema.additionalProperties = false;
+    expect(item).to.deep.equal(schema);
   });
 
   it('should allow creating message', async () => {
+    await logIn();
     let id = await client.create('messages', 'message', {message: "Hello world!"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
     expect(msg.message).to.equal("Hello world!");
   });
 
-  it('should allow getting ACL', async () => {
+  it('should allow getting ACL', async function() {
+    this.timeout(5000);
+    await logIn();
     let id = await client.create('messages', 'message', {message: "Hello world!"});
     let acl = await client.getACL('messages', 'message', id);
     expect(acl.allow.read).to.deep.equal(['_owner']);
@@ -135,6 +163,7 @@ describe("OneDB Client", () => {
   });
 
   it('should allow setting ACL', async () => {
+    await logIn();
     let id = await client.create('messages', 'message', {message: "Hello world!"});
     await client.updateACL('messages', 'message', id, {allow: {read: ['_owner', '_all']}})
     let acl = await client.getACL('messages', 'message', id);
@@ -149,6 +178,7 @@ describe("OneDB Client", () => {
   })
 
   it('should allow updating message', async () => {
+    await logIn();
     let id = await client.create('messages', 'message', {message: "Hello world"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
@@ -160,6 +190,7 @@ describe("OneDB Client", () => {
   });
 
   it('should allow deleteing message', async () => {
+    await logIn();
     let id = await client.create('messages', 'message', {message: "Hello world"});
     expect(id).to.be.a('string');
     let msg = await client.get('messages', 'message', id);
@@ -169,6 +200,7 @@ describe("OneDB Client", () => {
   });
 
   it('should resolve refs', async () => {
+    await logIn();
     const message = {message: 'hello world'};
     const messageID = await client.create('messages', 'message', message);
     const conversation = {messages: [{$ref: '/data/messages/message/' + messageID}]};
@@ -181,6 +213,7 @@ describe("OneDB Client", () => {
   })
 
   it('should allow both date and ISO string for list parameters', async () => {
+    await logIn();
     await client.create('messages', 'message', {message: '0'});
     let timeStart = new Date();
     await client.create('messages', 'message', {message: '1'});
@@ -200,6 +233,7 @@ describe("OneDB Client", () => {
   })
 
   it('should allow pagination', async function() {
+    await logIn();
     this.timeout(5000);
     let timeStart = new Date().toISOString();
     for (let i = 0; i < 10; ++i) {
