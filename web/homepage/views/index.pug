@@ -1,6 +1,8 @@
 doctype html
 html
   head
+    title OneDB - Open source, decentralized Backend-as-a-Service
+    meta(name="viewport" content="width=device-width, initial-scale=1")
     link(rel="icon" type="image/png" href="img/Icon.png")
     link(href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet")
     link(rel="stylesheet"
@@ -11,133 +13,13 @@ html
         href="https://use.fontawesome.com/releases/v5.3.1/css/all.css"
         integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU"
         crossorigin="anonymous")
+    link(rel="stylesheet" href="styles.css")
     script(src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
         integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
         crossorigin="anonymous")
     script(src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
         integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
         crossorigin="anonymous")
-    style.
-      body {
-        font-family: Raleway, sans-serif;
-      }
-      nav {
-        background-color: #2b3d53;
-      }
-      nav img {
-        max-height: 50px;
-      }
-      nav .nav-link.dropdown {
-        margin-left: 40px;
-      }
-      .navbar-dark .navbar-nav .nav-link,
-      .navbar-dark .nav-item > a,
-      .navbar-dark .navbar-toggler {
-        color: #fff;
-      }
-      @media (min-width: 992px) {
-        .nav-item {
-          margin-left: 40px;
-        }
-      }
-      .btn-lg {
-        min-width: 200px;
-      }
-      h3 {
-        margin-top: 30px;
-        margin-bottom: 30px;
-        text-align: center;
-      }
-      .page {
-        padding: 80px 0px;
-        color: #2b3d53;
-      }
-      .page-inverse {
-        color: #fff;
-        background-color: #2b3d53;
-      }
-      code {
-        color: inherit;
-      }
-      .page img {
-        max-width: 100%;
-      }
-      .first-page h2 {
-        margin-top: 50px;
-      }
-      .features ul {
-        list-style: none;
-        padding-left: 30px;
-        padding-right: 30px;
-        font-family: sans-serif;
-      }
-      @media (min-width: 1200px)  {
-        .features ul {
-          padding-left: 80px;
-          padding-right: 80px;
-        }
-      }
-      @media (max-width: 991px) and (min-width: 850px)  {
-        .features ul {
-          padding-left: 200px;
-          padding-right: 200px;
-        }
-      }
-      @media (max-width: 849px) and (min-width: 600px)  {
-        .features ul {
-          padding-left: 100px;
-          padding-right: 100px;
-        }
-      }
-      @media (max-width: 450px) {
-        .features ul {
-          padding-left: 0px;
-          padding-right: 0px;
-        }
-      }
-
-      .features ul li {
-        margin-bottom: 15px;
-        min-height: 100px;
-      }
-      .features ul li .icon {
-        width: 60px;
-        height: 60px;
-        padding: 5px;
-        padding-top: 6px;
-        font-size: 30px;
-        float: left;
-        border: 1px solid #fff;
-        border-radius: 30px;
-        margin-right: 20px;
-        text-align: center;
-      }
-      .features ul li span {
-        margin-left: 80px;
-        display: block;
-        padding-top: 5px;
-      }
-
-      .page.cta-page h2 {
-        margin-bottom: 50px;
-      }
-      .btn-primary, .btn-primary:hover, .btn-primary:active {
-        background-color: #2b3d53;
-        border-color: #2b3d53;
-      }
-      .cta-buttons .btn {
-        margin-bottom: 15px;
-      }
-
-      .mailing-list {
-        max-width: 500px;
-        margin-top: 100px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      footer {
-        padding: 30px 0px;
-      }
 
   body
     nav.navbar.navbar-expand-md.navbar-dark
@@ -155,9 +37,9 @@ html
             li.nav-item.dropdown
               a.nav-link.dropdown-toggle(data-toggle="dropdown" href="#") Sample Apps
               .dropdown-menu
-                a.dropdown-item(href="https://chat.one-db.org") OneChat
-                a.dropdown-item(href="https://todo.one-db.org") To-do
-                a.dropdown-item(href="https://data.one-db.org") Data Explorer
+                a.dropdown-item(href="https://chat.one-db.org" target="_blank") OneChat
+                a.dropdown-item(href="https://todo.one-db.org" target="_blank") To-do
+                a.dropdown-item(href="https://data.one-db.org" target="_blank") Data Explorer
     .page.first-page
       .container.text-center
         img(src="img/Logo.svg")
@@ -210,6 +92,33 @@ html
                 .icon
                   i.fa.fa-lock
                 span Fine-grained permissions give users complete control over their data
+    .page.sample-code-page
+      .container
+        h2.text-center Powerful Tools with a Simple Interface
+        p.
+          OneDB makes it easy to add user authentication, data storage, and validation to your frontend.
+          Check out <a href="https://docs.one-db.org">the documentation</a> to learn more.
+        script(src="https://gist.github.com/bobby-brennan/b962069ee7a5e79e26d04f85872393ae.js")
+    .page.page-inverse.team-page
+      .container
+        h2.text-center Meet the OneDB Team
+        mixin teammate(name, description)
+          .teammate.text-center
+            h4.text-capitalize.text-center= name
+            img(src="/img/team/" + name + (name === 'bob' ? '.png' : '.jpg'))
+            p.text-left= description
+        .row
+          .col
+            +teammate('bobby', 'Bobby Brennan is the lead developer for OneDB. He has spent the last four years building backend developer tools at DataFire, maintains a number of open source projects, and previously worked for Google as a Senior Software Engineer')
+          .col
+            +teammate('joe', 'Joe Pelletier is an experienced product leader with expertise in growing and managing successful enterprise SaaS platforms. Joe is currently a Director of Product Management at Veracode, where he focuses on early stage product development, incubation, and product portfolio strategy.')
+          .col
+            +teammate('andrew', 'Andrew Brennan has extensive experience in the software industry, particularly in product management, sales, and marketing. He currently works at DataFire, and was previously at InsightSquared.')
+        .row
+          .col
+            +teammate('throop', 'Throop Wilder has co-founded and built successful startups in computer software, networking hardware, and energy storage. Throop co-founded American Internet (sold to Cisco Systems) and Crossbeam Systems (sold to Blue Coat / Symantec). He later founded and ran 24m Technologies, a manufacturer of ultra-low cost lithium-ion batteries.')
+          .col
+            +teammate('bob', 'Bob Brennan has spent decades building software companies. He recently retired as CEO of Veracode, which was sold to CA Technologies in April, 2017. Prior to Veracode, Bob served as CEO of Iron Mountain, which had acquired his previous company, Connected Corporation')
     .page.cta-page
       .container
         h2.text-center Ready to get started?

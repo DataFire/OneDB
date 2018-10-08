@@ -1,0 +1,141 @@
+body {
+  font-family: Raleway, sans-serif;
+}
+nav {
+  background-color: #2b3d53;
+}
+nav img {
+  max-height: 50px;
+}
+nav .nav-link.dropdown {
+  margin-left: 40px;
+}
+.navbar-dark .navbar-nav .nav-link,
+.navbar-dark .nav-item > a,
+.navbar-dark .navbar-toggler {
+  color: #fff;
+}
+@media (min-width: 992px) {
+  .nav-item {
+    margin-left: 40px;
+  }
+}
+.btn-lg {
+  min-width: 200px;
+}
+h3 {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+.page {
+  padding: 80px 0px;
+  color: #2b3d53;
+}
+.page-inverse {
+  color: #fff;
+  background-color: #2b3d53;
+}
+code {
+  color: inherit;
+}
+.page img {
+  max-width: 100%;
+}
+.first-page h2 {
+  margin-top: 50px;
+}
+.features ul {
+  list-style: none;
+  padding-left: 30px;
+  padding-right: 30px;
+  font-family: sans-serif;
+}
+@media (min-width: 1200px)  {
+  .features ul {
+    padding-left: 80px;
+    padding-right: 80px;
+  }
+}
+@media (max-width: 991px) and (min-width: 850px)  {
+  .features ul {
+    padding-left: 200px;
+    padding-right: 200px;
+  }
+}
+@media (max-width: 849px) and (min-width: 600px)  {
+  .features ul {
+    padding-left: 100px;
+    padding-right: 100px;
+  }
+}
+@media (max-width: 450px) {
+  .features ul {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+}
+
+.features ul li {
+  margin-bottom: 15px;
+  min-height: 100px;
+}
+.features ul li .icon {
+  width: 60px;
+  height: 60px;
+  padding: 5px;
+  padding-top: 6px;
+  font-size: 30px;
+  float: left;
+  border: 1px solid #fff;
+  border-radius: 30px;
+  margin-right: 20px;
+  text-align: center;
+}
+.features ul li span {
+  margin-left: 80px;
+  display: block;
+  padding-top: 5px;
+}
+
+.page.team-page img {
+  max-height: 200px;
+  border-radius: 40px;
+}
+.teammate {
+  margin-top: 75px;
+  min-width: 300px;
+  height: 300px;
+  cursor: pointer;
+}
+.teammate p {
+  display: none;
+  padding-top: 30px;
+}
+.teammate:hover img {
+  display: none;
+}
+.teammate:hover p {
+  display: block;
+}
+
+.page.cta-page h2 {
+  margin-bottom: 50px;
+}
+.btn-primary, .btn-primary:hover, .btn-primary:active {
+  background-color: #2b3d53;
+  border-color: #2b3d53;
+}
+.cta-buttons .btn {
+  margin-bottom: 15px;
+}
+
+.mailing-list {
+  max-width: 500px;
+  margin-top: 100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+footer {
+  padding: 30px 0px;
+}
