@@ -4,6 +4,17 @@ routes:
   /:
     ui: documentation
     title: OneDB
+    meta:
+      keywords:
+        - OneDB
+        - documentation
+        - open source
+        - federated
+        - decentralized
+        - backend
+        - frontend
+        - backend as a service
+        - BaaS
     navigation:
       - title: Introduction
         markdownFile: markdown/Overview.md
