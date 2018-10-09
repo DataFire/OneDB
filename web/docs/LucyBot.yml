@@ -5,6 +5,8 @@ routes:
     ui: documentation
     title: OneDB
     meta:
+      title: OneDB Documentation
+      description: Documentation for OneDB, an open source, decentralized backend-as-a-service
       keywords:
         - OneDB
         - documentation
@@ -15,7 +17,6 @@ routes:
         - frontend
         - backend as a service
         - BaaS
-      description: Documentation for OneDB, an open source, decentralized backend-as-a-service
     navigation:
       - title: Introduction
         markdownFile: markdown/Overview.md
