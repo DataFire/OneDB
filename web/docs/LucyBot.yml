@@ -15,6 +15,7 @@ routes:
         - frontend
         - backend as a service
         - BaaS
+      description: Documentation for OneDB, an open source, decentralized backend-as-a-service
     navigation:
       - title: Introduction
         markdownFile: markdown/Overview.md
