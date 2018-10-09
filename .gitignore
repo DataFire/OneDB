@@ -1,4 +1,5 @@
 node_modules/
 apps/**/dist
 web/docs/dist
+web/homepage/index.html
 OneDB.yml
