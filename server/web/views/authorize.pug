@@ -198,12 +198,12 @@ block body
         .form-group
           label Email Address
             if signUp
-              small.help-text  - this will only be used for login and account recovery
+              small.help-text  - this is private, and will only be used for login and account recovery
           input.form-control(type="text" name="email")
         if signUp
           .form-group
             label Username
-            small.help-text  - this will be used to identify you to other users
+            small.help-text  - this is public, and will be used to identify you to other users
             input.form-control(type="text" name="username")
         .form-group
           label Password
