@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "cd server && npm test ; cd ../client && npm test",
-    "build": "npm run build:client && npm run build:apps && npm run build:docs",
+    "build": "npm run build:client && npm run build:apps && npm run build:docs && npm run build:homepage",
     "build:client": "cd client && npm run build",
     "build:apps": "cp client/dist/onedb-client.min.js apps/minimal/ ; cd apps/todo && npm run build ; cd ../data-explorer && npm run build ; cd ../chat && npm run build",
     "build:docs": "lucybot build --directory ./web/docs --destination ./web/docs/dist",
