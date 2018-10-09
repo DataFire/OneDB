@@ -13,13 +13,19 @@ declare let require:any;
         padding-left: 0px;
         list-style: none;
       }
+      .col {
+        min-width: 250px;
+      }
     `]
 })
 export class HomeComponent {
   @ViewChild('logInModal') logInModal;
   error:string;
   usage:any;
+  allNamespaces:any[];
+
   constructor(public onedb:OneDBService) {
+    this.loadNamespaces();
     onedb.onLogin.subscribe(instance => {
       this.loadUsage();
     })
@@ -36,5 +42,9 @@ export class HomeComponent {
     if (!this.usage && this.onedb.client.hosts.primary.user.namespaces) {
       this.usage = this.onedb.client.hosts.primary.user;
     }
+  }
+
+  async loadNamespaces() {
+    this.allNamespaces = (await this.onedb.client.list('core', 'namespace')).items;
   }
 }
