@@ -13,17 +13,22 @@
     <h2>Latest status updates</h2>
     <div id="Statuses"></div>
     <script>
-      onedb.list('status', 'status', {sort: 'info.created:descending'})
-        .then(function(response) {
-          document.getElementById('Statuses').innerHTML =
-              response.items.map(function(item) {
-                var html = '<h4>' + item.$.info.created_by;
-                html += '<small> wrote on ' + new Date(item.$.info.created).toDateString();
-                html += '</small></h4>';
-                html += '<p>' + item.status + '</p>';
-                return html;
-              }).join('\n')
-        })
+       onedb.list('status', 'status', {sort: 'info.created:descending'})
+          .then(function(response) {
+              var el = document.getElementById('Statuses');
+              for (var i = 0; i < response.items.length; ++i) {
+                  el.innerHTML += getHTMLForStatusUpdate(response.items[i])
+              }
+          });
+      function getHTMLForStatusUpdate(statusUpdate) {
+          var info = statusUpdate.$.info;
+          var html = '<h4>' + info.created_by + '</h4>';
+          html += '<i>wrote on ' + new Date(info.created).toDateString() + '</i>';
+          var statusElement = document.createElement('p');
+          statusElement.textContent = statusUpdate.status;
+          html += statusElement.outerHTML;
+          return html;
+      }
     </script>
   </body>
 </html>
