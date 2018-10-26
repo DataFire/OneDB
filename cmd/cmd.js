@@ -54,4 +54,5 @@ args = args.command(
     attempt('namespace'),
 )
 
-args.argv;
+args = args.demandCommand(1);
+args = args.help('h').alias('h', 'help').strict().argv;
