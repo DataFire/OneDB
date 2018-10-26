@@ -5,8 +5,8 @@
 OneDB lets you create cloud-enabled apps without having to worry about or pay for backend
 infrastructure.
 
-OneDB is an open-source Backend-as-a-Service, similar to [Firebase](https://firebase.google.com/).
-Anyone can host a OneDB instance, and end-users can decide where to store their data.
+OneDB is an open-source decentralized backend.
+Anyone can host a OneDB instance, and end-users can decide where they want to store their data.
 This means end-users have complete control and ownership over their data.
 
 OneDB takes care of authentication, data validation,
