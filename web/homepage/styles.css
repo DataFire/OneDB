@@ -45,11 +45,18 @@ code {
 .first-page h2 {
   margin-top: 50px;
 }
-.first-page p {
+.first-page .cta-buttons {
+  margin-top: 50px;
+  min-height: 50px;
+}
+
+.first-page p, .first-page .cta-buttons {
   max-width: 771px;
-  text-align: justify;
   margin-left: auto;
   margin-right: auto;
+}
+.first-page p {
+  text-align: justify;
 }
 .features ul {
   list-style: none;
