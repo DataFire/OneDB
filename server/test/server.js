@@ -31,6 +31,7 @@ describe("Server", () => {
   const oldMaxBytes = config.maxBytesPerItem;
 
   beforeEach(async function() {
+    this.timeout(15000);
     mongod = new MongoMemoryServer();
     config.maxBytesPerItem = MAX_BYTES;
     config.email = {file: EMAIL_FILE, from: 'no-reply@example.com'};

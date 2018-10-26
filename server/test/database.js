@@ -26,7 +26,7 @@ describe('Database', () => {
   let mongod = null;
 
   beforeEach(async function() {
-    this.timeout(5000);
+    this.timeout(15000);
     mongod = new MongoMemoryServer();
     const uri = await mongod.getConnectionString();
     database = new Database(uri);

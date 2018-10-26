@@ -51,7 +51,7 @@ const SERVERS = {
 
 describe("Multiple Servers", () => {
   beforeEach(async function() {
-    this.timeout(5000);
+    this.timeout(15000);
     for (let key in SERVERS) {
       const server = SERVERS[key];
       server.mongod = new MongoMemoryServer();
