@@ -24,9 +24,7 @@
           var info = statusUpdate.$.info;
           var html = '<h4>' + info.created_by + '</h4>';
           html += '<i>wrote on ' + new Date(info.created).toDateString() + '</i>';
-          var statusElement = document.createElement('p');
-          statusElement.textContent = statusUpdate.status;
-          html += statusElement.outerHTML;
+          html += '<p>' + statusUpdate.status.replace(/</g,"&lt;").replace(/>/g,"&gt;") + '</p>';
           return html;
       }
     </script>
