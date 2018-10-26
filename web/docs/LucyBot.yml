@@ -26,8 +26,8 @@ routes:
         children:
         - title: Quickstart
           markdownFile: markdown/Quickstart.md
-        - title: Hello World
-          markdownFile: markdown/Hello_World.md
+        - title: End-to-end Example
+          markdownFile: markdown/End_to_End.md
         - markdownFile: markdown/Client_API.md
         - markdownFile: markdown/Data_Schemas.md
         - title: Authorization
