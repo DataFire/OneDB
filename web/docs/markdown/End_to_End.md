@@ -3,12 +3,11 @@
 Let's create an app that lets the user post status updates, similar to Twitter.
 Here are the steps we'll take:
 
-1. We'll [create a new namespace](/Create_an_App/Data_Schemas) for status updates. This is where we'll tell
-OneDB exactly what a "status update" looks like, e.g. that it's a string with no more than 280 characters.
+1. We'll [create a new namespace](/Create_an_App/Data_Schemas) for status updates
 
 2. We'll create a single-page app that imports the OneDB JavaScript client
 
-3. We'll add a [login form](/Create_an_App/Authorization) to that HTML page
+3. We'll add a [login form](/Create_an_App/Authorization) to our app
 
 4. We'll add the basic user interface for viewing and writing status updates
 
@@ -19,13 +18,15 @@ OneDB exactly what a "status update" looks like, e.g. that it's a string with no
 When we're done, we'll have a fully working, cloud-enabled app. And since it's only a frontend, we
 can deploy it for free, without worrying about servers or databases.
 
+> Want to jump to the end? The source code is [on GitHub](https://github.com/DataFire/OneDB/tree/master/apps/minimal), or you can scroll to the bottom of this page.
+
 ## Step 1: Create a Namespace
 A namespace represents a set of related data schemas. For example, OneDB has a `chat` namespace, with
 `message` and `conversation` schemas. Or we might have a `sales_and_marketing` namespace, with
 schemas for `customer`, `product`, `meeting`, `email_campaign`, etc.
 
 ### Data schemas
-In this example, we'll create the `status` namespace, which will only have a single `statusUpdate` schema.
+In this example, we'll create the `status` namespace, which will only have a single schema, `statusUpdate`.
 OneDB uses a subset of [JSON Schema](https://json-schema.org/) to describe each data type. Here's the
 JSON Schema for `statusUpdate`:
 

@@ -16,7 +16,7 @@ curl -X POST \
 # "eyJhbGciOi.eyJlbWFpb"
 ```
 
-## Authorizing your Users
+## Authenticating your Users
 The OneDB Authentication process works similar to OAuth 2.0. Your users will be sent
 to the OneDB instance of their choice, and will be shown the list of permissions you're requesting.
 If they accept, you'll receive an access token that allows you to perform those actions on the

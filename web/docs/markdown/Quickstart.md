@@ -3,10 +3,10 @@
 In this quickstart example, we'll display the latest status updates that have been
 posted to the OneDB instance at `one-db.datafire.io`.
 
-For a more in-depth example, including instructions for authentication, see
-[the Hello World page](/Create_an_App/Hello_World).
+For a more in-depth tutorial, including instructions for authentication, see
+[the end-to-end example](/Create_an_App/End_to_end_Example).
 
-The full code for this tutorial is at the bottom of the page.
+> Want to jump to the end? The source code is [on GitHub](https://github.com/DataFire/OneDB/tree/master/apps/minimal), or you can scroll to the bottom of this page.
 
 ### Import the Library
 
@@ -45,7 +45,7 @@ the host:
 Now that we have a client, we can retrieve publicly available data.
 
 Note that to access private data or to save new data, you'll need the user to log in.
-See the [Hello World](/Create_an_App/Hello_World) example for more details.
+See the [end-to-end example](/Create_an_App/End_to_end_Example) for more details.
 
 ```html
 <html>
