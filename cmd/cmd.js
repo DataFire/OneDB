@@ -11,6 +11,9 @@ let args = require('yargs')
 
 function attempt(fn) {
   return async function(args) {
+    // TODO: why are these not set by yargs defaults?
+    args.host = args.host || DEFAULT_HOST;
+    args.directory = args.directory || process.cwd();
     try {
       await commands[fn](args);
     } catch (e) {
@@ -23,7 +26,7 @@ args = args.command(
     'serve',
     "Start a OneDB server",
     yargs => {
-      yargs.option('port', {
+      return yargs.option('port', {
         alias: 'p',
         describe: 'The port to listen on',
         default: 3000,
@@ -35,21 +38,23 @@ args = args.command(
     'namespace',
     "Create or update a namespace",
     yargs => {
-      yargs.option('name', {
+      yargs = yargs.option('name', {
         alias: 'n',
         describe: "The ID of the namespace",
         demand: true,
       })
-      yargs.option('directory', {
+      yargs = yargs.option('directory', {
         alias: 'd',
         describe: "The directory containing schema and ACL files",
         default: process.cwd(),
       });
-      yargs.option('host', {
+      yargs = yargs.option('host', {
         alias: 'h',
         describe: "The OneDB host to send the namespace to",
         default: DEFAULT_HOST,
+        type: 'string',
       })
+      return yargs;
     },
     attempt('namespace'),
 )
