@@ -36,3 +36,5 @@ routes:
           markdownFile: markdown/Multiple_Instances.md
       - title: Host an Instance
         markdownFile: markdown/Host_an_Instance.md
+      - title: HTTP API
+        markdownFile: markdown/HTTP.md
