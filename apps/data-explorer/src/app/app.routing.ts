@@ -6,6 +6,7 @@ import {ItemComponent} from './item/item.component'
 export const appRoutes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'data/:namespace', component: NamespaceComponent },
+  { path: 'data/:namespace/:type', component: ItemComponent },
   { path: 'data/:namespace/:type/:item_id', component: ItemComponent },
   { path: '**', redirectTo: '' },
 ];

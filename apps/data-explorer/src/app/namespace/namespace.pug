@@ -17,6 +17,9 @@ div(*ngIf="namespace")
 .row
   .col.namespace(*ngFor="let type of types; let idx = index;")
     h2 {{ type.id }}
+    a.btn.btn-success([routerLink]="['/data', namespace.$.id, type.id]")
+      i.fa.fa-left.fa-plus
+      span Create a new {{ type.id }}
     div([ngSwitch]="!viewAllData && !onedb.client.hosts.primary.user")
       div(*ngSwitchCase="true")
         p Please sign in to view your data

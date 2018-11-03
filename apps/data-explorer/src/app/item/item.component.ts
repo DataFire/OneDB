@@ -50,6 +50,9 @@ export class ItemComponent {
       this.item_id = params['item_id'] || this.item_id;
       if (this.namespace && this.type && this.item_id) {
         this.getData();
+      } else {
+        this.item = {};
+        this.itemString = '{}';
       }
     })
   }
@@ -90,9 +93,14 @@ export class ItemComponent {
 
   async save() {
     let item = JSON.parse(this.itemString);
-    await this.onedb.client.update(this.namespace, this.type, this.item_id, item);
-    await this.onedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl);
-    this.getData();
+    if (this.item.item_id) {
+      await this.onedb.client.update(this.namespace, this.type, this.item_id, item);
+      await this.onedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl);
+      await this.getData();
+    } else {
+      let itemID = await this.onedb.client.create(this.namespace, this.type, item);
+      this.router.navigate(['/data', this.namespace, this.type, itemID]);
+    }
   }
 
   async delete() {
