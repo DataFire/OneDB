@@ -73,7 +73,7 @@ block head
 
       function sendToken(token) {
         if (ORIGIN.startsWith('file:')) {
-          window.opener.postMessage(token);
+          window.opener.postMessage(token, '*');
         } else {
           window.opener.postMessage(token, ORIGIN);
         }
