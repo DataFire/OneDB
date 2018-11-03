@@ -315,6 +315,25 @@ class DatabaseForUser {
     if (params.owner) {
       query['acl.owner'] = {$eq: params.owner}
     }
+
+    function parseValue(schema, value) {
+      if (!schema) return value;
+      if (schema.type === 'number') {
+        try {
+          return parseFloat(value);
+        } catch (e) {}
+      } else if (schema.type === 'integer') {
+        try {
+          return parseInt(value);
+        } catch (e) {}
+      } else if (schema.type === 'boolean') {
+        try {
+          return parseBoolean(value);
+        } catch (e) {}
+      }
+      return value;
+    }
+
     for (let key in params) {
       if (key !== 'data' && !key.startsWith('data.')) continue;
       let parts = key.split('.');
@@ -325,20 +344,19 @@ class DatabaseForUser {
               ((subschema.properties && subschema.properties[part]) || subschema.additionalProperties);
       }
       if (!subschema) return fail(`No subschema found for ${key}`, 400);
-      if (subschema.type === 'number') {
-        try {
-          query[key] = parseFloat(params[key]);
-        } catch(e) {}
-      } else if (subschema.type === 'integer') {
-        try {
-          query[key] = parseInt(params[key]);
-        } catch (e) {}
-      } else if (subschema.type === 'boolean') {
-        try {
-          query[key] = parseBoolean(params[key]);
-        } catch (e) {}
+      if (subschema.type === 'array') {
+        let values = params[key];
+        if (values.indexOf('|') !== -1) {
+          values = params[key].split('|').map(v => parseValue(subschema.items, v));
+          query[key] = {$in: values};
+        } else if (values.indexOf(',') !== -1) {
+          values = params[key].split(',').map(v => parseValue(subschema.items, v));
+          query[key] = {$all: values};
+        } else {
+          query[key] = parseValue(subschema.items, params[key]);
+        }
       } else {
-        query[key] = params[key];
+        query[key] = parseValue(subschema, params[key]);
       }
     }
     return {query, sort, pageSize, skip}

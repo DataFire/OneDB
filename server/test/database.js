@@ -478,6 +478,64 @@ describe('Database', () => {
     expect(list).to.deep.equal(['one', 'three', 'four', 'five']);
   });
 
+  it('should allow filtering by array items', async () => {
+    const user0DB = await database.user(USERS[0].$.id);
+    const namespace = {
+      versions: [{
+        types: {
+          tags: {
+            schema: {
+              type: 'object',
+              properties: {
+                tags: {
+                  type: 'array',
+                  items: {type: 'string'},
+                }
+              }
+            }
+          }
+        }
+      }]
+    }
+    await user0DB.create('core', 'namespace', 'tags', namespace);
+
+    const tags1 = {tags: ['foo', 'bar']};
+    const tags2 = {tags: ['bar', 'baz']};
+    const tags3 = {tags: []};
+    const id1 = await user0DB.create('tags', 'tags', tags1);
+    const id2 = await user0DB.create('tags', 'tags', tags2);
+    const id3 = await user0DB.create('tags', 'tags', tags3);
+
+    let items = await user0DB.list('tags', 'tags');
+    expect(items.length).to.equal(3);
+
+    var {query} = await user0DB.buildListQuery('tags', 'tags', {'data.tags': 'foo'});
+    items = await user0DB.list('tags', 'tags', query);
+    expect(items.length).to.equal(1);
+    expect(items[0].$.id).to.equal(id1.$.id);
+
+    var {query} = await user0DB.buildListQuery('tags', 'tags', {'data.tags': 'bar'});
+    items = await user0DB.list('tags', 'tags', query);
+    expect(items.length).to.equal(2);
+    expect(items[0].$.id).to.equal(id2.$.id);
+    expect(items[1].$.id).to.equal(id1.$.id);
+
+    var {query} = await user0DB.buildListQuery('tags', 'tags', {'data.tags': 'foo|bar'});
+    items = await user0DB.list('tags', 'tags', query);
+    expect(items.length).to.equal(2);
+    expect(items[0].$.id).to.equal(id2.$.id);
+    expect(items[1].$.id).to.equal(id1.$.id);
+
+    var {query} = await user0DB.buildListQuery('tags', 'tags', {'data.tags': 'foo,baz'});
+    items = await user0DB.list('tags', 'tags', query);
+    expect(items.length).to.equal(0);
+
+    var {query} = await user0DB.buildListQuery('tags', 'tags', {'data.tags': 'foo,bar'});
+    items = await user0DB.list('tags', 'tags', query);
+    expect(items.length).to.equal(1);
+    expect(items[0].$.id).to.equal(id1.$.id);
+  })
+
   it('should allow filtering between two dates', async () => {
     const user0DB = await database.user(USERS[0].$.id);
     const user1DB = await database.user(USERS[1].$.id);
