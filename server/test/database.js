@@ -684,6 +684,14 @@ describe('Database', () => {
     })
   })
 
+  it('should support no token expiration', async () => {
+    const token = randomstring.generate(64);
+    await database.addToken('user1@example.com', token, {}, -1);
+    const user = await database.signInWithToken(token)
+    expect(user.id).to.equal(USERS[0].$.id);
+    expect(user.permissions).to.deep.equal({});
+  })
+
   it('should respect permissions', async () => {
     let permissions = {};
     let userDB = await database.user(USERS[1].$.id, permissions)
