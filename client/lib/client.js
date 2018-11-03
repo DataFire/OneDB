@@ -107,7 +107,12 @@ class Client {
     if (this.options.scope) {
       path += '&scope=' + this.options.scope.join('+');
     }
-    window.open(this.hosts.authorizing.location + path, '_blank');
+    if (this.options.iframe) {
+      let el = document.getElementById('_OneDBLoginForm');
+      el.innerHTML = `<iframe style="width: 100%; height: 680px; border: none" src="${this.hosts.authorizing.location + path}">`;
+    } else {
+      window.open(this.hosts.authorizing.location + path, '_blank');
+    }
   }
 
   async request(host, method, path, query={}, body=null) {

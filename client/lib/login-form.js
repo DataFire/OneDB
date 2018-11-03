@@ -63,7 +63,7 @@ module.exports = function(type) {
     window._oneDBHelpers.addHost('broadcast');
   }
 
-  return TEMPLATES[type].bind(self)();
+  return '<div id="_OneDBLoginForm">' + TEMPLATES[type].bind(self)() + '</div>';
 }
 
 const TEMPLATES = {
