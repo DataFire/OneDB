@@ -134,7 +134,7 @@ onedb.list('status', 'status', {sort: 'data.status:ascending'})
     })
 ```
 
-#### Filtering
+#### Filtering by metadata
 You can filter for data created or updated within a particular time range using the following options:
 * `created_since`
 * `created_before`
@@ -155,6 +155,7 @@ onedb.list('status', 'status', {
 })
 ```
 
+#### Filtering by data
 You can also filter by exact matches on the data:
 ```js
 onedb.list('status', 'status', {'data.status': "Hello"})
@@ -162,6 +163,28 @@ onedb.list('status', 'status', {'data.status': "Hello"})
       for (let item of result.items) {
         console.log(item.status); // "Hello"
       }
+    })
+```
+
+If the field you're querying is an array, you can issue queries that filter
+based on multiple items. You can either filter for items that have **all** the
+specified values, or **any** of the specified values.
+
+For example, say `status` has a `tags` field that's an array of strings.
+
+To find statuses that have **both** the `health` **and** `sports` tags:
+```js
+onedb.list('status', 'status', {'data.tags': "health,sports"})
+    .then(function(result) {
+      console.log(result.items);
+    })
+```
+
+To find statuses that have **either** the `health` **or** `sports` tags:
+```js
+onedb.list('status', 'status', {'data.tags': "health|sports"})
+    .then(function(result) {
+      console.log(result.items);
     })
 ```
 

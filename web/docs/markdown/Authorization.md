@@ -11,10 +11,14 @@ To generate a bearer token, you can use cURL:
 
 ```
 curl -X POST \
-  https://one-db.datafire.io/users/authorize?scope=core:read \
+  "https://one-db.datafire.io/users/authorize?scope=core:read&expires_in=-1" \
   --user me@example.com:mypassword
 # "eyJhbGciOi.eyJlbWFpb"
 ```
+
+### Query parameters
+* scope - a space separated list of scopes, e.g. `core:read+core:create` See **Scopes** below for more information.
+* expires_in - the number of seconds until this token expires. Set to `-1` to never expire. Default is 1 day.
 
 ## Authenticating your Users
 The OneDB Authentication process works similar to OAuth 2.0. Your users will be sent
