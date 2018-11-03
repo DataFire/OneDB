@@ -78,7 +78,7 @@ window.onedb = new OneDBClient({
       console.log("User is logged out")
     } else {
       console.log(instance.user.$.id);
-      console.log(instance.user.token);
+      console.log(instance.token);
     }
   }
 })

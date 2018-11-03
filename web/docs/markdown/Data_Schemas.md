@@ -48,7 +48,8 @@ Then create a schema in that folder, e.g. `types/tweet.schema.json`:
 }
 ```
 
-Then use the OneDB CLI to register your namespace:
+Then use the OneDB CLI to register your namespace. If you don't have an account already,
+you can create one at [data.one-db.org](https://data.one-db.org).
 
 ```bash
 npm install -g onedb-cli
