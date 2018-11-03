@@ -133,6 +133,8 @@ class Database {
         'data.expires': {$gt: moment().toISOString()},
       }, {
         'data.expires': {$exists: false},
+      }, {
+        'data.expires': null,
       }],
     }
     const tokenObj = await tokenCol.findOne(tokenQuery);
