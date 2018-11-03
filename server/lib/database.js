@@ -17,6 +17,7 @@ const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
 
 const AUTH_TOKEN_EXPIRATION_DAYS = 1;
+const AUTH_TOKEN_EXPIRATION_SECONDS = AUTH_TOKEN_EXPIRATION_DAYS * 24 * 60 * 60;
 
 class Database {
   constructor(opts={}) {
@@ -93,7 +94,7 @@ class Database {
     if (updated.result.nModified !== 1) return fail("User not found", 404);
   }
 
-  async addToken(email, token, permissions={}) {
+  async addToken(email, token, permissions={}, expiration=AUTH_TOKEN_EXPIRATION_SECONDS) {
     // TODO: remove old tokens
     if (!this.db) return fail("Database not initialized");
     let err = validate.validators.email(email);
@@ -106,7 +107,7 @@ class Database {
       username: existing.data.id,
       token,
       permissions: permissions || undefined,
-      expires: moment().add(AUTH_TOKEN_EXPIRATION_DAYS, 'days').toISOString(),
+      expires: expiration === -1 ? undefined : moment().add(expiration, 'seconds').toISOString(),
     });
   }
 
@@ -126,7 +127,14 @@ class Database {
   async signInWithToken(token) {
     const db = await this.user(dbUtil.USER_KEYS.system);
     const tokenCol = db.getCollection('system', 'authorization_token');
-    const tokenQuery = {'data.token': token, 'data.expires': {$gt: moment().toISOString()}}
+    const tokenQuery = {
+      'data.token': token,
+      $or: [{
+        'data.expires': {$gt: moment().toISOString()},
+      }, {
+        'data.expires': {$exists: false},
+      }],
+    }
     const tokenObj = await tokenCol.findOne(tokenQuery);
     if (!tokenObj) return fail("The provided token is invalid", 401);
     const userCol = db.getCollection('system', 'user_private');

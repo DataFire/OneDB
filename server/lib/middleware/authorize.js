@@ -18,6 +18,7 @@ module.exports = function(config) {
       return res.status(400).send(err);
     }
     const permissionsToGrant = req.query.scope ? util.scopes(req.query.scope) : null;
+    const expiration = req.query.expires_in ? parseInt(req.query.expires_in) : undefined;
 
     function getToken(email) {
       const data = {email, permissionsToGrant};
@@ -32,7 +33,7 @@ module.exports = function(config) {
       const email = creds[0];
       const password = creds[1];
       const token = getToken(email);
-      await req.systemDB.addToken(email, token, permissionsToGrant);
+      await req.systemDB.addToken(email, token, permissionsToGrant, expiration);
       res.json(token);
     } else if (parts[0] === 'Bearer') {
       const currentToken = parts[1];
@@ -44,7 +45,7 @@ module.exports = function(config) {
       const {id, email, permissions} = await req.systemDB.signInWithToken(currentToken);
       if (permissions === null) {
         const token = getToken(email);
-        await req.systemDB.addToken(email, token, permissionsToGrant);
+        await req.systemDB.addToken(email, token, permissionsToGrant, expiration);
         res.json(token);
       } else {
         return fail("Selected token does not have permission to create new auth tokens", 401);

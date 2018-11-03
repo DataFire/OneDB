@@ -670,6 +670,20 @@ describe('Database', () => {
     await expectError(database.signInWithToken('foob'), /The provided token is invalid/);
   });
 
+  it('should support custom token expiration', async () => {
+    const token = randomstring.generate(64);
+    await database.addToken('user1@example.com', token, {}, 1);
+    const user = await database.signInWithToken(token)
+    expect(user.id).to.equal(USERS[0].$.id);
+    expect(user.permissions).to.deep.equal({});
+
+    await new Promise(resolve => {
+      setTimeout(() => {
+        expectError(database.signInWithToken(token), /The provided token is invalid/).then(resolve);
+      }, 1500)
+    })
+  })
+
   it('should respect permissions', async () => {
     let permissions = {};
     let userDB = await database.user(USERS[1].$.id, permissions)
