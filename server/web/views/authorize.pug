@@ -72,10 +72,11 @@ block head
       }
 
       function sendToken(token) {
+        var win = window.opener || window.parent;
         if (ORIGIN.startsWith('file:')) {
-          window.opener.postMessage(token, '*');
+          win.postMessage(token, '*');
         } else {
-          window.opener.postMessage(token, ORIGIN);
+          win.postMessage(token, ORIGIN);
         }
         window.close();
       }
