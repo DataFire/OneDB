@@ -87,7 +87,8 @@ let validators = module.exports.validators = {
     if (!isValid) return "Info is invalid. " + errorsText(validateInfo.errors);
   },
   url: url => {
-    const opts = {require_protocol: true, protocols: ['http', 'https', 'file']};
+    if (url.startsWith('file:')) return;
+    const opts = {require_protocol: true, protocols: ['http', 'https']};
     if (!validator.isURL(url, opts)) {
       return `${url} is not a valid URL`;
     }
