@@ -53,6 +53,20 @@ allows the user to choose their instance.
 </html>
 ```
 
+You can tell the client to display the login form inside an iframe rather than a new tab:
+```js
+window.onedb = new OneDBClient({
+  iframe: true,
+  onLogin: function(instance) {
+    console.log(instance);
+  },
+  scope: [
+    'status:read',
+    'status:create',
+  ],
+});
+```
+
 ## Scopes
 You need to request permission for each namespace you want to interact with. Above,
 we asked for `read` and `create` permission for the `status` namespace.
