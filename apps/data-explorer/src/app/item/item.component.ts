@@ -93,7 +93,7 @@ export class ItemComponent {
 
   async save() {
     let item = JSON.parse(this.itemString);
-    if (this.item.item_id) {
+    if (this.item_id) {
       await this.onedb.client.update(this.namespace, this.type, this.item_id, item);
       await this.onedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl);
       await this.getData();
