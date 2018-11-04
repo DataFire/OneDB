@@ -54,6 +54,14 @@ args = args.command(
         default: DEFAULT_HOST,
         type: 'string',
       })
+      yargs = yargs.option('username', {
+        alias: 'u',
+        describe: "Your username",
+      })
+      yargs = yargs.option('password', {
+        alias: 'p',
+        describe: "Your password",
+      })
       return yargs;
     },
     attempt('namespace'),
