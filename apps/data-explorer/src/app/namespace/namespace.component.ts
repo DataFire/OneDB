@@ -15,9 +15,17 @@ const MAX_PROPERTIES_IN_TABLE = 5;
         margin-bottom: 15px;
         margin-left: -8px;
       }
+      tr {
+        border-bottom: 1px solid #eee;
+      }
       table td, table th {
         padding: 4px 8px;
         max-width: 200px;
+      }
+      .cell-content {
+        max-height: 65px;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .view-all-form-group label {
         margin-right: 10px;

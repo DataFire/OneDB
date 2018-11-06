@@ -37,12 +37,15 @@ div(*ngIf="namespace")
       tbody
         tr.item(*ngFor="let item of data[type.id].items")
           td
-            a([routerLink]="['/data', namespace.$.id, type.id, item.$.id]")
-              span {{ item.$.id }}
+            .cell-content
+              a([routerLink]="['/data', namespace.$.id, type.id, item.$.id]")
+                span {{ item.$.id }}
           td(*ngIf="viewAllData")
-            span {{ item.$.owner }}
+            .cell-content
+              span {{ item.$.owner }}
           td(*ngFor="let prop of type.properties")
-            span {{ item[prop] }}
+            .cell-content
+              span {{ item[prop] }}
     ul.pagination(*ngIf="data[type.id] && data[type.id].pages")
       li.page-item(*ngFor="let page of data[type.id].pages", [class.active]="page.active")
         button.page-link((click)="goToPage(type.id, page.skip)", [disabled]="page.disabled") {{ page.label }}
