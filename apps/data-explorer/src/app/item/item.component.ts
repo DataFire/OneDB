@@ -28,6 +28,8 @@ export class ItemComponent {
   type:string;
   item_id:string;
 
+  namespaceInfo:any;
+  schema:any;
   item:any;
   acl:any;
   info:any;
@@ -38,6 +40,7 @@ export class ItemComponent {
 
   loading:boolean;
   error:string;
+  editMode:string = 'form';
 
   constructor(
         public onedb:OneDBService,
@@ -48,6 +51,7 @@ export class ItemComponent {
       this.namespace = params['namespace'] || this.namespace;
       this.type = params['type'] || this.type;
       this.item_id = params['item_id'] || this.item_id;
+      this.getMetadata();
       if (this.namespace && this.type && this.item_id) {
         this.getData();
       } else {
@@ -66,11 +70,26 @@ export class ItemComponent {
     return m.format('MMMM Do YYYY, h:mm:ss a') + ' (' + m.fromNow() + ')';
   }
 
+  async getMetadata() {
+    this.namespaceInfo = await this.onedb.client.get('core', 'namespace', this.namespace);
+    this.schema = this.namespaceInfo.versions[this.namespaceInfo.versions.length - 1].types[this.type].schema;
+  }
+
   async getData() {
     this.item = await this.onedb.client.get(this.namespace, this.type, this.item_id);
     this.acl = await this.onedb.client.getACL(this.namespace, this.type, this.item_id);
     this.info = this.item.$.info;
     this.itemString = this.stringify(this.item);
+  }
+
+  toggleEditMode() {
+    if (this.editMode === 'form') {
+      this.itemString = this.stringify(this.item);
+      this.editMode = 'json';
+    } else {
+      this.item = JSON.parse(this.itemString);
+      this.editMode = 'form';
+    }
   }
 
   setACLString(str, aclType, accessType) {
@@ -92,7 +111,10 @@ export class ItemComponent {
   }
 
   async save() {
-    let item = JSON.parse(this.itemString);
+    let item = this.item;
+    if (this.editMode === 'json') {
+      item = JSON.parse(this.itemString);
+    }
     if (this.item_id) {
       await this.onedb.client.update(this.namespace, this.type, this.item_id, item);
       await this.onedb.client.updateACL(this.namespace, this.type, this.item_id, this.acl);

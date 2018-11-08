@@ -14,6 +14,8 @@ import { NavbarComponent }       from './navbar/navbar.component';
 import {LogInModalComponent} from './log-in-modal/log-in-modal.component'
 import {NamespaceComponent} from './namespace/namespace.component'
 import {ItemComponent} from './item/item.component'
+import {JSONSchemaEditorComponent} from './json-schema/json-schema-editor.component'
+import {SchemaLabelComponent} from './json-schema/schema-label.component'
 
 import {PlatformService} from './services/platform.service';
 import {OneDBService} from './services/onedb.service'
@@ -40,6 +42,8 @@ import { environment } from '../environments/environment';
     LogInModalComponent,
     NamespaceComponent,
     ItemComponent,
+    JSONSchemaEditorComponent,
+    SchemaLabelComponent,
   ],
   bootstrap: [ AppComponent ],
 })

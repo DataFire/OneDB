@@ -1,0 +1,68 @@
+mixin input(type)
+  input.input-sm.form-control.monospace(type=type, [(ngModel)]="value", (ngModelChange)="valueChange.emit(value)")
+
+.form-group.form-group-sm(*ngIf="schema")
+  schema-label(#labelComponent,
+      [label]="label",
+      [schema]="schema",
+      [refBase]="refBase",
+      [expand]="value !== undefined || depth > 0",
+      [required]="required",
+      [showExpand]="true",
+      [showRemove]="showRemove",
+      (onRemoved)="valueChange.emit(undefined)",
+      (expandChange)="setDefaultValue('exp')",
+      (schemaChange)="setSchema($event)",
+      (typeChange)="setDefaultValue('typ')")
+  div(*ngIf="labelComponent.expand")
+    p(*ngIf="!labelComponent.type") No type found. Click 'Edit as JSON' to set this field.
+    div(*ngIf="labelComponent.type === 'string'")
+      +input('text')
+    div(*ngIf="labelComponent.type === 'number'")
+      +input('number')
+    div(*ngIf="labelComponent.type === 'integer'")
+      +input('number')
+    div(*ngIf="labelComponent.type === 'boolean'")
+      .dropdown.form-dropdown(ngbDropdown)
+        button.btn.btn-sm.btn-secondary.dropdown-toggle(data-toggle="dropdown", ngbDropdownToggle)
+          i(*ngIf="value === undefined") blank
+          span(*ngIf="value !== undefined") {{value}}
+        .dropdown-menu(ngbDropdownMenu)
+          a.dropdown-item((click)="value = true; valueChange.emit(value)") true
+          a.dropdown-item((click)="value = false; valueChange.emit(value)") false
+          a.dropdown-item((click)="value = undefined; valueChange.emit(value)") <i>blank</i>
+    div(*ngIf="value !== undefined")
+      .nested-editor(*ngIf="labelComponent.type === 'object'")
+        json-schema-editor(*ngFor="let prop of allProperties",
+                           [label]="prop",
+                           [nested]="true",
+                           [depth]="depth - 1",
+                           [required]="(schema.required || []).indexOf(prop) !== -1",
+                           [schema]="util.getPropertySchema(prop, schema, refBase) || util.getSchemaFromValue(value[prop])",
+                           [showRemove]="removableProperties.indexOf(prop) !== -1",
+                           [refBase]="refBase",
+                           [value]="value[prop]",
+                           (valueChange)="nestedValueChange(prop, $event)")
+        .input-group.input-group-sm(*ngIf="schema.additionalProperties || allProperties.length === removableProperties.length")
+          input.form-control(placeholder="Add a field", [(ngModel)]="additionalPropertyName", (keyup)="$event.keyCode === 13 ? addProperty() : null")
+          .input-group-append(ngbDropdown)
+            a.btn.btn-secondary.dropdown-toggle(data-toggle="dropdown", ngbDropdownToggle)
+              span {{additionalPropertyType || 'Type'}}
+            .dropdown-menu(ngbDropdownMenu)
+              a.dropdown-item(
+                  *ngFor="let schemaType of util.SCHEMA_TYPES",
+                  [hidden]="schemaType === 'array'",
+                  (click)="additionalPropertyType = schemaType") {{schemaType}}
+            a.btn.btn-secondary((click)="addProperty()") Add
+      .nested-editor(*ngIf="labelComponent.type === 'array'")
+        json-schema-editor(*ngFor="let val of util.range(numItems || 0); let valIdx = index;",
+                           [label]="label + '[' + valIdx + ']'",
+                           [nested]="true",
+                           [schema]="schema.items",
+                           [depth]="1",
+                           [refBase]="refBase",
+                           [showRemove]="true",
+                           [value]="value[valIdx]",
+                           (valueChange)="nestedValueChange(valIdx, $event);")
+        .btn-toolbar
+          button.btn.btn-sm.btn-secondary((click)="numItems = numItems + 1") Add item

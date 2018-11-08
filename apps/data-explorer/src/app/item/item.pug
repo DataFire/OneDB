@@ -1,6 +1,6 @@
 h1
   a([routerLink]="['/data', namespace]") {{ namespace }}
-  span /{{ type }}/{{item_id}}
+  span /{{ type }}/{{item_id || '&lt;new&gt;' }}
 div(*ngIf="item")
   ul.info(*ngIf="info")
     li
@@ -20,9 +20,10 @@ div(*ngIf="item")
       i.fa.fa-spin.fa-refresh
     .btn-toolbar(*ngIf="!loading")
       button.btn.btn-success.mr-3((click)="wrapAsync('save')")
-        span Save
+        span(*ngIf="item_id") Save
+        span(*ngIf="!item_id") Create
         i.fa.fa-right.fa-cloud-upload
-      button.btn.btn-danger((click)="confirmDelete = true")
+      button.btn.btn-danger(*ngIf="item_id", (click)="confirmDelete = true")
         span Delete
         i.fa.fa-right.fa-trash
   .alert.alert-danger(*ngIf="error")
@@ -52,5 +53,13 @@ div(*ngIf="item")
           input.form-control(
             [value]="(acl[aclType][accessType] || []).join(', ')",
             (input)="setACLString($event.target.value, aclType, accessType)")
-  textarea.form-control(rows="20", [(ngModel)]="itemString")
+  a((click)="toggleEditMode()", href="javascript:void(0)")
+    span {{ editMode === 'json' ? 'View form editor' : 'Edit as JSON' }}
+  json-schema-editor(
+        *ngIf="editMode === 'form'",
+        [schema]="schema",
+        [refBase]="schema",
+        [depth]="3",
+        [value]="item")
+  textarea.form-control(*ngIf="editMode === 'json'", rows="20", [(ngModel)]="itemString")
 

@@ -1,0 +1,17 @@
+label.monospace
+  a(*ngIf="showRemove", (click)="clickRemove()")
+    i.fa.fa-left.fa-times.text-danger
+  span.text-primary(*ngIf="required") *
+  span {{label}}
+  span(*ngIf="label") :
+  span.hl-key(*ngIf="!typeChoices") {{type}}
+  .type-choice.dropdown(*ngIf="typeChoices", ngbDropdown)
+    a.btn.btn-xs.btn-default.dropdown-toggle(data-toggle="dropdown", ngbDropdownToggle)
+      span {{type}}
+    .dropdown-menu(ngbDropdownMenu)
+      a.dropdown-item(*ngFor="let t of typeChoices", (click)="type = t; typeChange.emit(type)")
+        span {{t}}
+  a(*ngIf="(showExpand && (type === 'object' || type === 'array')) || schema.$ref",
+    (click)="toggleExpand()")
+    i.fa.fa-right([class.fa-plus-square-o]="!expand", [class.fa-minus-square-o]="expand")
+p.text-danger(*ngIf="!schema") Unknown schema
