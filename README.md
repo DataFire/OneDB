@@ -2,7 +2,7 @@
 
 [![Travis][travis-image]][travis-link]
 [![NPM version][npm-image]][npm-link]
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://www.npmjs.com/package/onedb-cli)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://www.npmjs.com/package/onedb-cli) [![Join the chat at https://gitter.im/One-DB/Lobby](https://badges.gitter.im/One-DB/Lobby.svg)](https://gitter.im/One-DB/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 > The documentation for OneDB is at [docs.one-db.org](https://docs.one-db.org)
 
