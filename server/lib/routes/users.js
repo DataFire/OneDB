@@ -22,7 +22,11 @@ module.exports = function(config) {
   config.hostWithoutProtocol = replaceProtocol(config.host);
 
   async function sendEmail(to, subject, body) {
-    const emailConfig = JSON.parse(JSON.stringify(config.email));
+    if (!config.email) {
+      console.log("Warning: email is not set up for this server");
+      return Promise.resolve();
+    }
+    const emailConfig = JSON.parse(JSON.stringify(config.email || {}));
     if (!emailConfig.from) throw new Error("Must specify 'from' in email configuration");
     return new Promise((resolve, reject) => {
       if (emailConfig.file) {
@@ -119,6 +123,9 @@ module.exports = function(config) {
   }));
 
   router.post('/start_reset_password', errorGuard(async (req, res, next) => {
+    if (!config.email) {
+      return fail("Email is not set up for this OneDB instance. Please contact the owner to reset your password.");
+    }
     if (validate.validators.email(req.query.email)) {
       return fail("Must supply an email address", 400);
     }
@@ -130,7 +137,7 @@ module.exports = function(config) {
     const userPrivate = await collection.findOne(userQuery);
     if (!userPrivate) {
       await sendEmail(req.query.email, "OneDB password reset request", `
-        Someone asked to reset the OneDB password for this emal address. However, we don't have a user with this email address on file.
+        Someone asked to reset the OneDB password for this email address. However, we don't have a user with this email address on file.
         <br><br>
         We suggest trying a different email address, or a different OneDB instance.
       `);
