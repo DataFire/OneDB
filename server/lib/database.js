@@ -102,7 +102,7 @@ class Database {
     const query = {$or: [{
       'data.email': emailOrUsername,
     }, {
-      id: emailOrUsername,
+      'data.id': emailOrUsername,
     }]}
     const existing = await db.getCollection('system', 'user_private').find(query).toArray();
     if (!existing.length) return fail(`User ${emailOrUsername} not found`, 401);

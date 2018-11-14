@@ -691,6 +691,9 @@ describe('Database', () => {
   it('should allow login with email or username', async () => {
     let user = await database.signIn(USER_INFO[0].email, USER_INFO[0].password);
     expect(user).to.equal(USERS[0].$.id);
+
+    user = await database.signIn(USERS[0].$.id, USER_INFO[0].password);
+    expect(user).to.equal(USERS[0].$.id);
   })
 
   it('should support token based auth', async () => {

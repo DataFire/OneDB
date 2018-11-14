@@ -235,6 +235,15 @@ describe("Server", () => {
     expect(resp.data.$.id).to.equal(USER_1.id);
   })
 
+  it('should allow auth with username', async () => {
+    let resp = await axios.get(HOST + '/users/me', {validateStatus: () => true});
+    expect(resp.status).to.equal(401);
+
+    resp = await axios.get(HOST + '/users/me', {auth: {username: USER_1.id, password: USER_1.password}});
+    expect(resp.status).to.equal(200);
+    expect(resp.data.$.id).to.equal(USER_1.id);
+  })
+
   it('should not allow directly adding user', async () => {
     let resp = await axios.post(HOST + '/data/core/user', {}, {auth: USER_1, validateStatus: () => true});
     expect(resp.status).to.equal(401);
