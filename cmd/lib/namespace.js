@@ -2,12 +2,27 @@ const fs = require('fs');
 
 const npath = require('path');
 const Client = require('onedb-client').Client;
+const CREDS_FILE = require('./files').CREDENTIALS_FILE;
 
 module.exports = async function(args) {
-  const host = {
-    location: args.host,
-    username: args.username || process.env.ONEDB_USERNAME,
-    password: args.password || process.env.ONEDB_PASSWORD,
+  let creds = {};
+  if (fs.existsSync(CREDS_FILE)) {
+    creds = require(CREDS_FILE);
+    creds = creds[args.host] || {};
+  }
+  const host = {location: args.host};
+  if (args.username) {
+    host.username = args.username;
+    host.password = args.password;
+  } else if (process.env.ONEDB_USERNAME) {
+    host.username = process.env.ONEDB_USERNAME;
+    host.password = process.env.ONEDB_PASSWORD;
+  } else if (creds.token || creds.password) {
+    host.username = creds.username;
+    host.password = creds.password;
+    host.token = creds.token;
+  } else {
+    throw new Error("No credentials found. Please run:\nonedb login");
   }
   const client = new Client({
     hosts: {

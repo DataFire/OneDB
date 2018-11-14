@@ -96,8 +96,8 @@ You'll also need a free OneDB account for `one-db.datafire.io`, which you can ge
 
 To register your namespace, run:
 ```bash
-export ONEDB_USERNAME=me@example.com
-export ONEDB_PASSWORD=thisisasecret
+onedb login
+# Enter your username and password
 onedb namespace --name status --directory ./types
 ```
 

@@ -53,9 +53,8 @@ you can create one at [data.one-db.org](https://data.one-db.org).
 
 ```bash
 npm install -g onedb-cli
-
-export ONEDB_USERNAME=me@example.com
-export ONEDB_PASSWORD=thisisasecret
+onedb login
+# Enter your username/password
 onedb namespace --directory ./types --name my_twitter
 # Created namespace my_twitter
 ```

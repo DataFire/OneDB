@@ -23,6 +23,18 @@ function attempt(fn) {
 }
 
 args = args.command(
+    'login',
+    "Start a OneDB session",
+    yargs => {
+      return yargs.option('host', {
+        alias: 'h',
+        default: DEFAULT_HOST,
+        describe: "The OneDB instance to log into",
+      })
+    },
+    attempt('login'));
+
+args = args.command(
     'serve',
     "Start a OneDB server",
     yargs => {
@@ -33,7 +45,7 @@ args = args.command(
       })
     },
     attempt('serve'),
-)
+);
 args = args.command(
     'namespace',
     "Create or update a namespace",
