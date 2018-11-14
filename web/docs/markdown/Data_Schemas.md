@@ -150,6 +150,12 @@ Within each top-level option, the following access types can be set:
 * `append` - add to arrays in the data
 * `delete` - delete the data
 
+Each access type takes an array of user IDs. There are also three meta-users to provide
+wider access control:
+* `_all` - anyone (logged in or anonymous)
+* `_user` - any logged-in user
+* `_owner` - the owner of the item
+
 ## JSON Schema Support
 OneDB uses a subset of JSON Schema 7. We also enforce a few key constraints:
 * Top-level schemas must be of type `object`

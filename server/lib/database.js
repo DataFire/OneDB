@@ -257,7 +257,7 @@ class DatabaseForUser {
     query.$and = query.$and || [];
     if (typeof accesses === 'string') accesses = [accesses];
 
-    let ownerOK = true;
+    let accessTokenHasPermission = true;
     if (modifyACL) {
       if (!this.checkPermission(namespace, type, 'modify_acl')) {
         return fail(`This app does not have permission to modify ACL for ${namespace}/${type}`, 401);
@@ -266,31 +266,31 @@ class DatabaseForUser {
       for (let access of accesses) {
         if (!this.checkPermission(namespace, type, access)) {
           if (access === 'read') {
-            ownerOK = false;
+            accessTokenHasPermission = false;
           } else {
             return fail(`This app does not have permission to ${access} ${namespace}/${type}`, 401);
           }
         }
       }
     }
+    const validUsers = [dbUtil.USER_KEYS.all];
+    if (this.user.id !== dbUtil.USER_KEYS.all) validUsers.push(dbUtil.USER_KEYS.user);
+    if (accessTokenHasPermission) validUsers.push(this.user.id);
 
     accesses.forEach(access => {
       let allowKey = ['acl', accessType, access].join('.');
       let disallowKey = ['acl', 'disallow', access].join('.');
-      if (ownerOK) {
+      const userAccessQuery = {$and: [{}, {}]};
+      userAccessQuery.$and[0][allowKey] = {$in: validUsers};
+      userAccessQuery.$and[1][disallowKey] = {$nin: validUsers.concat([this.user.id])};
+      const orQuery = [userAccessQuery];
+      if (accessTokenHasPermission) {
         const ownerQuery = {$and: [{'acl.owner': this.user.id}, {}, {}]};
         ownerQuery.$and[1][allowKey] = {$in: [dbUtil.USER_KEYS.owner]};
         ownerQuery.$and[2][disallowKey] = {$nin: [dbUtil.USER_KEYS.owner]};
-        const accessQuery = {$and: [{}, {}]};
-        accessQuery.$and[0][allowKey] = {$in: [this.user.id, dbUtil.USER_KEYS.all]};
-        accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
-        query.$and.push({$or: [ownerQuery, accessQuery]});
-      } else {
-        const accessQuery = {$and: [{}, {}]}
-        accessQuery.$and[0][allowKey] = {$in: [dbUtil.USER_KEYS.all]};
-        accessQuery.$and[1][disallowKey] = {$nin: [this.user.id, dbUtil.USER_KEYS.all]};
-        query.$and.push(accessQuery);
+        orQuery.push(ownerQuery);
       }
+      query.$and.push({$or: orQuery});
     });
     return query;
   }

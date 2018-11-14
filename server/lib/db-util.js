@@ -17,6 +17,7 @@ const KEY_REGEX = /^(\$|\$ref|\$id|\$comment|\$schema|[A-Za-z]\w*)$/;
 
 const USER_KEYS = module.exports.USER_KEYS = {
   all: '_all',
+  user: '_user',
   system: '_system',
   owner: '_owner',
 }

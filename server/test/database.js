@@ -422,6 +422,25 @@ describe('Database', () => {
     expect(items[1]).to.deep.equal({message: "Hello"});
   });
 
+  it('should force login for _user ACL', async () => {
+    const user0DB = await database.user(USERS[0].$.id);
+    await user0DB.create('foo', 'thing', 'one', {message: "one"});
+    await user0DB.create('foo', 'thing', 'two', {message: "two"});
+    await user0DB.modifyACL('foo', 'thing', 'one', {allow: {read: ['_user']}});
+    await user0DB.modifyACL('foo', 'thing', 'two', {allow: {read: ['_all']}});
+
+    const anonDB = await database.user('_all');
+    let foos = await anonDB.list('foo', 'thing');
+    expect(foos.length).to.equal(1);
+    expect(foos[0].message).to.equal('two');
+
+    const user1DB = await database.user(USERS[0].$.id);
+    foos = await user1DB.list('foo', 'thing');
+    expect(foos.length).to.equal(2);
+    expect(foos[0].message).to.equal('two');
+    expect(foos[1].message).to.equal('one');
+  })
+
   it('should allow filtering and sorting', async () => {
     const user0DB = await database.user(USERS[0].$.id);
     const user1DB = await database.user(USERS[1].$.id);
