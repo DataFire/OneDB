@@ -196,7 +196,7 @@ class Client {
         return this.resolveRefs(item, defaultHost, cache, shallow);
       }));
       return resolved;
-    } else if (obj.$ref && !obj.$ref.startsWith('#')) {
+    } else if (obj.$ref && typeof obj.$ref === 'string' && !obj.$ref.startsWith('#')) {
       const match = obj.$ref.match(REF_REGEX);
       if (!match) throw new Error("Bad $ref:" + obj.$ref);
       const [full, hostname, ns, type, id] = match;

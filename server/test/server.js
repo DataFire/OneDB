@@ -108,7 +108,6 @@ describe("Server", () => {
     let ns = await axios.get(HOST + '/data/core/schema/namespace');
     expect(ns.data.type).to.equal('object');
     let schema = await axios.get(HOST + '/data/core/schema/schema');
-    console.log(schema.data);
     expect(schema.data.oneOf.length).to.equal(2);
   })
 

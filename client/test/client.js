@@ -111,7 +111,13 @@ describe("OneDB Client", () => {
         $: {type: 'object'},
         publicKey: {type: 'string'},
       }
-    })
+    });
+
+    item = await client.get('core', 'schema', 'namespace');
+    expect(item.$.id).to.equal('namespace');
+
+    item = await client.get('core', 'schema', 'schema');
+    expect(item.$.id).to.equal('schema');
   });
 
   it('should not allow create without login', async () => {
