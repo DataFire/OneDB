@@ -155,6 +155,14 @@ onedb.list('status', 'status', {
 })
 ```
 
+You can also filter by the owner or creator of the object:
+```js
+onedb.list('status', 'status', {
+  owner: 'john_doe',
+  created_by: 'john_doe',
+})
+```
+
 #### Filtering by data
 You can also filter by exact matches on the data:
 ```js
