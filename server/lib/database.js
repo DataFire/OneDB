@@ -94,33 +94,42 @@ class Database {
     if (updated.result.nModified !== 1) return fail("User not found", 404);
   }
 
-  async addToken(email, token, permissions={}, expiration=AUTH_TOKEN_EXPIRATION_SECONDS) {
-    // TODO: remove old tokens
+  async getUser(emailOrUsername) {
     if (!this.db) return fail("Database not initialized");
-    let err = validate.validators.email(email);
+    const err = validate.validators.email(emailOrUsername) && validate.validators.itemID(emailOrUsername);
     if (err) return fail(err, 400);
     const db = await this.user(dbUtil.USER_KEYS.system);
-    const userCol = db.getCollection('system', 'user_private');
-    const existing = await userCol.findOne({'data.email': email});
-    if (!existing) return fail(`User ${email} not found`, 401);
+    const query = {$or: [{
+      'data.email': emailOrUsername,
+    }, {
+      id: emailOrUsername,
+    }]}
+    const existing = await db.getCollection('system', 'user_private').find(query).toArray();
+    if (!existing.length) return fail(`User ${emailOrUsername} not found`, 401);
+    const user = existing[0].data;
+    return user;
+  }
+
+  async addToken(emailOrUsername, token, permissions={}, expiration=AUTH_TOKEN_EXPIRATION_SECONDS) {
+    // TODO: remove old tokens
+    if (!this.db) return fail("Database not initialized");
+    const user = await this.getUser(emailOrUsername);
+    const db = await this.user(dbUtil.USER_KEYS.system);
     await db.create('system', 'authorization_token', {
-      username: existing.data.id,
+      username: user.id,
       token,
       permissions: permissions || undefined,
       expires: expiration === -1 ? undefined : moment().add(expiration, 'seconds').toISOString(),
     });
   }
 
-  async signIn(email, password) {
+  async signIn(emailOrUsername, password) {
     if (!this.db) return fail("Database not initialized");
-    let err = validate.validators.email(email) || validate.validators.password(password);
+    const err = validate.validators.password(password);
     if (err) return fail(err, 400);
-    const db = await this.user(dbUtil.USER_KEYS.system);
-    const existing = await db.getCollection('system', 'user_private').find({'data.email': email}).toArray();
-    if (!existing.length) return fail(`User ${email} not found`, 401);
-    const user = existing[0].data;
+    const user = await this.getUser(emailOrUsername);
     const isValid = await dbUtil.checkPassword(password, user.hash, user.salt);
-    if (!isValid) return fail(`Invalid password for ${email}`, 401);
+    if (!isValid) return fail(`Invalid password for ${emailOrUsername}`, 401);
     return user.id;
   }
 

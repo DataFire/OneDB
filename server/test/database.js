@@ -10,6 +10,16 @@ const dbUtil = require('../lib/db-util');
 let database = null;
 let systemDB = null;
 let USERS = [];
+let USER_INFO = [{
+  email: 'user1@example.com',
+  password: 'abcdefgh',
+}, {
+  email: 'user2@example.com',
+  password: 'foobarbaz',
+}, {
+  email: 'user3@example.com',
+  password: 'a^&*sc234',
+}]
 
 const expectError = function(prom, regex) {
   return prom.then(() => {
@@ -34,9 +44,9 @@ describe('Database', () => {
     systemDB = await database.user('_system');
 
     USERS = []
-    USERS.push(await database.createUser('user1@example.com', 'abcdabcd'));
-    USERS.push(await database.createUser('user2@example.com', 'abcdefgh'));
-    USERS.push(await database.createUser('user3@example.com', 'abcdefgh'));
+    for (let user of USER_INFO) {
+      USERS.push(await database.createUser(user.email, user.password));
+    }
 
     const userDB = await database.user(USERS[0].$.id);
     const thingSchema = {
@@ -677,6 +687,11 @@ describe('Database', () => {
     const item = await user0DB.get('foo', 'thing', 'thing2');
     expect(item.message).to.equal("This is a new string");
   });
+
+  it('should allow login with email or username', async () => {
+    let user = await database.signIn(USER_INFO[0].email, USER_INFO[0].password);
+    expect(user).to.equal(USERS[0].$.id);
+  })
 
   it('should support token based auth', async () => {
     const token = randomstring.generate(64);
