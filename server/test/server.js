@@ -104,6 +104,14 @@ describe("Server", () => {
     expect(response.data).to.equal('pong');
   });
 
+  it('should have core schemas', async () => {
+    let ns = await axios.get(HOST + '/data/core/schema/namespace');
+    expect(ns.data.type).to.equal('object');
+    let schema = await axios.get(HOST + '/data/core/schema/schema');
+    console.log(schema.data);
+    expect(schema.data.oneOf.length).to.equal(2);
+  })
+
   it('should be rate limited', async function() {
     this.timeout(3000);
     const numRequests = 101;

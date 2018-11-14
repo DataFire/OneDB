@@ -671,7 +671,7 @@ class DatabaseForUser {
       return cache;
     }
     for (let key in data) {
-      if (key === '$ref') {
+      if (key === '$ref' && typeof data === 'string') {
         const match = data[key].match(REF_REGEX);
         if (!match) continue;
         const [full, ns, type, id] = match;
