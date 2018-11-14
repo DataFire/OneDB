@@ -96,6 +96,17 @@ class Client {
     return this.request(host, 'post', '/users/register');
   }
 
+  async generateToken(host, scope=[], expires_in=null) {
+    if (!host.username || !host.password) throw new Error("Must specify username and password to generate a token");
+    let path = '/users/authorize?';
+    path += scope.join('+');
+    if (expires_in !== null) {
+      path += '&expires_in=' + expires_in;
+    }
+    const token = await this.request(host, 'post', path);
+    return token;
+  }
+
   authorize(host) {
     if (typeof window === 'undefined') {
       throw new Error("Cannot call authorize() outside of browser context");
