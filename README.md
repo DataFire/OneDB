@@ -48,7 +48,7 @@ Help us expand the OneDB network by hosting an instance. You'll need:
 * The OneDB server (this repository)
 * A MongoDB instance
 
-If you hosta public instance, let us know and we'll add you to the [list of known hosts](Hosts.md)
+If you host a public instance, let us know and we'll add you to the [list of known hosts](Hosts.md)
 
 ### Installation and Setup
 Install the server:
