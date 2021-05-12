@@ -22,7 +22,7 @@
     "jsonwebtoken": "^8.3.0",
     "moment": "^2.22.2",
     "mongodb": "^3.1.6",
-    "nodemailer": "^4.6.7",
+    "nodemailer": "^6.4.16",
     "pug": "^2.0.3",
     "randomstring": "^1.1.5",
     "redos": "^1.0.1",
