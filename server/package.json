@@ -19,7 +19,7 @@
     "cors": "^2.8.4",
     "express": "^4.16.3",
     "express-rate-limit": "^2.11.0",
-    "jsonwebtoken": "^8.3.0",
+    "jsonwebtoken": "^9.0.0",
     "moment": "^2.22.2",
     "mongodb": "^3.1.6",
     "nodemailer": "^4.6.7",
